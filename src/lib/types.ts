@@ -25,8 +25,13 @@ export type PaddyLifted = {
 export type PrivatePurchase = {
   id: string;
   mandiName: string;
+  itemType: 'rice' | 'paddy';
   farmerName: string;
-  paddyAmount: number;
+  quantity: number;
+  rate: number;
+  totalAmount: number;
+  amountPaid: number;
+  balance: number;
 };
 
 export type LabourRecord = {

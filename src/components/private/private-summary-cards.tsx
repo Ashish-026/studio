@@ -9,7 +9,7 @@ export function PrivateSummaryCards() {
   const { purchases } = usePrivateData();
 
   const summary = useMemo(() => {
-    const totalPurchased = purchases.reduce((acc, item) => acc + item.paddyAmount, 0);
+    const totalPurchased = purchases.reduce((acc, item) => acc + item.quantity, 0);
     const uniqueMandis = new Set(purchases.map(p => p.mandiName)).size;
     const uniqueFarmers = new Set(purchases.map(p => p.farmerName)).size;
 

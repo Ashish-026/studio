@@ -1,32 +1,34 @@
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext } from 'react';
+import type { PrivatePurchase } from '@/lib/types';
 
-// Simplified type for private purchases
-export type PrivatePurchase = {
-  id: string;
-  mandiName: string;
-  farmerName: string;
-  paddyAmount: number;
-};
 
 interface PrivateContextType {
   purchases: PrivatePurchase[];
-  addPurchase: (item: Omit<PrivatePurchase, 'id'>) => void;
+  addPurchase: (item: Omit<PrivatePurchase, 'id' | 'totalAmount' | 'balance'>) => void;
 }
 
 const PrivateContext = createContext<PrivateContextType | null>(null);
 
 const initialPurchases: PrivatePurchase[] = [
-    { id: '1', mandiName: 'Private Mandi A', farmerName: 'Gopal Verma', paddyAmount: 150 },
-    { id: '2', mandiName: 'Private Mandi B', farmerName: 'Sunita Devi', paddyAmount: 200 },
+    { id: '1', mandiName: 'Private Mandi A', farmerName: 'Gopal Verma', itemType: 'paddy', quantity: 150, rate: 2200, totalAmount: 330000, amountPaid: 300000, balance: 30000 },
+    { id: '2', mandiName: 'Private Mandi B', farmerName: 'Sunita Devi', itemType: 'rice', quantity: 200, rate: 3500, totalAmount: 700000, amountPaid: 700000, balance: 0 },
 ];
 
 export function PrivateProvider({ children }: { children: ReactNode }) {
   const [purchases, setPurchases] = useState<PrivatePurchase[]>(initialPurchases);
 
-  const addPurchase = useCallback((item: Omit<PrivatePurchase, 'id'>) => {
-    setPurchases((prev) => [...prev, { ...item, id: new Date().toISOString() }]);
+  const addPurchase = useCallback((item: Omit<PrivatePurchase, 'id' | 'totalAmount' | 'balance'>) => {
+    const totalAmount = item.quantity * item.rate;
+    const balance = totalAmount - item.amountPaid;
+    const newPurchase = {
+      ...item,
+      id: new Date().toISOString(),
+      totalAmount,
+      balance,
+    };
+    setPurchases((prev) => [...prev, newPurchase]);
   }, []);
 
   return (
