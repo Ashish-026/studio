@@ -42,6 +42,20 @@ export type PrivatePurchase = {
   payments: Payment[];
 };
 
+export type PrivateSale = {
+  id: string;
+  customerName: string;
+  itemType: 'rice' | 'paddy';
+  quantity: number;
+  rate: number;
+  totalAmount: number;
+  amountReceived: number;
+  balance: number;
+  description?: string;
+  date: Date;
+  payments: Payment[];
+}
+
 export type LabourRecord = {
     id: string;
     name: string;

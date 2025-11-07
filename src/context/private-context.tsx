@@ -1,13 +1,16 @@
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext } from 'react';
-import type { PrivatePurchase, Payment } from '@/lib/types';
+import type { PrivatePurchase, Payment, PrivateSale } from '@/lib/types';
 
 
 interface PrivateContextType {
   purchases: PrivatePurchase[];
   addPurchase: (item: Omit<PrivatePurchase, 'id' | 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { initialPayment: number }) => void;
   addPayment: (purchaseId: string, amount: number) => void;
+  sales: PrivateSale[];
+  addSale: (item: Omit<PrivateSale, 'id' | 'date' | 'totalAmount' | 'amountReceived' | 'balance' | 'payments'> & { initialPayment: number }) => void;
+  addSalePayment: (saleId: string, amount: number) => void;
 }
 
 const PrivateContext = createContext<PrivateContextType | null>(null);
@@ -61,8 +64,42 @@ const initialPurchases: PrivatePurchase[] = [
     },
 ];
 
+const initialSales: PrivateSale[] = [
+    {
+        id: 's1',
+        customerName: 'Local Mill Corp',
+        itemType: 'paddy',
+        quantity: 100,
+        rate: 2100,
+        totalAmount: 210000,
+        amountReceived: 210000,
+        balance: 0,
+        description: 'Full payment received.',
+        date: new Date('2024-06-10'),
+        payments: [
+            { id: 'sp1', amount: 210000, date: new Date('2024-06-10') }
+        ]
+    },
+    {
+        id: 's2',
+        customerName: 'Regional Exporters',
+        itemType: 'rice',
+        quantity: 150,
+        rate: 3800,
+        totalAmount: 570000,
+        amountReceived: 300000,
+        balance: 270000,
+        description: 'Partial payment received, rest due next month.',
+        date: new Date('2024-06-12'),
+        payments: [
+            { id: 'sp2', amount: 300000, date: new Date('2024-06-12') }
+        ]
+    }
+]
+
 export function PrivateProvider({ children }: { children: ReactNode }) {
   const [purchases, setPurchases] = useState<PrivatePurchase[]>(initialPurchases);
+  const [sales, setSales] = useState<PrivateSale[]>(initialSales);
 
   const addPurchase = useCallback((item: Omit<PrivatePurchase, 'id' | 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { initialPayment: number }) => {
     const totalAmount = item.quantity * item.rate;
@@ -92,16 +129,51 @@ export function PrivateProvider({ children }: { children: ReactNode }) {
                 ...p,
                 amountPaid: updatedAmountPaid,
                 balance: updatedBalance,
-                payments: [...p.payments, newPayment]
+                payments: [...p.payments, newPayment].sort((a, b) => b.date.getTime() - a.date.getTime())
             };
         }
         return p;
     }));
   }, []);
 
+  const addSale = useCallback((item: Omit<PrivateSale, 'id' | 'date' | 'totalAmount' | 'amountReceived' | 'balance' | 'payments'> & { initialPayment: number }) => {
+    const totalAmount = item.quantity * item.rate;
+    const newSale: PrivateSale = {
+        ...item,
+        id: new Date().toISOString(),
+        date: new Date(),
+        totalAmount,
+        amountReceived: item.initialPayment,
+        balance: totalAmount - item.initialPayment,
+        payments: item.initialPayment > 0 ? [{ id: new Date().toISOString() + '-sp', amount: item.initialPayment, date: new Date() }] : []
+    };
+    setSales((prev) => [...prev, newSale]);
+  }, []);
+
+  const addSalePayment = useCallback((saleId: string, amount: number) => {
+    setSales(prev => prev.map(s => {
+        if(s.id === saleId) {
+            const newPayment: Payment = {
+                id: new Date().toISOString(),
+                amount,
+                date: new Date(),
+            };
+            const updatedAmountReceived = s.amountReceived + amount;
+            const updatedBalance = s.totalAmount - updatedAmountReceived;
+            return {
+                ...s,
+                amountReceived: updatedAmountReceived,
+                balance: updatedBalance,
+                payments: [...s.payments, newPayment].sort((a, b) => b.date.getTime() - a.date.getTime())
+            };
+        }
+        return s;
+    }));
+  }, []);
+
 
   return (
-    <PrivateContext.Provider value={{ purchases, addPurchase, addPayment }}>
+    <PrivateContext.Provider value={{ purchases, addPurchase, addPayment, sales, addSale, addSalePayment }}>
       {children}
     </PrivateContext.Provider>
   );
