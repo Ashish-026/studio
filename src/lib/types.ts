@@ -5,7 +5,7 @@ export type User = {
 };
 
 export type TargetAllocation = {
-  id: string;
+  id:string;
   mandiName: string;
   date: Date;
   target: number;
@@ -17,6 +17,7 @@ export type PaddyLifted = {
   farmerName: string;
   totalPaddyReceived: number;
   mandiWeight: number;
+  entryType?: 'physical' | 'monetary';
 };
 
 export type PrivatePurchase = {
