@@ -81,6 +81,19 @@ export type Labourer = {
     balance: number;
 };
 
+export type Vehicle = {
+    id: string;
+    vehicleNumber: string;
+    driverName: string;
+    ownerName: string;
+    rentType: 'daily' | 'monthly' | 'per_trip';
+    rentAmount: number;
+    payments: Payment[];
+    totalRent: number;
+    totalPaid: number;
+    balance: number;
+    dateAdded: Date;
+};
 
 export type PrivateEntry = {
   id: string;

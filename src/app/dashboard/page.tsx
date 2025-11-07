@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Building, Tractor, Users } from 'lucide-react';
+import { ArrowRight, Building, Tractor, Users, Car } from 'lucide-react';
 
 const registers = [
   {
@@ -23,6 +23,13 @@ const registers = [
     description: 'Maintain records for labour and related activities.',
     href: '/dashboard/labour',
     icon: <Users className="h-8 w-8 text-primary" />,
+    enabled: true,
+  },
+  {
+    title: 'Vehicle Register',
+    description: 'Manage vehicle details and rent payments.',
+    href: '/dashboard/vehicle',
+    icon: <Car className="h-8 w-8 text-primary" />,
     enabled: true,
   },
 ];
