@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import type { PrivatePurchase } from '@/lib/types';
+import { Badge } from '../ui/badge';
 
 const formSchema = z.object({
   mandiName: z.string().min(1, 'Mandi name is required'),
@@ -43,6 +44,7 @@ export function PrivatePurchases() {
     defaultValues: {
       mandiName: '',
       farmerName: '',
+      amountPaid: 0,
       description: '',
     },
   });
@@ -69,11 +71,6 @@ export function PrivatePurchases() {
 
   function onPaymentSubmit(values: z.infer<typeof paymentSchema>) {
     if (!selectedPurchase) return;
-
-    if (values.paymentAmount > selectedPurchase.balance) {
-      paymentForm.setError('paymentAmount', { type: 'manual', message: 'Payment cannot exceed balance.' });
-      return;
-    }
 
     updatePayment(selectedPurchase.id, values.paymentAmount);
     toast({
@@ -145,7 +142,7 @@ export function PrivatePurchases() {
                             <FormItem><FormLabel>Rate per Qtl (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="2200" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={form.control} name="amountPaid" render={({ field }) => (
-                            <FormItem><FormLabel>Initial Amount Paid (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="300000" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Initial Amount Paid (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                     </div>
                      <FormField control={form.control} name="description" render={({ field }) => (
@@ -169,7 +166,7 @@ export function PrivatePurchases() {
                     <TableHead>Item</TableHead>
                     <TableHead className="text-right">Total (₹)</TableHead>
                     <TableHead className="text-right">Paid (₹)</TableHead>
-                    <TableHead className="text-right">Balance (₹)</TableHead>
+                    <TableHead className="text-right">Balance / Advance (₹)</TableHead>
                     <TableHead className="text-center">Action</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -184,9 +181,19 @@ export function PrivatePurchases() {
                         <TableCell className="capitalize">{item.itemType} ({item.quantity.toLocaleString('en-IN')} Qtl)</TableCell>
                         <TableCell className="text-right font-medium">{formatCurrency(item.totalAmount)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(item.amountPaid)}</TableCell>
-                        <TableCell className={`text-right font-semibold ${item.balance > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(item.balance)}</TableCell>
+                        <TableCell className="text-right font-semibold">
+                            {item.balance > 0 ? (
+                                <span className="text-destructive">{formatCurrency(item.balance)}</span>
+                            ) : item.balance < 0 ? (
+                                <Badge variant="secondary" className="text-green-600 border-green-600/50">
+                                    {formatCurrency(Math.abs(item.balance))} Advance
+                                </Badge>
+                            ) : (
+                                <span className="text-green-600">{formatCurrency(0)}</span>
+                            )}
+                        </TableCell>
                         <TableCell className="text-center">
-                            <Button variant="outline" size="sm" onClick={() => handleOpenPaymentDialog(item)} disabled={item.balance <= 0}>
+                            <Button variant="outline" size="sm" onClick={() => handleOpenPaymentDialog(item)}>
                                 <Wallet className="mr-2 h-4 w-4" />
                                 Pay
                             </Button>
@@ -207,7 +214,13 @@ export function PrivatePurchases() {
                 <DialogDescription>
                     Record a new payment for <span className="font-semibold">{selectedPurchase?.farmerName}</span>.
                     <br />
-                    Outstanding Balance: <span className="font-semibold">{formatCurrency(selectedPurchase?.balance || 0)}</span>
+                     {selectedPurchase && selectedPurchase.balance > 0 ? (
+                        <>Outstanding Balance: <span className="font-semibold">{formatCurrency(selectedPurchase.balance)}</span></>
+                    ) : selectedPurchase && selectedPurchase.balance < 0 ? (
+                        <>Current Advance: <span className="font-semibold">{formatCurrency(Math.abs(selectedPurchase.balance))}</span></>
+                    ) : (
+                        "This account is fully settled."
+                    )}
                 </DialogDescription>
             </DialogHeader>
             <Form {...paymentForm}>
