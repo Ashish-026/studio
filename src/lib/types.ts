@@ -115,4 +115,16 @@ export type PrivateEntry = {
 export type StockItem = {
     paddy: number;
     rice: number;
+    bran: number;
+    brokenRice: number;
 }
+
+export type ProcessingResult = {
+  id: string;
+  date: Date;
+  paddyUsed: number;
+  riceYield: number;
+  branYield: number;
+  brokenRiceYield: number;
+  yieldPercentage: number;
+};
