@@ -56,17 +56,6 @@ export type PrivateSale = {
   payments: Payment[];
 }
 
-export type ProcessingResult = {
-    id: string;
-    date: Date;
-    purchaseId: string;
-    paddyQuantity: number;
-    riceProduced: number;
-    brokenRice: number;
-    bran: number;
-    yieldPercentage: number;
-};
-
 export type LabourWorkEntry = {
   id: string;
   date: Date;
@@ -122,3 +111,8 @@ export type PrivateEntry = {
   quantityReceived: number;
   amountPaid: number;
 };
+
+export type StockItem = {
+    paddy: number;
+    rice: number;
+}

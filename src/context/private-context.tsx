@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext } from 'react';
-import type { PrivatePurchase, Payment, PrivateSale, ProcessingResult } from '@/lib/types';
+import type { PrivatePurchase, Payment, PrivateSale } from '@/lib/types';
 
 
 interface PrivateContextType {
@@ -11,8 +11,6 @@ interface PrivateContextType {
   sales: PrivateSale[];
   addSale: (item: Omit<PrivateSale, 'id' | 'date' | 'totalAmount' | 'amountReceived' | 'balance' | 'payments'> & { initialPayment: number }) => void;
   addSalePayment: (saleId: string, amount: number) => void;
-  processingResults: ProcessingResult[];
-  addProcessingResult: (result: Omit<ProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
 }
 
 const PrivateContext = createContext<PrivateContextType | null>(null);
@@ -99,23 +97,9 @@ const initialSales: PrivateSale[] = [
     }
 ];
 
-const initialProcessingResults: ProcessingResult[] = [
-    {
-        id: 'proc1',
-        date: new Date('2024-07-10'),
-        purchaseId: '1',
-        paddyQuantity: 150,
-        riceProduced: 102,
-        brokenRice: 3,
-        bran: 5,
-        yieldPercentage: 68,
-    }
-]
-
 export function PrivateProvider({ children }: { children: ReactNode }) {
   const [purchases, setPurchases] = useState<PrivatePurchase[]>(initialPurchases);
   const [sales, setSales] = useState<PrivateSale[]>(initialSales);
-  const [processingResults, setProcessingResults] = useState<ProcessingResult[]>(initialProcessingResults);
 
   const addPurchase = useCallback((item: Omit<PrivatePurchase, 'id' | 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { initialPayment: number }) => {
     const totalAmount = item.quantity * item.rate;
@@ -187,20 +171,8 @@ export function PrivateProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const addProcessingResult = useCallback((result: Omit<ProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => {
-    const yieldPercentage = (result.riceProduced / result.paddyQuantity) * 100;
-    const newResult: ProcessingResult = {
-      ...result,
-      id: new Date().toISOString(),
-      date: new Date(),
-      yieldPercentage,
-    };
-    setProcessingResults(prev => [...prev, newResult]);
-  }, []);
-
-
   return (
-    <PrivateContext.Provider value={{ purchases, addPurchase, addPayment, sales, addSale, addSalePayment, processingResults, addProcessingResult }}>
+    <PrivateContext.Provider value={{ purchases, addPurchase, addPayment, sales, addSale, addSalePayment }}>
       {children}
     </PrivateContext.Provider>
   );

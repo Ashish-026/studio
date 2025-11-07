@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Building, Tractor, Users, Car } from 'lucide-react';
+import { ArrowRight, Building, Tractor, Users, Car, Warehouse } from 'lucide-react';
 
 const registers = [
   {
@@ -32,6 +32,13 @@ const registers = [
     icon: <Car className="h-8 w-8 text-primary" />,
     enabled: true,
   },
+  {
+    title: 'Stock Register',
+    description: 'View and manage OSCSC and private stock.',
+    href: '/dashboard/stock',
+    icon: <Warehouse className="h-8 w-8 text-primary" />,
+    enabled: true,
+  }
 ];
 
 export default function DashboardPage() {
