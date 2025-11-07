@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useOSCSCData } from '@/context/oscsc-context';
-import { format } from 'date-fns';
 import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formSchema = z.object({
   mandiName: z.string().min(1, 'Mandi name is required'),
@@ -22,9 +22,14 @@ const formSchema = z.object({
 });
 
 export function PaddyLifted() {
-  const { paddyLiftedItems, addPaddyLifted } = useOSCSCData();
+  const { paddyLiftedItems, addPaddyLifted, targetAllocations } = useOSCSCData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
+
+  const uniqueMandis = useMemo(() => {
+    const mandiNames = targetAllocations.map((allocation) => allocation.mandiName);
+    return [...new Set(mandiNames)];
+  }, [targetAllocations]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,11 +57,14 @@ export function PaddyLifted() {
             <CardTitle>Paddy Lifting Records</CardTitle>
             <CardDescription>View and manage paddy lifting entries from various mandis.</CardDescription>
           </div>
-          <Button onClick={() => setShowForm(!showForm)} size="sm">
+          <Button onClick={() => setShowForm(!showForm)} size="sm" disabled={uniqueMandis.length === 0}>
             <PlusCircle className="mr-2 h-4 w-4" />
             {showForm ? 'Cancel' : 'Add Entry'}
           </Button>
         </div>
+        {uniqueMandis.length === 0 && !showForm && (
+            <p className="text-sm text-muted-foreground pt-2">Please add a target allotment before adding a paddy lifting entry.</p>
+        )}
       </CardHeader>
       <CardContent className="space-y-6">
         {showForm && (
@@ -67,9 +75,30 @@ export function PaddyLifted() {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                  <FormField control={form.control} name="mandiName" render={({ field }) => (
-                    <FormItem><FormLabel>Mandi Name</FormLabel><FormControl><Input placeholder="e.g., Bargarh Main" {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
+                  <FormField
+                    control={form.control}
+                    name="mandiName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Mandi Name</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a mandi" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {uniqueMandis.map((mandi) => (
+                              <SelectItem key={mandi} value={mandi}>
+                                {mandi}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField control={form.control} name="farmerName" render={({ field }) => (
                     <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Patel" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
