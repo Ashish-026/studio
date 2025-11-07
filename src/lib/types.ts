@@ -48,3 +48,10 @@ export type LabourRecord = {
     activity: string;
     hoursWorked: number;
 };
+
+export type PrivateEntry = {
+  id: string;
+  name: string;
+  quantityReceived: number;
+  amountPaid: number;
+};
