@@ -30,15 +30,15 @@ export type Payment = {
 
 export type PrivatePurchase = {
   id: string;
-  mandiName: string;
-  itemType: 'rice' | 'paddy';
   farmerName: string;
+  itemType: 'rice' | 'paddy';
   quantity: number;
   rate: number;
   totalAmount: number;
   amountPaid: number;
   balance: number;
   description?: string;
+  date: Date;
   payments: Payment[];
 };
 
