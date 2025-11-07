@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { usePrivateData } from '@/context/private-context';
-import { PlusCircle, Wallet, ChevronDown, ChevronUp } from 'lucide-react';
+import { PlusCircle, Wallet, ChevronDown, ChevronUp, Briefcase } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import type { PrivatePurchase } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const formSchema = z.object({
   mandiName: z.string().min(1, 'Mandi name is required'),
@@ -41,7 +41,7 @@ export function PrivatePurchases() {
   const [showForm, setShowForm] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<PrivatePurchase | null>(null);
-  const [openRow, setOpenRow] = useState<string | null>(null);
+  const [openPurchase, setOpenPurchase] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,6 +56,19 @@ export function PrivatePurchases() {
   const paymentForm = useForm<z.infer<typeof paymentSchema>>({
     resolver: zodResolver(paymentSchema),
   });
+  
+  const farmers = useMemo(() => {
+    const farmerMap = new Map<string, PrivatePurchase[]>();
+    purchases.forEach(p => {
+        const existing = farmerMap.get(p.farmerName) || [];
+        farmerMap.set(p.farmerName, [...existing, p]);
+    });
+    return Array.from(farmerMap.entries()).map(([name, purchases]) => ({
+      name,
+      purchases,
+      totalBalance: purchases.reduce((sum, p) => sum + p.balance, 0),
+    }));
+  }, [purchases]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     addPurchase(values);
@@ -65,6 +78,16 @@ export function PrivatePurchases() {
     });
     form.reset();
     setShowForm(false);
+  }
+
+  function handleAddNewPurchase(farmerName?: string) {
+    form.reset({
+        mandiName: '',
+        farmerName: farmerName || '',
+        amountPaid: 0,
+        description: '',
+    });
+    setShowForm(true);
   }
 
   function handleOpenPaymentDialog(purchase: PrivatePurchase) {
@@ -93,8 +116,8 @@ export function PrivatePurchases() {
     }).format(amount);
   }
 
-  const toggleRow = (id: string) => {
-    setOpenRow(openRow === id ? null : id);
+  const togglePurchaseRow = (id: string) => {
+    setOpenPurchase(openPurchase === id ? null : id);
   };
 
   return (
@@ -104,11 +127,11 @@ export function PrivatePurchases() {
         <div className="flex justify-between items-start">
           <div>
             <CardTitle>Private Purchase Records</CardTitle>
-            <CardDescription>View and manage paddy/rice purchases from private mandis. Click a row to see payment history.</CardDescription>
+            <CardDescription>View and manage paddy/rice purchases from private mandis, grouped by farmer.</CardDescription>
           </div>
-          <Button onClick={() => setShowForm(!showForm)} size="sm">
+          <Button onClick={() => handleAddNewPurchase()} size="sm">
             <PlusCircle className="mr-2 h-4 w-4" />
-            {showForm ? 'Cancel' : 'Add Entry'}
+            {showForm ? 'Cancel' : 'Add New Entry'}
           </Button>
         </div>
       </CardHeader>
@@ -156,7 +179,10 @@ export function PrivatePurchases() {
                      <FormField control={form.control} name="description" render={({ field }) => (
                         <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Add a short description..." {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                  <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90">Add Purchase</Button>
+                    <div className="flex gap-2">
+                        <Button type="submit" className="bg-accent hover:bg-accent/90">Add Purchase</Button>
+                        <Button type="button" variant="ghost" onClick={() => setShowForm(false)}>Cancel</Button>
+                    </div>
                 </form>
               </Form>
             </CardContent>
@@ -164,95 +190,126 @@ export function PrivatePurchases() {
         )}
 
         <div>
-            <h3 className="text-lg font-semibold mb-2">Purchase History</h3>
-            <div className="border rounded-lg">
-                <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[50px]"></TableHead>
-                        <TableHead>Farmer</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Item</TableHead>
-                        <TableHead className="text-right">Total (₹)</TableHead>
-                        <TableHead className="text-right">Paid (₹)</TableHead>
-                        <TableHead className="text-right">Balance / Advance (₹)</TableHead>
-                        <TableHead className="text-center">Action</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {purchases.length === 0 && (
-                        <TableRow><TableCell colSpan={8} className="text-center">No purchases recorded yet.</TableCell></TableRow>
-                    )}
-                    {purchases.map((item) => (
-                    <Collapsible asChild key={item.id} open={openRow === item.id} onOpenChange={() => toggleRow(item.id)}>
-                        <>
-                        <TableRow className="cursor-pointer" onClick={() => toggleRow(item.id)}>
-                            <TableCell>
-                                <CollapsibleTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="w-9 p-0">
-                                        {openRow === item.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                        <span className="sr-only">Toggle</span>
-                                    </Button>
-                                </CollapsibleTrigger>
-                            </TableCell>
-                            <TableCell className="font-medium">{item.farmerName}<br/><span className="text-xs text-muted-foreground">{item.mandiName}</span></TableCell>
-                            <TableCell className="max-w-[200px] truncate">{item.description || '-'}</TableCell>
-                            <TableCell className="capitalize">{item.itemType} ({item.quantity.toLocaleString('en-IN')} Qtl)</TableCell>
-                            <TableCell className="text-right font-medium">{formatCurrency(item.totalAmount)}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(item.amountPaid)}</TableCell>
-                            <TableCell className="text-right font-semibold">
-                                {item.balance > 0 ? (
-                                    <span className="text-destructive">{formatCurrency(item.balance)}</span>
-                                ) : item.balance < 0 ? (
-                                    <Badge variant="secondary" className="text-green-600 border-green-600/50">
-                                        {formatCurrency(Math.abs(item.balance))} Advance
-                                    </Badge>
-                                ) : (
-                                    <span className="text-green-600">{formatCurrency(0)}</span>
-                                )}
-                            </TableCell>
-                            <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                                <Button variant="outline" size="sm" onClick={() => handleOpenPaymentDialog(item)}>
-                                    <Wallet className="mr-2 h-4 w-4" />
-                                    Pay
-                                </Button>
-                            </TableCell>
-                        </TableRow>
-                        <CollapsibleContent asChild>
-                           <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                <TableCell colSpan={8} className="p-0">
-                                    <div className="p-4">
-                                        <h4 className="font-semibold mb-2">Payment History for {item.farmerName}</h4>
-                                        {item.payments.length > 0 ? (
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Date</TableHead>
-                                                        <TableHead className="text-right">Amount Paid (₹)</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {item.payments.map(payment => (
-                                                        <TableRow key={payment.id}>
-                                                            <TableCell>{format(payment.date, 'dd MMM yyyy, p')}</TableCell>
-                                                            <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground text-center py-2">No payments recorded yet.</p>
-                                        )}
-                                    </div>
-                                </TableCell>
+            <h3 className="text-lg font-semibold mb-2">Farmer Accounts</h3>
+             {farmers.length === 0 && !showForm && (
+                <p className="text-center text-muted-foreground py-4">No purchases recorded yet.</p>
+            )}
+            <Accordion type="single" collapsible className="w-full">
+              {farmers.map(farmer => (
+                <AccordionItem value={farmer.name} key={farmer.name}>
+                  <AccordionTrigger>
+                    <div className="flex justify-between w-full pr-4">
+                        <div className="flex items-center gap-2">
+                            <Briefcase className="h-5 w-5 text-primary" />
+                            <span className="font-semibold text-lg">{farmer.name}</span>
+                        </div>
+                        <div className='text-right'>
+                            <div className="text-sm">Total Balance</div>
+                             {farmer.totalBalance > 0 ? (
+                                <span className="text-destructive font-semibold">{formatCurrency(farmer.totalBalance)}</span>
+                            ) : farmer.totalBalance < 0 ? (
+                                <Badge variant="secondary" className="text-green-600 border-green-600/50 font-semibold">
+                                    {formatCurrency(Math.abs(farmer.totalBalance))} Advance
+                                </Badge>
+                            ) : (
+                                <span className="text-green-600 font-semibold">{formatCurrency(0)}</span>
+                            )}
+                        </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="p-2 bg-muted/30">
+                    <div className="flex justify-end mb-2">
+                        <Button size="sm" variant="outline" onClick={() => handleAddNewPurchase(farmer.name)}>
+                            <PlusCircle className="h-4 w-4 mr-2" /> Add New Purchase for {farmer.name}
+                        </Button>
+                    </div>
+                    <div className="border rounded-lg">
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-[50px]"></TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead>Item</TableHead>
+                                <TableHead className="text-right">Total (₹)</TableHead>
+                                <TableHead className="text-right">Paid (₹)</TableHead>
+                                <TableHead className="text-right">Balance / Advance (₹)</TableHead>
+                                <TableHead className="text-center">Action</TableHead>
                             </TableRow>
-                        </CollapsibleContent>
-                        </>
-                    </Collapsible>
-                    ))}
-                </TableBody>
-                </Table>
-            </div>
+                        </TableHeader>
+                        <TableBody>
+                            {farmer.purchases.map((item) => (
+                            <Collapsible asChild key={item.id} open={openPurchase === item.id} onOpenChange={() => togglePurchaseRow(item.id)}>
+                                <>
+                                <TableRow className="cursor-pointer bg-background" onClick={() => togglePurchaseRow(item.id)}>
+                                    <TableCell>
+                                        <CollapsibleTrigger asChild>
+                                            <Button variant="ghost" size="sm" className="w-9 p-0">
+                                                {openPurchase === item.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                <span className="sr-only">Toggle</span>
+                                            </Button>
+                                        </CollapsibleTrigger>
+                                    </TableCell>
+                                    <TableCell className="max-w-[200px] truncate">{item.description || '-'}<br/><span className="text-xs text-muted-foreground">{item.mandiName}</span></TableCell>
+                                    <TableCell className="capitalize">{item.itemType} ({item.quantity.toLocaleString('en-IN')} Qtl)</TableCell>
+                                    <TableCell className="text-right font-medium">{formatCurrency(item.totalAmount)}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(item.amountPaid)}</TableCell>
+                                    <TableCell className="text-right font-semibold">
+                                        {item.balance > 0 ? (
+                                            <span className="text-destructive">{formatCurrency(item.balance)}</span>
+                                        ) : item.balance < 0 ? (
+                                            <Badge variant="secondary" className="text-green-600 border-green-600/50">
+                                                {formatCurrency(Math.abs(item.balance))} Advance
+                                            </Badge>
+                                        ) : (
+                                            <span className="text-green-600">{formatCurrency(0)}</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                                        <Button variant="outline" size="sm" onClick={() => handleOpenPaymentDialog(item)}>
+                                            <Wallet className="mr-2 h-4 w-4" />
+                                            Pay
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                                <CollapsibleContent asChild>
+                                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                        <TableCell colSpan={7} className="p-0">
+                                            <div className="p-4">
+                                                <h4 className="font-semibold mb-2">Payment History for Purchase on {format(item.payments[0]?.date || new Date(), 'dd MMM yyyy')}</h4>
+                                                {item.payments.length > 0 ? (
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>Date</TableHead>
+                                                                <TableHead className="text-right">Amount Paid (₹)</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {item.payments.map(payment => (
+                                                                <TableRow key={payment.id}>
+                                                                    <TableCell>{format(payment.date, 'dd MMM yyyy, p')}</TableCell>
+                                                                    <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                ) : (
+                                                    <p className="text-sm text-muted-foreground text-center py-2">No payments recorded for this purchase yet.</p>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                </CollapsibleContent>
+                                </>
+                            </Collapsible>
+                            ))}
+                        </TableBody>
+                        </Table>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
         </div>
       </CardContent>
     </Card>
@@ -265,11 +322,11 @@ export function PrivatePurchases() {
                     Record a new payment for <span className="font-semibold">{selectedPurchase?.farmerName}</span>.
                     <br />
                      {selectedPurchase && selectedPurchase.balance > 0 ? (
-                        <>Outstanding Balance: <span className="font-semibold">{formatCurrency(selectedPurchase.balance)}</span></>
+                        <>Outstanding Balance for this purchase: <span className="font-semibold">{formatCurrency(selectedPurchase.balance)}</span></>
                     ) : selectedPurchase && selectedPurchase.balance < 0 ? (
-                        <>Current Advance: <span className="font-semibold">{formatCurrency(Math.abs(selectedPurchase.balance))}</span></>
+                        <>Current Advance on this purchase: <span className="font-semibold">{formatCurrency(Math.abs(selectedPurchase.balance))}</span></>
                     ) : (
-                        "This account is fully settled."
+                        "This purchase is fully settled."
                     )}
                 </DialogDescription>
             </DialogHeader>
