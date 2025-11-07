@@ -4,6 +4,7 @@ import { PrivatePurchases } from './private-purchases';
 import { PrivateSales } from './private-sales';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PrivateSummaryCards } from './private-summary-cards';
+import { PrivateProcessing } from './private-processing';
 
 
 export function PrivateDashboard() {
@@ -14,12 +15,16 @@ export function PrivateDashboard() {
         <TabsList>
           <TabsTrigger value="purchases">Purchases</TabsTrigger>
           <TabsTrigger value="sales">Sales</TabsTrigger>
+          <TabsTrigger value="processing">Processing</TabsTrigger>
         </TabsList>
         <TabsContent value="purchases" className="space-y-4">
           <PrivatePurchases />
         </TabsContent>
         <TabsContent value="sales" className="space-y-4">
           <PrivateSales />
+        </TabsContent>
+        <TabsContent value="processing" className="space-y-4">
+          <PrivateProcessing />
         </TabsContent>
       </Tabs>
     </div>
