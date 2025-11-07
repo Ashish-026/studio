@@ -17,6 +17,8 @@ export type PaddyLifted = {
   farmerName: string;
   totalPaddyReceived: number;
   mandiWeight: number;
+  moneyReceived?: number;
+  ratePerQuintal?: number;
   entryType?: 'physical' | 'monetary';
 };
 

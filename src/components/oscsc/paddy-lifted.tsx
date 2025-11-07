@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 const physicalFormSchema = z.object({
   mandiName: z.string().min(1, 'Mandi name is required'),
@@ -42,6 +43,14 @@ export function PaddyLifted() {
     const mandiNames = targetAllocations.map((allocation) => allocation.mandiName);
     return [...new Set(mandiNames)];
   }, [targetAllocations]);
+  
+  const physicalEntries = useMemo(() => 
+    paddyLiftedItems.filter(item => item.entryType === 'physical' || !item.entryType), 
+  [paddyLiftedItems]);
+
+  const monetaryEntries = useMemo(() => 
+    paddyLiftedItems.filter(item => item.entryType === 'monetary'), 
+  [paddyLiftedItems]);
 
   const physicalForm = useForm<z.infer<typeof physicalFormSchema>>({
     resolver: zodResolver(physicalFormSchema),
@@ -67,9 +76,11 @@ export function PaddyLifted() {
     const equivalentQuintal = values.moneyReceived / values.ratePerQuintal;
     addPaddyLifted({
       mandiName: values.mandiName,
-      farmerName: `Monetary Entry (₹${values.moneyReceived.toLocaleString('en-IN')})`,
+      farmerName: `Monetary Entry`,
+      moneyReceived: values.moneyReceived,
+      ratePerQuintal: values.ratePerQuintal,
       totalPaddyReceived: equivalentQuintal,
-      mandiWeight: equivalentQuintal, // Assuming mandi weight is same as received for this entry type
+      mandiWeight: 0, 
       entryType: 'monetary',
     });
     toast({
@@ -198,39 +209,67 @@ export function PaddyLifted() {
             </Card>
         )}
 
-        <div>
-            <h3 className="text-lg font-semibold mb-2">Lifting History</h3>
-            <div className="border rounded-lg">
-                <Table>
-                <TableHeader>
-                    <TableRow>
-                    <TableHead>Mandi Name</TableHead>
-                    <TableHead>Farmer/Entry Details</TableHead>
-                    <TableHead>Paddy Received (Qtl)</TableHead>
-                    <TableHead>Mandi Weight (Qtl)</TableHead>
-                    <TableHead className="text-right">Entry Type</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {paddyLiftedItems.length === 0 && (
-                        <TableRow><TableCell colSpan={5} className="text-center">No paddy lifted yet.</TableCell></TableRow>
-                    )}
-                    {paddyLiftedItems.map((item) => (
-                    <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.mandiName}</TableCell>
-                        <TableCell>{item.farmerName}</TableCell>
-                        <TableCell>{item.totalPaddyReceived.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
-                        <TableCell>{item.mandiWeight.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={item.entryType === 'monetary' ? 'secondary' : 'outline'} className="capitalize">
-                            {item.entryType || 'physical'}
-                          </Badge>
-                        </TableCell>
-                    </TableRow>
-                    ))}
-                </TableBody>
-                </Table>
+        <div className="space-y-6">
+            <div>
+                <h3 className="text-lg font-semibold mb-2">Physical Lifting History</h3>
+                <div className="border rounded-lg">
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>Mandi Name</TableHead>
+                        <TableHead>Farmer Name</TableHead>
+                        <TableHead>Paddy Received (Qtl)</TableHead>
+                        <TableHead className="text-right">Mandi Weight (Qtl)</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {physicalEntries.length === 0 && (
+                            <TableRow><TableCell colSpan={4} className="text-center">No physical paddy lifted yet.</TableCell></TableRow>
+                        )}
+                        {physicalEntries.map((item) => (
+                        <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.mandiName}</TableCell>
+                            <TableCell>{item.farmerName}</TableCell>
+                            <TableCell>{item.totalPaddyReceived.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell className="text-right">{item.mandiWeight.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
+                        </TableRow>
+                        ))}
+                    </TableBody>
+                    </Table>
+                </div>
             </div>
+
+            {isAdmin && (
+            <div>
+                <Separator className="my-6" />
+                <h3 className="text-lg font-semibold mb-2">Monetary Lifting History</h3>
+                <div className="border rounded-lg">
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>Mandi Name</TableHead>
+                        <TableHead>Money Received (₹)</TableHead>
+                        <TableHead>Rate per Quintal (₹)</TableHead>
+                        <TableHead className="text-right">Equivalent Paddy (Qtl)</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {monetaryEntries.length === 0 && (
+                            <TableRow><TableCell colSpan={4} className="text-center">No monetary entries recorded yet.</TableCell></TableRow>
+                        )}
+                        {monetaryEntries.map((item) => (
+                        <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.mandiName}</TableCell>
+                            <TableCell>₹{item.moneyReceived?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell>₹{item.ratePerQuintal?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell className="text-right font-medium">{item.totalPaddyReceived.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
+                        </TableRow>
+                        ))}
+                    </TableBody>
+                    </Table>
+                </div>
+            </div>
+            )}
         </div>
       </CardContent>
     </Card>

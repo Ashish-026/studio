@@ -10,9 +10,17 @@ export function SummaryCards() {
 
   const summary = useMemo(() => {
     const targetAllotted = targetAllocations.reduce((acc, item) => acc + item.target, 0);
-    const physicalPaddyLifted = paddyLiftedItems.reduce((acc, item) => acc + item.totalPaddyReceived, 0);
-    const balanceToBeLifted = targetAllotted - physicalPaddyLifted;
-    const nonPhysicallyLifted = 0; // As per prompt, logic undefined.
+    
+    const physicalPaddyLifted = paddyLiftedItems
+      .filter(item => item.entryType === 'physical' || !item.entryType)
+      .reduce((acc, item) => acc + item.totalPaddyReceived, 0);
+
+    const nonPhysicallyLifted = paddyLiftedItems
+      .filter(item => item.entryType === 'monetary')
+      .reduce((acc, item) => acc + item.totalPaddyReceived, 0);
+      
+    const totalPaddyLifted = physicalPaddyLifted + nonPhysicallyLifted;
+    const balanceToBeLifted = targetAllotted - totalPaddyLifted;
 
     return {
       targetAllotted,
@@ -58,12 +66,12 @@ export function SummaryCards() {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Non-Physically Lifted</CardTitle>
+          <CardTitle className="text-sm font-medium">Monetary Paddy Lifted (Quintals)</CardTitle>
           <Warehouse className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatNumber(summary.nonPhysicallyLifted)}</div>
-          <p className="text-xs text-muted-foreground">Adjustments and non-physical entries.</p>
+          <p className="text-xs text-muted-foreground">Paddy equivalent from monetary entries.</p>
         </CardContent>
       </Card>
     </div>
