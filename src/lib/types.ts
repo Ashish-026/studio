@@ -32,6 +32,7 @@ export type PrivatePurchase = {
   totalAmount: number;
   amountPaid: number;
   balance: number;
+  description?: string;
 };
 
 export type LabourRecord = {
