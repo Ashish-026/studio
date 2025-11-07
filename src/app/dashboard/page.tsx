@@ -12,9 +12,9 @@ const registers = [
     enabled: true,
   },
   {
-    title: 'Private Register',
-    description: 'Track paddy lifting from private mandis.',
-    href: '/dashboard/private',
+    title: 'OSCSC Register',
+    description: 'Track paddy lifting from OSCSC mandis.',
+    href: '/dashboard/oscsc',
     icon: <Building className="h-8 w-8 text-primary" />,
     enabled: true,
   },
@@ -34,7 +34,7 @@ const registers = [
   },
   {
     title: 'Stock Register',
-    description: 'View and manage OSCSC and private stock.',
+    description: 'Manage purchases, sales, processing, and view stock.',
     href: '/dashboard/stock',
     icon: <Warehouse className="h-8 w-8 text-primary" />,
     enabled: true,

@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { usePrivateData } from '@/context/private-context';
+import { useStockData } from '@/context/stock-context';
 import { PlusCircle, ChevronDown, ChevronRight, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,16 +14,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 
 const saleFormSchema = z.object({
+  source: z.enum(['oscsc', 'private'], { required_error: 'Stock source is required' }),
   customerName: z.string().min(1, 'Customer name is required'),
   itemType: z.enum(['paddy', 'rice']),
-  quantity: z.coerce.number().positive('Quantity must be a positive number'),
-  rate: z.coerce.number().positive('Rate must be a positive number'),
-  initialPayment: z.coerce.number().min(0, 'Initial payment cannot be negative'),
+  quantity: z.coerce.number().positive('Quantity must be positive'),
+  rate: z.coerce.number().positive('Rate must be positive'),
+  initialPayment: z.coerce.number().min(0, 'Initial payment cannot be negative').default(0),
   description: z.string().optional(),
 });
 
@@ -32,7 +33,7 @@ const paymentFormSchema = z.object({
 });
 
 export function PrivateSales() {
-  const { sales, addSale, addSalePayment } = usePrivateData();
+  const { sales, addSale, addSalePayment, oscscStock, privateStock } = useStockData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [openCustomerCollapsibles, setOpenCustomerCollapsibles] = useState<Record<string, boolean>>({});
@@ -68,6 +69,14 @@ export function PrivateSales() {
   }, [sales]);
 
   function onSaleSubmit(values: z.infer<typeof saleFormSchema>) {
+    const stockSource = values.source === 'oscsc' ? oscscStock : privateStock;
+    const stockAvailable = values.itemType === 'paddy' ? stockSource.paddy : stockSource.rice;
+    
+    if (values.quantity > stockAvailable) {
+        saleForm.setError('quantity', { message: `Exceeds available stock of ${stockAvailable.toLocaleString()} Qtl` });
+        return;
+    }
+
     addSale(values);
     toast({
       title: 'Success!',
@@ -127,6 +136,9 @@ export function PrivateSales() {
               <CardContent>
                 <Form {...saleForm}>
                   <form onSubmit={saleForm.handleSubmit(onSaleSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+                    <FormField control={saleForm.control} name="source" render={({ field }) => (
+                        <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="oscsc">OSCSC</SelectItem><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                    )} />
                     <FormField control={saleForm.control} name="customerName" render={({ field }) => (
                       <FormItem><FormLabel>Customer Name</FormLabel><FormControl><Input placeholder="e.g., Local Mill Corp" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
@@ -188,6 +200,7 @@ export function PrivateSales() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Date</TableHead>
+                                            <TableHead>Source</TableHead>
                                             <TableHead>Type</TableHead>
                                             <TableHead>Description</TableHead>
                                             <TableHead className="text-right">Qty (Qtl)</TableHead>
@@ -204,6 +217,7 @@ export function PrivateSales() {
                                                 <>
                                                     <TableRow>
                                                         <TableCell>{format(s.date, 'dd MMM yyyy')}</TableCell>
+                                                        <TableCell className="capitalize">{s.source}</TableCell>
                                                         <TableCell className="capitalize">{s.itemType}</TableCell>
                                                         <TableCell className="max-w-[200px] truncate">{s.description || '-'}</TableCell>
                                                         <TableCell className="text-right">{s.quantity.toLocaleString('en-IN')}</TableCell>
@@ -224,7 +238,7 @@ export function PrivateSales() {
                                                     </TableRow>
                                                     <CollapsibleContent asChild>
                                                         <tr className="bg-muted/50">
-                                                            <TableCell colSpan={9} className="p-0">
+                                                            <TableCell colSpan={10} className="p-0">
                                                                 <div className="p-4">
                                                                     <h4 className="font-semibold mb-2">Payment History</h4>
                                                                     {s.payments.length > 0 ? (

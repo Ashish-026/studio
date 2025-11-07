@@ -1,13 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { usePrivateData } from '@/context/private-context';
+import { useStockData } from '@/context/stock-context';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowDown, ArrowUp, Banknote, Scale } from 'lucide-react';
 
 export function PrivateSummaryCards() {
-  const { purchases, sales } = usePrivateData();
+  const { purchases, sales } = useStockData();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 

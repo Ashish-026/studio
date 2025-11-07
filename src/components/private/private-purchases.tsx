@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { usePrivateData } from '@/context/private-context';
+import { useStockData } from '@/context/stock-context';
 import { PlusCircle, ChevronDown, ChevronRight, Receipt } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ const paymentFormSchema = z.object({
 });
 
 export function PrivatePurchases() {
-  const { purchases, addPurchase, addPayment } = usePrivateData();
+  const { purchases, addPurchase, addPayment } = useStockData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [openFarmerCollapsibles, setOpenFarmerCollapsibles] = useState<Record<string, boolean>>({});
