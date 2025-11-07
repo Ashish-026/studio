@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { AppHeader } from '@/components/dashboard/header';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MandiProvider } from '@/context/mandi-context';
 
 export default function DashboardLayout({
   children,
@@ -41,7 +42,11 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen w-full flex-col">
       <AppHeader />
-      <main className="flex flex-1 flex-col">{children}</main>
+      <main className="flex flex-1 flex-col">
+        <MandiProvider>
+            {children}
+        </MandiProvider>
+      </main>
     </div>
   );
 }

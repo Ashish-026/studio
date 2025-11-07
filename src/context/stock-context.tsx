@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, ReactNode, useMemo, useState, useCallback } from 'react';
-import type { StockItem, ProcessingResult, PrivatePurchase, Payment, PrivateSale } from '@/lib/types';
+import type { StockItem, ProcessingResult, PrivatePurchase, Payment, PrivateSale, MandiProcessingResult } from '@/lib/types';
 
 interface StockContextType {
   privateStock: StockItem;
@@ -116,7 +116,7 @@ const initialSales: PrivateSale[] = [
 ];
 
 
-export function StockProvider({ children }: { children: ReactNode }) {
+export function StockProvider({ children, mandiProcessingHistory }: { children: ReactNode, mandiProcessingHistory?: MandiProcessingResult[] }) {
   const [purchases, setPurchases] = useState<PrivatePurchase[]>(initialPurchases);
   const [sales, setSales] = useState<PrivateSale[]>(initialSales);
   const [processingHistory, setProcessingHistory] = useState<ProcessingResult[]>(initialProcessingHistory);
@@ -162,13 +162,16 @@ export function StockProvider({ children }: { children: ReactNode }) {
   }, [purchases, sales, processedPaddyBySource, processedYieldsBySource]);
   
   const totalStock = useMemo<StockItem>(() => {
+    const mandiBran = mandiProcessingHistory?.reduce((acc, item) => acc + item.branYield, 0) || 0;
+    const mandiBrokenRice = mandiProcessingHistory?.reduce((acc, item) => acc + item.brokenRiceYield, 0) || 0;
+    
     return {
       paddy: privateStock.paddy,
       rice: privateStock.rice,
-      bran: privateStock.bran,
-      brokenRice: privateStock.brokenRice,
+      bran: privateStock.bran + mandiBran,
+      brokenRice: privateStock.brokenRice + mandiBrokenRice,
     };
-  }, [privateStock]);
+  }, [privateStock, mandiProcessingHistory]);
 
   const addProcessingResult = useCallback((result: Omit<ProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => {
     const newResult: ProcessingResult = {

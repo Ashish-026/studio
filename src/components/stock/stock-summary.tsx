@@ -3,7 +3,7 @@
 import { useStockData } from '@/context/stock-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Warehouse, Wheat, Sprout, Package } from 'lucide-react';
+import { Wheat, Sprout, Package } from 'lucide-react';
 import { PrivateSummaryCards } from '../private/private-summary-cards';
 
 export function StockSummary() {
@@ -42,7 +42,7 @@ export function StockSummary() {
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{formatNumber(totalStock.bran)} Qtl</div>
-                <p className="text-xs text-muted-foreground">From processing.</p>
+                <p className="text-xs text-muted-foreground">From all processing sources.</p>
             </CardContent>
             </Card>
             <Card>
@@ -52,7 +52,7 @@ export function StockSummary() {
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{formatNumber(totalStock.brokenRice)} Qtl</div>
-                <p className="text-xs text-muted-foreground">From processing.</p>
+                <p className="text-xs text-muted-foreground">From all processing sources.</p>
             </CardContent>
             </Card>
         </div>
