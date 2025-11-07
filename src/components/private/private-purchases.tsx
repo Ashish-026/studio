@@ -199,7 +199,7 @@ export function PrivatePurchases() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {farmer.purchases.map(p => (
+                                        {farmer.purchases.map((p: any) => (
                                              <Collapsible key={p.id} asChild>
                                                 <>
                                                     <TableRow>
@@ -231,7 +231,7 @@ export function PrivatePurchases() {
                                                                         <Table>
                                                                             <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
                                                                             <TableBody>
-                                                                                {p.payments.map((payment: any) => (
+                                                                                {[...p.payments].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((payment: any) => (
                                                                                     <TableRow key={payment.id}>
                                                                                         <TableCell>{format(payment.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
                                                                                         <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
