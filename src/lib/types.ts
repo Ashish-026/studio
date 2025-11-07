@@ -64,8 +64,7 @@ export type LabourRecord = {
   wage: number;
   // Daily wage fields
   activity?: string;
-  hoursWorked?: number;
-  dailyRate?: number; // Rate for a full day (e.g., 8 hours)
+  dailyRate?: number; // Rate for a full day
   // Item rate fields
   itemName?: string;
   quantity?: number;

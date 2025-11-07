@@ -18,7 +18,6 @@ import { format } from 'date-fns';
 const dailyFormSchema = z.object({
   name: z.string().min(1, "Labourer's name is required"),
   activity: z.string().min(1, 'Activity is required'),
-  hoursWorked: z.coerce.number().positive('Must be a positive number'),
   dailyRate: z.coerce.number().positive('Daily rate must be positive'),
 });
 
@@ -99,18 +98,15 @@ export function LabourRecords() {
                     </TabsList>
                     <TabsContent value="daily" className="pt-4">
                         <Form {...dailyForm}>
-                            <form onSubmit={dailyForm.handleSubmit(onDailySubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                            <form onSubmit={dailyForm.handleSubmit(onDailySubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                                 <FormField control={dailyForm.control} name="name" render={({ field }) => (
                                     <FormItem><FormLabel>Labourer Name</FormLabel><FormControl><Input placeholder="e.g., Manoj Kumar" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={dailyForm.control} name="activity" render={({ field }) => (
                                     <FormItem><FormLabel>Activity</FormLabel><FormControl><Input placeholder="e.g., Loading, Cleaning" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
-                                <FormField control={dailyForm.control} name="hoursWorked" render={({ field }) => (
-                                    <FormItem><FormLabel>Hours Worked</FormLabel><FormControl><Input type="number" step="0.5" placeholder="8" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
                                 <FormField control={dailyForm.control} name="dailyRate" render={({ field }) => (
-                                    <FormItem><FormLabel>Daily Rate (for 8 hrs)</FormLabel><FormControl><Input type="number" step="10" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormLabel>Daily Rate</FormLabel><FormControl><Input type="number" step="10" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <Button type="submit" className="w-full md:w-auto md:col-span-full bg-accent hover:bg-accent/90">Add Daily Record</Button>
                             </form>
@@ -164,7 +160,7 @@ export function LabourRecords() {
                         <TableCell className="capitalize">{item.entryType.replace('_', ' ')}</TableCell>
                         <TableCell>
                             {item.entryType === 'daily' 
-                                ? `${item.activity} - ${item.hoursWorked} hrs @ ${formatCurrency(item.dailyRate!)}/day`
+                                ? `${item.activity} @ ${formatCurrency(item.dailyRate!)}/day`
                                 : `${item.quantity} x ${item.itemName} @ ${formatCurrency(item.ratePerItem!)}/item`
                             }
                         </TableCell>
