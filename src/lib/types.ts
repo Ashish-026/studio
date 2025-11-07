@@ -57,11 +57,21 @@ export type PrivateSale = {
 }
 
 export type LabourRecord = {
-    id: string;
-    name: string;
-    activity: string;
-    hoursWorked: number;
+  id: string;
+  name: string;
+  date: Date;
+  entryType: 'daily' | 'item_rate';
+  wage: number;
+  // Daily wage fields
+  activity?: string;
+  hoursWorked?: number;
+  dailyRate?: number; // Rate for a full day (e.g., 8 hours)
+  // Item rate fields
+  itemName?: string;
+  quantity?: number;
+  ratePerItem?: number;
 };
+
 
 export type PrivateEntry = {
   id: string;
