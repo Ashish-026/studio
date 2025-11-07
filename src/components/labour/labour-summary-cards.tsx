@@ -2,11 +2,14 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLabourData } from '@/context/labour-context';
+import { useAuth } from '@/hooks/use-auth';
 import { Banknote, Users, Scale } from 'lucide-react';
 import { useMemo } from 'react';
 
 export function LabourSummaryCards() {
   const { labourers } = useLabourData();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const summary = useMemo(() => {
     const totalWages = labourers.reduce((acc, item) => acc + item.totalWages, 0);
@@ -23,6 +26,10 @@ export function LabourSummaryCards() {
   }, [labourers]);
 
   const formatCurrency = (num: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(num);
+
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
