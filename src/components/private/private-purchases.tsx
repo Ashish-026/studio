@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { usePrivateData } from '@/context/private-context';
-import { PlusCircle, Wallet } from 'lucide-react';
+import { PlusCircle, Wallet, ChevronDown, ChevronUp } from 'lucide-react';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import type { PrivatePurchase } from '@/lib/types';
 import { Badge } from '../ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
   mandiName: z.string().min(1, 'Mandi name is required'),
@@ -33,11 +36,12 @@ const paymentSchema = z.object({
 });
 
 export function PrivatePurchases() {
-  const { purchases, addPurchase, updatePayment } = usePrivateData();
+  const { purchases, addPurchase, addPayment } = usePrivateData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<PrivatePurchase | null>(null);
+  const [openRow, setOpenRow] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -72,7 +76,7 @@ export function PrivatePurchases() {
   function onPaymentSubmit(values: z.infer<typeof paymentSchema>) {
     if (!selectedPurchase) return;
 
-    updatePayment(selectedPurchase.id, values.paymentAmount);
+    addPayment(selectedPurchase.id, values.paymentAmount);
     toast({
       title: 'Payment Added',
       description: `Payment of ${formatCurrency(values.paymentAmount)} for ${selectedPurchase.farmerName} has been recorded.`,
@@ -89,6 +93,10 @@ export function PrivatePurchases() {
     }).format(amount);
   }
 
+  const toggleRow = (id: string) => {
+    setOpenRow(openRow === id ? null : id);
+  };
+
   return (
     <>
     <Card>
@@ -96,7 +104,7 @@ export function PrivatePurchases() {
         <div className="flex justify-between items-start">
           <div>
             <CardTitle>Private Purchase Records</CardTitle>
-            <CardDescription>View and manage paddy/rice purchases from private mandis.</CardDescription>
+            <CardDescription>View and manage paddy/rice purchases from private mandis. Click a row to see payment history.</CardDescription>
           </div>
           <Button onClick={() => setShowForm(!showForm)} size="sm">
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -161,13 +169,14 @@ export function PrivatePurchases() {
                 <Table>
                 <TableHeader>
                     <TableRow>
-                    <TableHead>Farmer</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="text-right">Total (₹)</TableHead>
-                    <TableHead className="text-right">Paid (₹)</TableHead>
-                    <TableHead className="text-right">Balance / Advance (₹)</TableHead>
-                    <TableHead className="text-center">Action</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead>Farmer</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="text-right">Total (₹)</TableHead>
+                        <TableHead className="text-right">Paid (₹)</TableHead>
+                        <TableHead className="text-right">Balance / Advance (₹)</TableHead>
+                        <TableHead className="text-center">Action</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -175,30 +184,71 @@ export function PrivatePurchases() {
                         <TableRow><TableCell colSpan={8} className="text-center">No purchases recorded yet.</TableCell></TableRow>
                     )}
                     {purchases.map((item) => (
-                    <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.farmerName}<br/><span className="text-xs text-muted-foreground">{item.mandiName}</span></TableCell>
-                        <TableCell className="max-w-[200px] truncate">{item.description || '-'}</TableCell>
-                        <TableCell className="capitalize">{item.itemType} ({item.quantity.toLocaleString('en-IN')} Qtl)</TableCell>
-                        <TableCell className="text-right font-medium">{formatCurrency(item.totalAmount)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(item.amountPaid)}</TableCell>
-                        <TableCell className="text-right font-semibold">
-                            {item.balance > 0 ? (
-                                <span className="text-destructive">{formatCurrency(item.balance)}</span>
-                            ) : item.balance < 0 ? (
-                                <Badge variant="secondary" className="text-green-600 border-green-600/50">
-                                    {formatCurrency(Math.abs(item.balance))} Advance
-                                </Badge>
-                            ) : (
-                                <span className="text-green-600">{formatCurrency(0)}</span>
-                            )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                            <Button variant="outline" size="sm" onClick={() => handleOpenPaymentDialog(item)}>
-                                <Wallet className="mr-2 h-4 w-4" />
-                                Pay
-                            </Button>
-                        </TableCell>
-                    </TableRow>
+                    <Collapsible asChild key={item.id} open={openRow === item.id} onOpenChange={() => toggleRow(item.id)}>
+                        <>
+                        <TableRow className="cursor-pointer" onClick={() => toggleRow(item.id)}>
+                            <TableCell>
+                                <CollapsibleTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="w-9 p-0">
+                                        {openRow === item.id ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                        <span className="sr-only">Toggle</span>
+                                    </Button>
+                                </CollapsibleTrigger>
+                            </TableCell>
+                            <TableCell className="font-medium">{item.farmerName}<br/><span className="text-xs text-muted-foreground">{item.mandiName}</span></TableCell>
+                            <TableCell className="max-w-[200px] truncate">{item.description || '-'}</TableCell>
+                            <TableCell className="capitalize">{item.itemType} ({item.quantity.toLocaleString('en-IN')} Qtl)</TableCell>
+                            <TableCell className="text-right font-medium">{formatCurrency(item.totalAmount)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(item.amountPaid)}</TableCell>
+                            <TableCell className="text-right font-semibold">
+                                {item.balance > 0 ? (
+                                    <span className="text-destructive">{formatCurrency(item.balance)}</span>
+                                ) : item.balance < 0 ? (
+                                    <Badge variant="secondary" className="text-green-600 border-green-600/50">
+                                        {formatCurrency(Math.abs(item.balance))} Advance
+                                    </Badge>
+                                ) : (
+                                    <span className="text-green-600">{formatCurrency(0)}</span>
+                                )}
+                            </TableCell>
+                            <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                                <Button variant="outline" size="sm" onClick={() => handleOpenPaymentDialog(item)}>
+                                    <Wallet className="mr-2 h-4 w-4" />
+                                    Pay
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                        <CollapsibleContent asChild>
+                           <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                <TableCell colSpan={8} className="p-0">
+                                    <div className="p-4">
+                                        <h4 className="font-semibold mb-2">Payment History for {item.farmerName}</h4>
+                                        {item.payments.length > 0 ? (
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Date</TableHead>
+                                                        <TableHead className="text-right">Amount Paid (₹)</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {item.payments.map(payment => (
+                                                        <TableRow key={payment.id}>
+                                                            <TableCell>{format(payment.date, 'dd MMM yyyy, p')}</TableCell>
+                                                            <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground text-center py-2">No payments recorded yet.</p>
+                                        )}
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        </CollapsibleContent>
+                        </>
+                    </Collapsible>
                     ))}
                 </TableBody>
                 </Table>

@@ -22,6 +22,12 @@ export type PaddyLifted = {
   entryType?: 'physical' | 'monetary';
 };
 
+export type Payment = {
+  id: string;
+  amount: number;
+  date: Date;
+};
+
 export type PrivatePurchase = {
   id: string;
   mandiName: string;
@@ -33,6 +39,7 @@ export type PrivatePurchase = {
   amountPaid: number;
   balance: number;
   description?: string;
+  payments: Payment[];
 };
 
 export type LabourRecord = {
