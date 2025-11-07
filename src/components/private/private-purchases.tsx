@@ -35,7 +35,7 @@ export function PrivatePurchases() {
   const { purchases, addPurchase, addPayment } = usePrivateData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
-  const [openCollapsibles, setOpenCollapsibles] = useState<Record<string, boolean>>({});
+  const [openFarmerCollapsibles, setOpenFarmerCollapsibles] = useState<Record<string, boolean>>({});
   const [isPaymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<string | null>(null);
 
@@ -60,7 +60,8 @@ export function PrivatePurchases() {
     const farmers: Record<string, { id: string, name: string, purchases: any[] }> = {};
     purchases.forEach(p => {
       if (!farmers[p.farmerName]) {
-        farmers[p.farmerName] = { id: p.id, name: p.farmerName, purchases: [] };
+        // Use a consistent ID for the farmer group based on the name
+        farmers[p.farmerName] = { id: p.farmerName.replace(/\s+/g, '-'), name: p.farmerName, purchases: [] };
       }
       farmers[p.farmerName].purchases.push(p);
     });
@@ -168,13 +169,13 @@ export function PrivatePurchases() {
                 {farmerAggregates.map(farmer => (
                     <Collapsible 
                         key={farmer.id}
-                        open={openCollapsibles[farmer.id] || false}
-                        onOpenChange={(isOpen) => setOpenCollapsibles(prev => ({...prev, [farmer.id]: isOpen}))}
+                        open={openFarmerCollapsibles[farmer.id] || false}
+                        onOpenChange={(isOpen) => setOpenFarmerCollapsibles(prev => ({...prev, [farmer.id]: isOpen}))}
                         className="border-b last:border-b-0"
                     >
                         <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
                             <div className="flex items-center gap-2">
-                                {openCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                 <span className="font-medium">{farmer.name}</span>
                             </div>
                             <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); purchaseForm.setValue('farmerName', farmer.name); setShowForm(true); window.scrollTo({top: 0, behavior: 'smooth'}); }}>
@@ -230,7 +231,7 @@ export function PrivatePurchases() {
                                                                         <Table>
                                                                             <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
                                                                             <TableBody>
-                                                                                {p.payments.map(payment => (
+                                                                                {p.payments.map((payment: any) => (
                                                                                     <TableRow key={payment.id}>
                                                                                         <TableCell>{format(payment.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
                                                                                         <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
@@ -238,7 +239,7 @@ export function PrivatePurchases() {
                                                                                 ))}
                                                                             </TableBody>
                                                                         </Table>
-                                                                    ) : <p className="text-sm text-muted-foreground">No payments recorded yet.</p>}
+                                                                    ) : <p className="text-sm text-muted-foreground">No payments recorded for this purchase yet.</p>}
                                                                 </div>
                                                             </TableCell>
                                                         </tr>
