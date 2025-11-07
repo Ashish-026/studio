@@ -19,7 +19,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { format } from 'date-fns';
 
 const saleFormSchema = z.object({
-  source: z.enum(['oscsc', 'private'], { required_error: 'Stock source is required' }),
+  source: z.enum(['private'], { required_error: 'Stock source is required' }),
   customerName: z.string().min(1, 'Customer name is required'),
   itemType: z.enum(['paddy', 'rice']),
   quantity: z.coerce.number().positive('Quantity must be positive'),
@@ -33,7 +33,7 @@ const paymentFormSchema = z.object({
 });
 
 export function PrivateSales() {
-  const { sales, addSale, addSalePayment, oscscStock, privateStock } = useStockData();
+  const { sales, addSale, addSalePayment, privateStock } = useStockData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [openCustomerCollapsibles, setOpenCustomerCollapsibles] = useState<Record<string, boolean>>({});
@@ -43,6 +43,7 @@ export function PrivateSales() {
   const saleForm = useForm<z.infer<typeof saleFormSchema>>({
     resolver: zodResolver(saleFormSchema),
     defaultValues: {
+      source: 'private',
       customerName: '',
       itemType: 'paddy',
       quantity: 0,
@@ -69,7 +70,7 @@ export function PrivateSales() {
   }, [sales]);
 
   function onSaleSubmit(values: z.infer<typeof saleFormSchema>) {
-    const stockSource = values.source === 'oscsc' ? oscscStock : privateStock;
+    const stockSource = privateStock;
     const stockAvailable = values.itemType === 'paddy' ? stockSource.paddy : stockSource.rice;
     
     if (values.quantity > stockAvailable) {
@@ -137,7 +138,7 @@ export function PrivateSales() {
                 <Form {...saleForm}>
                   <form onSubmit={saleForm.handleSubmit(onSaleSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                     <FormField control={saleForm.control} name="source" render={({ field }) => (
-                        <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="oscsc">OSCSC</SelectItem><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                     )} />
                     <FormField control={saleForm.control} name="customerName" render={({ field }) => (
                       <FormItem><FormLabel>Customer Name</FormLabel><FormControl><Input placeholder="e.g., Local Mill Corp" {...field} /></FormControl><FormMessage /></FormItem>

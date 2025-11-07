@@ -1,11 +1,9 @@
 'use client';
 
 import { createContext, useContext, ReactNode, useMemo, useState, useCallback } from 'react';
-import { useOSCSCData } from './oscsc-context';
 import type { StockItem, ProcessingResult, PrivatePurchase, Payment, PrivateSale } from '@/lib/types';
 
 interface StockContextType {
-  oscscStock: StockItem;
   privateStock: StockItem;
   totalStock: StockItem;
   processingHistory: ProcessingResult[];
@@ -119,7 +117,6 @@ const initialSales: PrivateSale[] = [
 
 
 export function StockProvider({ children }: { children: ReactNode }) {
-  const { paddyLiftedItems } = useOSCSCData();
   const [purchases, setPurchases] = useState<PrivatePurchase[]>(initialPurchases);
   const [sales, setSales] = useState<PrivateSale[]>(initialSales);
   const [processingHistory, setProcessingHistory] = useState<ProcessingResult[]>(initialProcessingHistory);
@@ -128,7 +125,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
     return processingHistory.reduce((acc, item) => {
         acc[item.source] = (acc[item.source] || 0) + item.paddyUsed;
         return acc;
-    }, { oscsc: 0, private: 0 });
+    }, { private: 0 });
   }, [processingHistory]);
 
   const processedYieldsBySource = useMemo(() => {
@@ -142,26 +139,9 @@ export function StockProvider({ children }: { children: ReactNode }) {
         acc[source].brokenRice += item.brokenRiceYield;
         return acc;
     }, { 
-        oscsc: { rice: 0, bran: 0, brokenRice: 0 }, 
         private: { rice: 0, bran: 0, brokenRice: 0 } 
     });
   }, [processingHistory]);
-
-  const oscscStock = useMemo<StockItem>(() => {
-    const totalPaddyLifted = paddyLiftedItems.reduce((acc, item) => acc + item.totalPaddyReceived, 0);
-    const soldPaddy = sales.filter(s => s.source === 'oscsc' && s.itemType === 'paddy').reduce((acc, s) => acc + s.quantity, 0);
-    const paddyUsedForProcessing = processedPaddyBySource.oscsc;
-    
-    const yields = processedYieldsBySource.oscsc;
-    const soldRice = sales.filter(s => s.source === 'oscsc' && s.itemType === 'rice').reduce((acc, s) => acc + s.quantity, 0);
-
-    return { 
-        paddy: totalPaddyLifted - soldPaddy - paddyUsedForProcessing, 
-        rice: yields.rice - soldRice, 
-        bran: yields.bran, 
-        brokenRice: yields.brokenRice
-    };
-  }, [paddyLiftedItems, sales, processedPaddyBySource, processedYieldsBySource]);
 
   const privateStock = useMemo<StockItem>(() => {
     const purchasedPaddy = purchases.filter(p => p.itemType === 'paddy').reduce((acc, p) => acc + p.quantity, 0);
@@ -183,12 +163,12 @@ export function StockProvider({ children }: { children: ReactNode }) {
   
   const totalStock = useMemo<StockItem>(() => {
     return {
-      paddy: oscscStock.paddy + privateStock.paddy,
-      rice: oscscStock.rice + privateStock.rice,
-      bran: oscscStock.bran + privateStock.bran,
-      brokenRice: oscscStock.brokenRice + privateStock.brokenRice,
+      paddy: privateStock.paddy,
+      rice: privateStock.rice,
+      bran: privateStock.bran,
+      brokenRice: privateStock.brokenRice,
     };
-  }, [oscscStock, privateStock]);
+  }, [privateStock]);
 
   const addProcessingResult = useCallback((result: Omit<ProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => {
     const newResult: ProcessingResult = {
@@ -272,7 +252,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <StockContext.Provider value={{ oscscStock, privateStock, totalStock, processingHistory, addProcessingResult, purchases, addPurchase, addPayment, sales, addSale, addSalePayment }}>
+    <StockContext.Provider value={{ privateStock, totalStock, processingHistory, addProcessingResult, purchases, addPurchase, addPayment, sales, addSale, addSalePayment }}>
       {children}
     </StockContext.Provider>
   );

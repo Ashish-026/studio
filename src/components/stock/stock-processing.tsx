@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import { PlusCircle } from 'lucide-react';
 
 const processingSchema = z.object({
-    source: z.enum(['oscsc', 'private'], { required_error: 'Stock source is required' }),
+    source: z.enum(['private'], { required_error: 'Stock source is required' }),
     paddyUsed: z.coerce.number().positive('Paddy quantity must be positive'),
     riceYield: z.coerce.number().positive('Rice yield must be positive'),
     branYield: z.coerce.number().min(0, 'Cannot be negative'),
@@ -24,18 +24,21 @@ const processingSchema = z.object({
 });
 
 export function StockProcessing() {
-  const { oscscStock, privateStock, processingHistory, addProcessingResult } = useStockData();
+  const { privateStock, processingHistory, addProcessingResult } = useStockData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
 
   const processingForm = useForm<z.infer<typeof processingSchema>>({
     resolver: zodResolver(processingSchema),
+    defaultValues: {
+        source: 'private',
+    }
   });
 
   const formatNumber = (num: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num);
 
   function onProcessingSubmit(values: z.infer<typeof processingSchema>) {
-    const stockSource = values.source === 'oscsc' ? oscscStock : privateStock;
+    const stockSource = privateStock;
     if(values.paddyUsed > stockSource.paddy) {
         processingForm.setError('paddyUsed', { message: `Exceeds available paddy stock of ${formatNumber(stockSource.paddy)} Qtl from ${values.source}` });
         return;
@@ -71,7 +74,7 @@ export function StockProcessing() {
                 <Form {...processingForm}>
                   <form onSubmit={processingForm.handleSubmit(onProcessingSubmit)} className="space-y-4">
                        <FormField control={processingForm.control} name="source" render={({ field }) => (
-                          <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="oscsc">OSCSC</SelectItem><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                          <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                       )} />
                       <FormField control={processingForm.control} name="paddyUsed" render={({ field }) => (
                           <FormItem><FormLabel>Paddy to Process (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="e.g., 100" {...field} /></FormControl><FormMessage /></FormItem>

@@ -7,7 +7,7 @@ import { Warehouse, Wheat, Sprout, Package } from 'lucide-react';
 import { PrivateSummaryCards } from '../private/private-summary-cards';
 
 export function StockSummary() {
-  const { oscscStock, privateStock, totalStock } = useStockData();
+  const { privateStock, totalStock } = useStockData();
 
   const formatNumber = (num: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num);
 
@@ -22,7 +22,7 @@ export function StockSummary() {
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{formatNumber(totalStock.paddy)} Qtl</div>
-                <p className="text-xs text-muted-foreground">Combined OSCSC and private paddy stock.</p>
+                <p className="text-xs text-muted-foreground">Combined private paddy stock.</p>
             </CardContent>
             </Card>
             <Card>
@@ -73,11 +73,6 @@ export function StockSummary() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow>
-                        <TableCell className="font-medium">OSCSC</TableCell>
-                        <TableCell className="text-right">{formatNumber(oscscStock.paddy)}</TableCell>
-                        <TableCell className="text-right">{formatNumber(oscscStock.rice)}</TableCell>
-                        </TableRow>
                         <TableRow>
                         <TableCell className="font-medium">Private</TableCell>
                         <TableCell className="text-right">{formatNumber(privateStock.paddy)}</TableCell>

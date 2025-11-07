@@ -12,13 +12,6 @@ const registers = [
     enabled: true,
   },
   {
-    title: 'OSCSC Register',
-    description: 'Track paddy lifting from OSCSC mandis.',
-    href: '/dashboard/oscsc',
-    icon: <Building className="h-8 w-8 text-primary" />,
-    enabled: true,
-  },
-  {
     title: 'Labour Register',
     description: 'Maintain records for labour and related activities.',
     href: '/dashboard/labour',
