@@ -3,11 +3,13 @@
 import { PrivatePurchases } from './private-purchases';
 import { PrivateSales } from './private-sales';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PrivateSummaryCards } from './private-summary-cards';
 
 
 export function PrivateDashboard() {
   return (
     <div className="space-y-8">
+      <PrivateSummaryCards />
       <Tabs defaultValue="purchases" className="space-y-4">
         <TabsList>
           <TabsTrigger value="purchases">Purchases</TabsTrigger>
