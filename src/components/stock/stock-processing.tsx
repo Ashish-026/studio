@@ -14,12 +14,20 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { PlusCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
-const processingSchema = z.object({
+const paddyProcessingSchema = z.object({
     source: z.enum(['private'], { required_error: 'Stock source is required' }),
     paddyUsed: z.coerce.number().positive('Paddy quantity must be positive'),
     riceYield: z.coerce.number().positive('Rice yield must be positive'),
     branYield: z.coerce.number().min(0, 'Cannot be negative'),
+    brokenRiceYield: z.coerce.number().min(0, 'Cannot be negative'),
+});
+
+const riceProcessingSchema = z.object({
+    source: z.enum(['private'], { required_error: 'Stock source is required' }),
+    riceUsed: z.coerce.number().positive('Rice quantity must be positive'),
+    finalRiceYield: z.coerce.number().positive('Final rice yield must be positive'),
     brokenRiceYield: z.coerce.number().min(0, 'Cannot be negative'),
 });
 
@@ -28,34 +36,56 @@ export function StockProcessing() {
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
 
-  const processingForm = useForm<z.infer<typeof processingSchema>>({
-    resolver: zodResolver(processingSchema),
-    defaultValues: {
-        source: 'private',
-    }
+  const paddyProcessingForm = useForm<z.infer<typeof paddyProcessingSchema>>({
+    resolver: zodResolver(paddyProcessingSchema),
+    defaultValues: { source: 'private' }
+  });
+
+  const riceProcessingForm = useForm<z.infer<typeof riceProcessingSchema>>({
+    resolver: zodResolver(riceProcessingSchema),
+    defaultValues: { source: 'private' }
   });
 
   const formatNumber = (num: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num);
 
-  function onProcessingSubmit(values: z.infer<typeof processingSchema>) {
+  function onPaddyProcessingSubmit(values: z.infer<typeof paddyProcessingSchema>) {
     const stockSource = privateStock;
     if(values.paddyUsed > stockSource.paddy) {
-        processingForm.setError('paddyUsed', { message: `Exceeds available paddy stock of ${formatNumber(stockSource.paddy)} Qtl from ${values.source}` });
+        paddyProcessingForm.setError('paddyUsed', { message: `Exceeds available paddy stock of ${formatNumber(stockSource.paddy)} Qtl from ${values.source}` });
         return;
     }
-    addProcessingResult(values);
-    toast({ title: 'Success!', description: 'Processing has been recorded and stock updated.' });
-    processingForm.reset();
+    addProcessingResult({ ...values, type: 'paddy' });
+    toast({ title: 'Success!', description: 'Paddy processing has been recorded and stock updated.' });
+    paddyProcessingForm.reset();
     setShowForm(false);
   }
+
+  function onRiceProcessingSubmit(values: z.infer<typeof riceProcessingSchema>) {
+    const stockSource = privateStock;
+    if (values.riceUsed > stockSource.rice) {
+        riceProcessingForm.setError('riceUsed', { message: `Exceeds available rice stock of ${formatNumber(stockSource.rice)} Qtl from ${values.source}` });
+        return;
+    }
+    addProcessingResult({ 
+        ...values, 
+        type: 'rice',
+        paddyUsed: 0,
+        riceYield: values.finalRiceYield,
+        branYield: 0,
+     });
+    toast({ title: 'Success!', description: 'Rice processing has been recorded and stock updated.' });
+    riceProcessingForm.reset();
+    setShowForm(false);
+  }
+
 
   return (
     <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle>Paddy Processing</CardTitle>
-              <CardDescription>Record paddy processing activities and view history.</CardDescription>
+              <CardTitle>Stock Processing</CardTitle>
+              <CardDescription>Record processing activities and view history.</CardDescription>
             </div>
             <Button onClick={() => setShowForm(!showForm)} size="sm">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -68,32 +98,62 @@ export function StockProcessing() {
             <Card className="bg-muted/50">
               <CardHeader>
                 <CardTitle>New Processing Entry</CardTitle>
-                <CardDescription>Convert paddy into rice and other byproducts.</CardDescription>
+                <CardDescription>Convert stock into other products.</CardDescription>
               </CardHeader>
               <CardContent>
-                <Form {...processingForm}>
-                  <form onSubmit={processingForm.handleSubmit(onProcessingSubmit)} className="space-y-4">
-                       <FormField control={processingForm.control} name="source" render={({ field }) => (
-                          <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
-                      )} />
-                      <FormField control={processingForm.control} name="paddyUsed" render={({ field }) => (
-                          <FormItem><FormLabel>Paddy to Process (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="e.g., 100" {...field} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                      <p className="font-medium text-sm">Enter Yields (in Quintals):</p>
-                      <div className="grid grid-cols-3 gap-4">
-                           <FormField control={processingForm.control} name="riceYield" render={({ field }) => (
-                              <FormItem><FormLabel>Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                          )} />
-                           <FormField control={processingForm.control} name="branYield" render={({ field }) => (
-                              <FormItem><FormLabel>Bran</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                          )} />
-                           <FormField control={processingForm.control} name="brokenRiceYield" render={({ field }) => (
-                              <FormItem><FormLabel>Broken Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                          )} />
-                      </div>
-                      <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Record Processing</Button>
-                  </form>
-                </Form>
+                <Tabs defaultValue="paddy">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="paddy">Paddy Processing</TabsTrigger>
+                        <TabsTrigger value="rice">Rice Processing</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="paddy" className="pt-4">
+                        <Form {...paddyProcessingForm}>
+                        <form onSubmit={paddyProcessingForm.handleSubmit(onPaddyProcessingSubmit)} className="space-y-4">
+                            <FormField control={paddyProcessingForm.control} name="source" render={({ field }) => (
+                                <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={paddyProcessingForm.control} name="paddyUsed" render={({ field }) => (
+                                <FormItem><FormLabel>Paddy to Process (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="e.g., 100" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <p className="font-medium text-sm">Enter Yields (in Quintals):</p>
+                            <div className="grid grid-cols-3 gap-4">
+                                <FormField control={paddyProcessingForm.control} name="riceYield" render={({ field }) => (
+                                    <FormItem><FormLabel>Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={paddyProcessingForm.control} name="branYield" render={({ field }) => (
+                                    <FormItem><FormLabel>Bran</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={paddyProcessingForm.control} name="brokenRiceYield" render={({ field }) => (
+                                    <FormItem><FormLabel>Broken Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                            </div>
+                            <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Record Paddy Processing</Button>
+                        </form>
+                        </Form>
+                    </TabsContent>
+                    <TabsContent value="rice" className="pt-4">
+                        <Form {...riceProcessingForm}>
+                        <form onSubmit={riceProcessingForm.handleSubmit(onRiceProcessingSubmit)} className="space-y-4">
+                            <FormField control={riceProcessingForm.control} name="source" render={({ field }) => (
+                                <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={riceProcessingForm.control} name="riceUsed" render={({ field }) => (
+                                <FormItem><FormLabel>Rice to Re-process (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="e.g., 50" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <p className="font-medium text-sm">Enter Yields (in Quintals):</p>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={riceProcessingForm.control} name="finalRiceYield" render={({ field }) => (
+                                    <FormItem><FormLabel>Final Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={riceProcessingForm.control} name="brokenRiceYield" render={({ field }) => (
+                                    <FormItem><FormLabel>Broken Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                            </div>
+                            <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Record Rice Processing</Button>
+                        </form>
+                        </Form>
+                    </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
         )}
@@ -105,23 +165,27 @@ export function StockProcessing() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Date</TableHead>
+                            <TableHead>Type</TableHead>
                             <TableHead>Source</TableHead>
-                            <TableHead>Paddy Used (Qtl)</TableHead>
+                            <TableHead>Input Used (Qtl)</TableHead>
                             <TableHead>Rice Yield (Qtl)</TableHead>
                             <TableHead className="text-right">Yield (%)</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {processingHistory.length === 0 ? (
-                            <TableRow><TableCell colSpan={5} className="text-center h-24">No processing history.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="text-center h-24">No processing history.</TableCell></TableRow>
                         ) : (
                             [...processingHistory].sort((a, b) => b.date.getTime() - a.date.getTime()).map(p => (
                                 <TableRow key={p.id}>
                                     <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
+                                    <TableCell className='capitalize'>{p.type || 'paddy'}</TableCell>
                                     <TableCell className='capitalize'>{p.source}</TableCell>
-                                    <TableCell>{formatNumber(p.paddyUsed)}</TableCell>
+                                    <TableCell>
+                                        {p.type === 'rice' ? `${formatNumber(p.riceUsed || 0)} (Rice)` : `${formatNumber(p.paddyUsed)} (Paddy)`}
+                                    </TableCell>
                                     <TableCell>{formatNumber(p.riceYield)}</TableCell>
-                                    <TableCell className="text-right font-medium">{formatNumber(p.yieldPercentage)}%</TableCell>
+                                    <TableCell className="text-right font-medium">{p.type !== 'rice' ? `${formatNumber(p.yieldPercentage)}%` : '-'}</TableCell>
                                 </TableRow>
                             ))
                         )}

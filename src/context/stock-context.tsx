@@ -25,6 +25,7 @@ const initialProcessingHistory: ProcessingResult[] = [
         id: 'p1',
         date: new Date('2024-07-20'),
         source: 'private',
+        type: 'paddy',
         paddyUsed: 100, // in quintals
         riceYield: 65, // in quintals
         branYield: 5,
@@ -127,7 +128,18 @@ export function StockProvider({ children, mandiProcessingHistory }: { children: 
 
   const processedPaddyBySource = useMemo(() => {
     return processingHistory.reduce((acc, item) => {
-        acc[item.source] = (acc[item.source] || 0) + item.paddyUsed;
+        if(item.type === 'paddy') {
+            acc[item.source] = (acc[item.source] || 0) + item.paddyUsed;
+        }
+        return acc;
+    }, { private: 0 });
+  }, [processingHistory]);
+
+  const processedRiceBySource = useMemo(() => {
+    return processingHistory.reduce((acc, item) => {
+        if(item.type === 'rice') {
+            acc[item.source] = (acc[item.source] || 0) + (item.riceUsed || 0);
+        }
         return acc;
     }, { private: 0 });
   }, [processingHistory]);
@@ -155,15 +167,16 @@ export function StockProvider({ children, mandiProcessingHistory }: { children: 
     const soldRice = sales.filter(s => s.source === 'private' && s.itemType === 'rice').reduce((acc, s) => acc + s.quantity, 0);
 
     const paddyUsedForProcessing = processedPaddyBySource.private;
+    const riceUsedForProcessing = processedRiceBySource.private;
     const yields = processedYieldsBySource.private;
 
     return {
       paddy: purchasedPaddy - paddyUsedForProcessing - soldPaddy,
-      rice: (purchasedRice + yields.rice) - soldRice - transferredOutStock,
+      rice: (purchasedRice + yields.rice) - riceUsedForProcessing - soldRice - transferredOutStock,
       bran: yields.bran,
       brokenRice: yields.brokenRice,
     };
-  }, [purchases, sales, processedPaddyBySource, processedYieldsBySource, transferredOutStock]);
+  }, [purchases, sales, processedPaddyBySource, processedRiceBySource, processedYieldsBySource, transferredOutStock]);
   
   const totalStock = useMemo<StockItem>(() => {
     const mandiBran = mandiProcessingHistory?.reduce((acc, item) => acc + item.branYield, 0) || 0;
@@ -178,11 +191,12 @@ export function StockProvider({ children, mandiProcessingHistory }: { children: 
   }, [privateStock, mandiProcessingHistory]);
 
   const addProcessingResult = useCallback((result: Omit<ProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => {
+    const yieldPercentage = result.type === 'paddy' ? (result.riceYield / result.paddyUsed) * 100 : 0;
     const newResult: ProcessingResult = {
         ...result,
         id: new Date().toISOString(),
         date: new Date(),
-        yieldPercentage: (result.riceYield / result.paddyUsed) * 100,
+        yieldPercentage: yieldPercentage,
     };
     setProcessingHistory(prev => [...prev, newResult]);
   }, []);

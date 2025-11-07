@@ -142,7 +142,10 @@ export type ProcessingResult = {
   id: string;
   date: Date;
   source: 'private';
+  type: 'paddy' | 'rice';
   paddyUsed: number;
+  riceUsed?: number;
+  finalRiceYield?: number;
   riceYield: number;
   branYield: number;
   brokenRiceYield: number;
