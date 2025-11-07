@@ -184,6 +184,7 @@ export function PrivatePurchases() {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                             <div className="px-4 pb-4">
+                                <h4 className="font-semibold text-md my-2">Purchase Details</h4>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
