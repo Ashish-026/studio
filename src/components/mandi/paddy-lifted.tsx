@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useMadiData } from '@/context/madi-context';
+import { useMandiData } from '@/context/mandi-context';
 import { PlusCircle, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ const monetaryFormSchema = z.object({
 
 
 export function PaddyLifted() {
-  const { paddyLiftedItems, addPaddyLifted, targetAllocations } = useMadiData();
+  const { paddyLiftedItems, addPaddyLifted, targetAllocations } = useMandiData();
   const { toast } = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';

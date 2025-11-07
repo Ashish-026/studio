@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useMadiData } from '@/context/madi-context';
+import { useMandiData } from '@/context/mandi-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -13,7 +13,7 @@ type MandiSummaryData = {
 };
 
 export function MandiSummary() {
-  const { targetAllocations, paddyLiftedItems } = useMadiData();
+  const { targetAllocations, paddyLiftedItems } = useMandiData();
 
   const mandiSummary = useMemo(() => {
     const summaryMap = new Map<string, { totalTarget: number; totalLifted: number }>();

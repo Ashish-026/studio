@@ -5,9 +5,9 @@ import { ArrowRight, Building, Tractor, Users } from 'lucide-react';
 
 const registers = [
   {
-    title: 'Madi Register',
+    title: 'Mandi Register',
     description: 'Manage official state civil supplies corporation data.',
-    href: '/dashboard/madi',
+    href: '/dashboard/mandi',
     icon: <Tractor className="h-8 w-8 text-primary" />,
     enabled: true,
   },

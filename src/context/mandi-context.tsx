@@ -3,14 +3,14 @@
 import { createContext, useState, useCallback, ReactNode, useContext } from 'react';
 import type { TargetAllocation, PaddyLifted } from '@/lib/types';
 
-interface MadiContextType {
+interface MandiContextType {
   targetAllocations: TargetAllocation[];
   paddyLiftedItems: PaddyLifted[];
   addTarget: (item: Omit<TargetAllocation, 'id'>) => void;
   addPaddyLifted: (item: Omit<PaddyLifted, 'id'>) => void;
 }
 
-const MadiContext = createContext<MadiContextType | null>(null);
+const MandiContext = createContext<MandiContextType | null>(null);
 
 const initialTargets: TargetAllocation[] = [
     { id: '1', mandiName: 'Bargarh Main', date: new Date('2024-05-10'), target: 5000 },
@@ -25,7 +25,7 @@ const initialPaddyLifted: PaddyLifted[] = [
 ];
 
 
-export function MadiProvider({ children }: { children: ReactNode }) {
+export function MandiProvider({ children }: { children: ReactNode }) {
   const [targetAllocations, setTargetAllocations] = useState<TargetAllocation[]>(initialTargets);
   const [paddyLiftedItems, setPaddyLiftedItems] = useState<PaddyLifted[]>(initialPaddyLifted);
 
@@ -38,16 +38,16 @@ export function MadiProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <MadiContext.Provider value={{ targetAllocations, paddyLiftedItems, addTarget, addPaddyLifted }}>
+    <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, addTarget, addPaddyLifted }}>
       {children}
-    </MadiContext.Provider>
+    </MandiContext.Provider>
   );
 }
 
-export function useMadiData() {
-    const context = useContext(MadiContext);
+export function useMandiData() {
+    const context = useContext(MandiContext);
     if (!context) {
-        throw new Error('useMadiData must be used within an MadiProvider');
+        throw new Error('useMandiData must be used within an MandiProvider');
     }
     return context;
 }

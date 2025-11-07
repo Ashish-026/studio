@@ -1,12 +1,12 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useMadiData } from '@/context/madi-context';
+import { useMandiData } from '@/context/mandi-context';
 import { Scale, Target, Tractor, Warehouse } from 'lucide-react';
 import { useMemo } from 'react';
 
 export function SummaryCards() {
-  const { targetAllocations, paddyLiftedItems } = useMadiData();
+  const { targetAllocations, paddyLiftedItems } = useMandiData();
 
   const summary = useMemo(() => {
     const targetAllotted = targetAllocations.reduce((acc, item) => acc + item.target, 0);

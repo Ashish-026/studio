@@ -7,7 +7,7 @@ import { PaddyLifted } from './paddy-lifted';
 import { MandiSummary } from './mandi-summary';
 import { Separator } from '../ui/separator';
 
-export function MadiDashboard() {
+export function MandiDashboard() {
   return (
     <div className="space-y-8">
       <SummaryCards />

@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/hooks/use-auth';
-import { useMadiData } from '@/context/madi-context';
+import { useMandiData } from '@/context/mandi-context';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,7 @@ const formSchema = z.object({
 
 export function TargetAllotment() {
   const { user } = useAuth();
-  const { targetAllocations, addTarget } = useMadiData();
+  const { targetAllocations, addTarget } = useMandiData();
   const { toast } = useToast();
   const isAdmin = user?.role === 'admin';
   const [showForm, setShowForm] = useState(false);
