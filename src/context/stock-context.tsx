@@ -2,13 +2,15 @@
 
 import { createContext, useContext, ReactNode, useMemo, useState, useCallback } from 'react';
 import type { StockItem, ProcessingResult, PrivatePurchase, Payment, PrivateSale, MandiProcessingResult } from '@/lib/types';
-import { useMandiData } from './mandi-context';
 
 interface StockContextType {
   privateStock: StockItem;
   totalStock: StockItem;
   processingHistory: ProcessingResult[];
+  mandiProcessingHistory: MandiProcessingResult[];
+  transferredInStock: number;
   addProcessingResult: (result: Omit<ProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
+  addMandiProcessing: (item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
   purchases: PrivatePurchase[];
   addPurchase: (item: Omit<PrivatePurchase, 'id' | 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { initialPayment: number }) => void;
   addPayment: (purchaseId: string, amount: number) => void;
@@ -33,6 +35,11 @@ const initialProcessingHistory: ProcessingResult[] = [
         yieldPercentage: 65
     }
 ];
+
+const initialMandiProcessingHistory: MandiProcessingResult[] = [
+    { id: 'mp1', date: new Date('2024-07-20'), paddyUsed: 150, riceYield: 97.5, branYield: 7.5, brokenRiceYield: 3, yieldPercentage: 65 }
+];
+
 
 const initialPurchases: PrivatePurchase[] = [
     { 
@@ -119,11 +126,11 @@ const initialSales: PrivateSale[] = [
 ];
 
 
-export function StockProvider({ children, mandiProcessingHistory }: { children: ReactNode, mandiProcessingHistory?: MandiProcessingResult[] }) {
-  const { addTransferredStock } = useMandiData();
+export function StockProvider({ children }: { children: ReactNode }) {
   const [purchases, setPurchases] = useState<PrivatePurchase[]>(initialPurchases);
   const [sales, setSales] = useState<PrivateSale[]>(initialSales);
   const [processingHistory, setProcessingHistory] = useState<ProcessingResult[]>(initialProcessingHistory);
+  const [mandiProcessingHistory, setMandiProcessingHistory] = useState<MandiProcessingResult[]>(initialMandiProcessingHistory);
   const [transferredOutStock, setTransferredOutStock] = useState(0);
 
   const processedPaddyBySource = useMemo(() => {
@@ -179,8 +186,8 @@ export function StockProvider({ children, mandiProcessingHistory }: { children: 
   }, [purchases, sales, processedPaddyBySource, processedRiceBySource, processedYieldsBySource, transferredOutStock]);
   
   const totalStock = useMemo<StockItem>(() => {
-    const mandiBran = mandiProcessingHistory?.reduce((acc, item) => acc + item.branYield, 0) || 0;
-    const mandiBrokenRice = mandiProcessingHistory?.reduce((acc, item) => acc + item.brokenRiceYield, 0) || 0;
+    const mandiBran = mandiProcessingHistory.reduce((acc, item) => acc + item.branYield, 0) || 0;
+    const mandiBrokenRice = mandiProcessingHistory.reduce((acc, item) => acc + item.brokenRiceYield, 0) || 0;
     
     return {
       paddy: privateStock.paddy,
@@ -199,6 +206,16 @@ export function StockProvider({ children, mandiProcessingHistory }: { children: 
         yieldPercentage: yieldPercentage,
     };
     setProcessingHistory(prev => [...prev, newResult]);
+  }, []);
+
+  const addMandiProcessing = useCallback((item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => {
+    const newProcessingEntry: MandiProcessingResult = {
+        ...item,
+        id: new Date().toISOString(),
+        date: new Date(),
+        yieldPercentage: (item.riceYield / item.paddyUsed) * 100,
+    };
+    setMandiProcessingHistory(prev => [...prev, newProcessingEntry]);
   }, []);
 
   const addPurchase = useCallback((item: Omit<PrivatePurchase, 'id' | 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { initialPayment: number }) => {
@@ -273,12 +290,11 @@ export function StockProvider({ children, mandiProcessingHistory }: { children: 
 
   const transferRiceToMandi = useCallback((quantity: number) => {
       setTransferredOutStock(prev => prev + quantity);
-      addTransferredStock(quantity);
-  }, [addTransferredStock]);
+  }, []);
 
 
   return (
-    <StockContext.Provider value={{ privateStock, totalStock, processingHistory, addProcessingResult, purchases, addPurchase, addPayment, sales, addSale, addSalePayment, transferRiceToMandi }}>
+    <StockContext.Provider value={{ privateStock, totalStock, processingHistory, mandiProcessingHistory, transferredInStock: transferredOutStock, addProcessingResult, addMandiProcessing, purchases, addPurchase, addPayment, sales, addSale, addSalePayment, transferRiceToMandi }}>
       {children}
     </StockContext.Provider>
   );

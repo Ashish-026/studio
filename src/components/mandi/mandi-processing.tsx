@@ -22,7 +22,7 @@ const processingSchema = z.object({
 });
 
 export function MandiProcessing() {
-  const { paddyLiftedItems, processingHistory, addProcessing } = useMandiData();
+  const { paddyLiftedItems, processingHistory, addMandiProcessing } = useMandiData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
 
@@ -44,7 +44,7 @@ export function MandiProcessing() {
         processingForm.setError('paddyUsed', { message: `Exceeds available paddy stock of ${formatNumber(availablePaddy)} Qtl` });
         return;
     }
-    addProcessing(values);
+    addMandiProcessing(values);
     toast({ title: 'Success!', description: 'Processing has been recorded and stock updated.' });
     processingForm.reset();
     setShowForm(false);
