@@ -1,10 +1,11 @@
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext, useMemo } from 'react';
+import { createContext, useState, useCallback, ReactNode, useContext } from 'react';
 import type { Labourer, LabourWorkEntry, Payment } from '@/lib/types';
 
 interface LabourContextType {
   labourers: Labourer[];
+  addLabourer: (labourerName: string) => void;
   addWorkEntry: (labourerName: string, item: Omit<LabourWorkEntry, 'id' | 'date' | 'wage'>) => void;
   addPayment: (labourerId: string, amount: number) => void;
 }
@@ -49,6 +50,25 @@ const calculateTotals = (workEntries: LabourWorkEntry[], payments: Payment[]) =>
 export function LabourProvider({ children }: { children: ReactNode }) {
   const [labourers, setLabourers] = useState<Labourer[]>(initialLabourers);
 
+  const addLabourer = useCallback((labourerName: string) => {
+    setLabourers(prev => {
+        const existingLabourer = prev.find(l => l.name === labourerName);
+        if (existingLabourer) {
+            return prev; // Or maybe show a toast? For now, do nothing if exists
+        }
+        const newLabourer: Labourer = {
+            id: new Date().toISOString() + '-l',
+            name: labourerName,
+            workEntries: [],
+            payments: [],
+            totalWages: 0,
+            totalPaid: 0,
+            balance: 0,
+        };
+        return [...prev, newLabourer];
+    });
+  }, []);
+
   const addWorkEntry = useCallback((labourerName: string, item: Omit<LabourWorkEntry, 'id' | 'date' | 'wage'>) => {
     let wage = 0;
     if (item.entryType === 'daily' && item.dailyRate) {
@@ -75,16 +95,9 @@ export function LabourProvider({ children }: { children: ReactNode }) {
                 }
                 return l;
             });
-        } else {
-            const newLabourer: Labourer = {
-                id: new Date().toISOString() + '-l',
-                name: labourerName,
-                workEntries: [newWorkEntry],
-                payments: [],
-                ...calculateTotals([newWorkEntry], []),
-            };
-            return [...prev, newLabourer];
         }
+        // This case should ideally not be hit if we add labourers separately
+        return prev;
     });
   }, []);
 
@@ -106,7 +119,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <LabourContext.Provider value={{ labourers, addWorkEntry, addPayment }}>
+    <LabourContext.Provider value={{ labourers, addLabourer, addWorkEntry, addPayment }}>
       {children}
     </LabourContext.Provider>
   );

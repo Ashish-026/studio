@@ -18,15 +18,17 @@ import { Textarea } from '../ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 
-const dailyWorkSchema = z.object({
+const labourerSchema = z.object({
   labourerName: z.string().min(1, "Labourer's name is required"),
+});
+
+const dailyWorkSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   activity: z.string().min(1, 'Activity is required'),
   dailyRate: z.coerce.number().positive('Daily rate must be positive'),
 });
 
 const itemRateWorkSchema = z.object({
-  labourerName: z.string().min(1, "Labourer's name is required"),
   description: z.string().min(1, 'Description is required'),
   itemName: z.string().min(1, 'Item name is required'),
   quantity: z.coerce.number().positive('Quantity must be positive'),
@@ -38,21 +40,26 @@ const paymentFormSchema = z.object({
 });
 
 export function LabourRecords() {
-  const { labourers, addWorkEntry, addPayment } = useLabourData();
+  const { labourers, addWorkEntry, addPayment, addLabourer } = useLabourData();
   const { toast } = useToast();
-  const [showWorkForm, setShowWorkForm] = useState(false);
+  const [showAddLabourerForm, setShowAddLabourerForm] = useState(false);
   const [openLabourerCollapsibles, setOpenLabourerCollapsibles] = useState<Record<string, boolean>>({});
   const [isPaymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedLabourer, setSelectedLabourer] = useState<string | null>(null);
 
+  const labourerForm = useForm<z.infer<typeof labourerSchema>>({
+    resolver: zodResolver(labourerSchema),
+    defaultValues: { labourerName: ''},
+  });
+
   const dailyWorkForm = useForm<z.infer<typeof dailyWorkSchema>>({
     resolver: zodResolver(dailyWorkSchema),
-    defaultValues: { labourerName: '', description: '', activity: '' },
+    defaultValues: { description: '', activity: '' },
   });
 
   const itemRateWorkForm = useForm<z.infer<typeof itemRateWorkSchema>>({
     resolver: zodResolver(itemRateWorkSchema),
-    defaultValues: { labourerName: '', description: '', itemName: '' },
+    defaultValues: { description: '', itemName: '' },
   });
 
   const paymentForm = useForm<z.infer<typeof paymentFormSchema>>({
@@ -64,18 +71,23 @@ export function LabourRecords() {
     return [...labourers].sort((a,b) => a.name.localeCompare(b.name));
   }, [labourers]);
 
-  function onDailyWorkSubmit(values: z.infer<typeof dailyWorkSchema>) {
-    addWorkEntry(values.labourerName, { ...values, entryType: 'daily' });
-    toast({ title: 'Success!', description: 'Daily work record has been added.' });
-    dailyWorkForm.reset();
-    setShowWorkForm(false);
+  function onLabourerSubmit(values: z.infer<typeof labourerSchema>) {
+    addLabourer(values.labourerName);
+    toast({ title: 'Success!', description: `${values.labourerName} has been added.` });
+    labourerForm.reset();
+    setShowAddLabourerForm(false);
   }
 
-  function onItemRateWorkSubmit(values: z.infer<typeof itemRateWorkSchema>) {
-    addWorkEntry(values.labourerName, { ...values, entryType: 'item_rate' });
+  function onDailyWorkSubmit(labourerName: string, values: z.infer<typeof dailyWorkSchema>) {
+    addWorkEntry(labourerName, { ...values, entryType: 'daily' });
+    toast({ title: 'Success!', description: 'Daily work record has been added.' });
+    dailyWorkForm.reset();
+  }
+
+  function onItemRateWorkSubmit(labourerName: string, values: z.infer<typeof itemRateWorkSchema>) {
+    addWorkEntry(labourerName, { ...values, entryType: 'item_rate' });
     toast({ title: 'Success!', description: 'Item rate work record has been added.' });
     itemRateWorkForm.reset();
-    setShowWorkForm(false);
   }
 
   function onPaymentSubmit(values: z.infer<typeof paymentFormSchema>) {
@@ -106,64 +118,25 @@ export function LabourRecords() {
               <CardTitle>Labour Records</CardTitle>
               <CardDescription>View and manage labourer work and payment details.</CardDescription>
             </div>
-            <Button onClick={() => setShowWorkForm(!showWorkForm)} size="sm">
+            <Button onClick={() => setShowAddLabourerForm(!showAddLabourerForm)} size="sm">
               <PlusCircle className="mr-2 h-4 w-4" />
-              {showWorkForm ? 'Cancel' : 'Add Work Entry'}
+              {showAddLabourerForm ? 'Cancel' : 'Add Labourer'}
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {showWorkForm && (
+          {showAddLabourerForm && (
             <Card className="bg-muted/50">
-              <CardHeader><CardTitle>New Work Entry</CardTitle></CardHeader>
+              <CardHeader><CardTitle>New Labourer</CardTitle></CardHeader>
               <CardContent>
-                <Tabs defaultValue="daily">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="daily">Daily Work</TabsTrigger>
-                    <TabsTrigger value="item_rate">Item Rate Work</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="daily" className="pt-4">
-                    <Form {...dailyWorkForm}>
-                      <form onSubmit={dailyWorkForm.handleSubmit(onDailyWorkSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                        <FormField control={dailyWorkForm.control} name="labourerName" render={({ field }) => (
-                            <FormItem><FormLabel>Labourer Name</FormLabel><FormControl><Input placeholder="e.g., Manoj Kumar" {...field} /></FormControl><FormMessage /></FormItem>
+                <Form {...labourerForm}>
+                    <form onSubmit={labourerForm.handleSubmit(onLabourerSubmit)} className="flex items-end gap-4">
+                        <FormField control={labourerForm.control} name="labourerName" render={({ field }) => (
+                            <FormItem className="flex-grow"><FormLabel>Labourer Name</FormLabel><FormControl><Input placeholder="e.g., Manoj Kumar" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
-                        <FormField control={dailyWorkForm.control} name="activity" render={({ field }) => (
-                            <FormItem><FormLabel>Activity</FormLabel><FormControl><Input placeholder="e.g., Loading, Cleaning" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={dailyWorkForm.control} name="dailyRate" render={({ field }) => (
-                            <FormItem><FormLabel>Daily Rate (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <FormField control={dailyWorkForm.control} name="description" render={({ field }) => (
-                            <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe the work done..." {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                        <Button type="submit" className="w-full md:w-auto md:col-span-full bg-accent hover:bg-accent/90">Add Daily Work</Button>
-                      </form>
-                    </Form>
-                  </TabsContent>
-                  <TabsContent value="item_rate" className="pt-4">
-                    <Form {...itemRateWorkForm}>
-                        <form onSubmit={itemRateWorkForm.handleSubmit(onItemRateWorkSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                            <FormField control={itemRateWorkForm.control} name="labourerName" render={({ field }) => (
-                                <FormItem><FormLabel>Labourer Name</FormLabel><FormControl><Input placeholder="e.g., Rakesh Sharma" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={itemRateWorkForm.control} name="itemName" render={({ field }) => (
-                                <FormItem><FormLabel>Item Name</FormLabel><FormControl><Input placeholder="e.g., Paddy Bags" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={itemRateWorkForm.control} name="quantity" render={({ field }) => (
-                                <FormItem><FormLabel>Quantity</FormLabel><FormControl><Input type="number" placeholder="200" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={itemRateWorkForm.control} name="ratePerItem" render={({ field }) => (
-                                <FormItem><FormLabel>Rate per Item (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="2.5" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                             <FormField control={itemRateWorkForm.control} name="description" render={({ field }) => (
-                                <FormItem className="md:col-span-2"><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe the work done..." {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <Button type="submit" className="w-full md:w-auto md:col-span-full bg-accent hover:bg-accent/90">Add Item Rate Work</Button>
-                        </form>
-                    </Form>
-                  </TabsContent>
-                </Tabs>
+                        <Button type="submit" className="bg-accent hover:bg-accent/90">Add Labourer</Button>
+                    </form>
+                </Form>
               </CardContent>
             </Card>
           )}
@@ -194,7 +167,54 @@ export function LabourRecords() {
                             </div>
                         </CollapsibleTrigger>
                         <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
-                            <div className="p-4 space-y-4">
+                            <div className="p-4 space-y-6">
+                                <Card>
+                                    <CardHeader><CardTitle className="text-lg">Add New Work Entry</CardTitle></CardHeader>
+                                    <CardContent>
+                                        <Tabs defaultValue="daily">
+                                            <TabsList className="grid w-full grid-cols-2">
+                                                <TabsTrigger value="daily">Daily Work</TabsTrigger>
+                                                <TabsTrigger value="item_rate">Item Rate Work</TabsTrigger>
+                                            </TabsList>
+                                            <TabsContent value="daily" className="pt-4">
+                                                <Form {...dailyWorkForm}>
+                                                <form onSubmit={dailyWorkForm.handleSubmit((values) => onDailyWorkSubmit(l.name, values))} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                                                    <FormField control={dailyWorkForm.control} name="activity" render={({ field }) => (
+                                                        <FormItem><FormLabel>Activity</FormLabel><FormControl><Input placeholder="e.g., Loading, Cleaning" {...field} /></FormControl><FormMessage /></FormItem>
+                                                    )} />
+                                                    <FormField control={dailyWorkForm.control} name="dailyRate" render={({ field }) => (
+                                                        <FormItem><FormLabel>Daily Rate (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="500" {...field} /></FormControl><FormMessage /></FormItem>
+                                                    )} />
+                                                    <FormField control={dailyWorkForm.control} name="description" render={({ field }) => (
+                                                        <FormItem className="md:col-span-2"><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe the work done..." {...field} /></FormControl><FormMessage /></FormItem>
+                                                    )} />
+                                                    <Button type="submit" className="w-full md:w-auto md:col-span-full bg-accent hover:bg-accent/90">Add Daily Work</Button>
+                                                </form>
+                                                </Form>
+                                            </TabsContent>
+                                            <TabsContent value="item_rate" className="pt-4">
+                                                <Form {...itemRateWorkForm}>
+                                                    <form onSubmit={itemRateWorkForm.handleSubmit((values) => onItemRateWorkSubmit(l.name, values))} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                                                        <FormField control={itemRateWorkForm.control} name="itemName" render={({ field }) => (
+                                                            <FormItem><FormLabel>Item Name</FormLabel><FormControl><Input placeholder="e.g., Paddy Bags" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                        <FormField control={itemRateWorkForm.control} name="quantity" render={({ field }) => (
+                                                            <FormItem><FormLabel>Quantity</FormLabel><FormControl><Input type="number" placeholder="200" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                        <FormField control={itemRateWorkForm.control} name="ratePerItem" render={({ field }) => (
+                                                            <FormItem><FormLabel>Rate per Item (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="2.5" {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                        <FormField control={itemRateWorkForm.control} name="description" render={({ field }) => (
+                                                            <FormItem className="md:col-span-2"><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="Describe the work done..." {...field} /></FormControl><FormMessage /></FormItem>
+                                                        )} />
+                                                        <Button type="submit" className="w-full md:w-auto md:col-span-full bg-accent hover:bg-accent/90">Add Item Rate Work</Button>
+                                                    </form>
+                                                </Form>
+                                            </TabsContent>
+                                        </Tabs>
+                                    </CardContent>
+                                </Card>
+
                                 <div>
                                     <h4 className="font-semibold mb-2 flex items-center gap-2"><Briefcase className="h-4 w-4" /> Work History</h4>
                                     {l.workEntries.length > 0 ? (
@@ -239,7 +259,7 @@ export function LabourRecords() {
                     </Collapsible>
                 ))}
                 {sortedLabourers.length === 0 && (
-                    <div className="p-4 text-center text-muted-foreground">No labourer records found.</div>
+                    <div className="p-4 text-center text-muted-foreground">No labourer records found. Add one to get started.</div>
                 )}
             </div>
           </div>
