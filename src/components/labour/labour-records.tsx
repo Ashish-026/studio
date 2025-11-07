@@ -78,14 +78,14 @@ export function LabourRecords() {
     setShowAddLabourerForm(false);
   }
 
-  function onDailyWorkSubmit(labourerName: string, values: z.infer<typeof dailyWorkSchema>) {
-    addWorkEntry(labourerName, { ...values, entryType: 'daily' });
+  function onDailyWorkSubmit(labourerId: string, values: z.infer<typeof dailyWorkSchema>) {
+    addWorkEntry(labourerId, { ...values, entryType: 'daily' });
     toast({ title: 'Success!', description: 'Daily work record has been added.' });
     dailyWorkForm.reset();
   }
 
-  function onItemRateWorkSubmit(labourerName: string, values: z.infer<typeof itemRateWorkSchema>) {
-    addWorkEntry(labourerName, { ...values, entryType: 'item_rate' });
+  function onItemRateWorkSubmit(labourerId: string, values: z.infer<typeof itemRateWorkSchema>) {
+    addWorkEntry(labourerId, { ...values, entryType: 'item_rate' });
     toast({ title: 'Success!', description: 'Item rate work record has been added.' });
     itemRateWorkForm.reset();
   }
@@ -178,7 +178,7 @@ export function LabourRecords() {
                                             </TabsList>
                                             <TabsContent value="daily" className="pt-4">
                                                 <Form {...dailyWorkForm}>
-                                                <form onSubmit={dailyWorkForm.handleSubmit((values) => onDailyWorkSubmit(l.name, values))} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                                                <form onSubmit={dailyWorkForm.handleSubmit((values) => onDailyWorkSubmit(l.id, values))} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                                                     <FormField control={dailyWorkForm.control} name="activity" render={({ field }) => (
                                                         <FormItem><FormLabel>Activity</FormLabel><FormControl><Input placeholder="e.g., Loading, Cleaning" {...field} /></FormControl><FormMessage /></FormItem>
                                                     )} />
@@ -194,7 +194,7 @@ export function LabourRecords() {
                                             </TabsContent>
                                             <TabsContent value="item_rate" className="pt-4">
                                                 <Form {...itemRateWorkForm}>
-                                                    <form onSubmit={itemRateWorkForm.handleSubmit((values) => onItemRateWorkSubmit(l.name, values))} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                                                    <form onSubmit={itemRateWorkForm.handleSubmit((values) => onItemRateWorkSubmit(l.id, values))} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
                                                         <FormField control={itemRateWorkForm.control} name="itemName" render={({ field }) => (
                                                             <FormItem><FormLabel>Item Name</FormLabel><FormControl><Input placeholder="e.g., Paddy Bags" {...field} /></FormControl><FormMessage /></FormItem>
                                                         )} />

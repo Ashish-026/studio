@@ -6,7 +6,7 @@ import type { Labourer, LabourWorkEntry, Payment } from '@/lib/types';
 interface LabourContextType {
   labourers: Labourer[];
   addLabourer: (labourerName: string) => void;
-  addWorkEntry: (labourerName: string, item: Omit<LabourWorkEntry, 'id' | 'date' | 'wage'>) => void;
+  addWorkEntry: (labourerId: string, item: Omit<LabourWorkEntry, 'id' | 'date' | 'wage'>) => void;
   addPayment: (labourerId: string, amount: number) => void;
 }
 
@@ -69,7 +69,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const addWorkEntry = useCallback((labourerName: string, item: Omit<LabourWorkEntry, 'id' | 'date' | 'wage'>) => {
+  const addWorkEntry = useCallback((labourerId: string, item: Omit<LabourWorkEntry, 'id' | 'date' | 'wage'>) => {
     let wage = 0;
     if (item.entryType === 'daily' && item.dailyRate) {
         wage = item.dailyRate;
@@ -85,19 +85,14 @@ export function LabourProvider({ children }: { children: ReactNode }) {
     };
 
     setLabourers(prev => {
-        const existingLabourer = prev.find(l => l.name === labourerName);
-        if (existingLabourer) {
-            return prev.map(l => {
-                if (l.name === labourerName) {
-                    const updatedWorkEntries = [...l.workEntries, newWorkEntry];
-                    const totals = calculateTotals(updatedWorkEntries, l.payments);
-                    return { ...l, workEntries: updatedWorkEntries, ...totals };
-                }
-                return l;
-            });
-        }
-        // This case should ideally not be hit if we add labourers separately
-        return prev;
+        return prev.map(l => {
+            if (l.id === labourerId) {
+                const updatedWorkEntries = [...l.workEntries, newWorkEntry];
+                const totals = calculateTotals(updatedWorkEntries, l.payments);
+                return { ...l, workEntries: updatedWorkEntries, ...totals };
+            }
+            return l;
+        });
     });
   }, []);
 
