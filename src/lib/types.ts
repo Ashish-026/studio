@@ -56,10 +56,10 @@ export type PrivateSale = {
   payments: Payment[];
 }
 
-export type LabourRecord = {
+export type LabourWorkEntry = {
   id: string;
-  name: string;
   date: Date;
+  description: string;
   entryType: 'daily' | 'item_rate';
   wage: number;
   // Daily wage fields
@@ -69,6 +69,16 @@ export type LabourRecord = {
   itemName?: string;
   quantity?: number;
   ratePerItem?: number;
+};
+
+export type Labourer = {
+    id: string;
+    name: string;
+    workEntries: LabourWorkEntry[];
+    payments: Payment[];
+    totalWages: number;
+    totalPaid: number;
+    balance: number;
 };
 
 

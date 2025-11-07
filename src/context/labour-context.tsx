@@ -1,25 +1,55 @@
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext } from 'react';
-import type { LabourRecord } from '@/lib/types';
+import { createContext, useState, useCallback, ReactNode, useContext, useMemo } from 'react';
+import type { Labourer, LabourWorkEntry, Payment } from '@/lib/types';
 
 interface LabourContextType {
-  records: LabourRecord[];
-  addRecord: (item: Omit<LabourRecord, 'id' | 'date' | 'wage'>) => void;
+  labourers: Labourer[];
+  addWorkEntry: (labourerName: string, item: Omit<LabourWorkEntry, 'id' | 'date' | 'wage'>) => void;
+  addPayment: (labourerId: string, amount: number) => void;
 }
 
 const LabourContext = createContext<LabourContextType | null>(null);
 
-const initialRecords: LabourRecord[] = [
-    { id: '1', name: 'Manoj Kumar', activity: 'Loading', dailyRate: 500, date: new Date('2024-07-01'), entryType: 'daily', wage: 500 },
-    { id: '2', name: 'Anita Singh', activity: 'Cleaning', dailyRate: 400, date: new Date('2024-07-01'), entryType: 'daily', wage: 400 },
-    { id: '3', name: 'Rakesh Sharma', itemName: 'Paddy Bags', quantity: 200, ratePerItem: 2.5, date: new Date('2024-07-02'), entryType: 'item_rate', wage: 500 },
+const initialLabourers: Labourer[] = [
+    { 
+        id: '1', 
+        name: 'Manoj Kumar',
+        workEntries: [
+            { id: 'w1', date: new Date('2024-07-01'), description: 'Morning shift', entryType: 'daily', activity: 'Loading', dailyRate: 500, wage: 500 },
+            { id: 'w2', date: new Date('2024-07-03'), description: 'Urgent work', entryType: 'item_rate', itemName: 'Paddy Bags', quantity: 100, ratePerItem: 3, wage: 300 },
+        ],
+        payments: [
+            { id: 'p1', amount: 700, date: new Date('2024-07-05') }
+        ],
+        totalWages: 800,
+        totalPaid: 700,
+        balance: 100
+    },
+    { 
+        id: '2', 
+        name: 'Anita Singh',
+        workEntries: [
+            { id: 'w3', date: new Date('2024-07-02'), description: 'Site cleaning', entryType: 'daily', activity: 'Cleaning', dailyRate: 400, wage: 400 },
+        ],
+        payments: [],
+        totalWages: 400,
+        totalPaid: 0,
+        balance: 400
+    },
 ];
 
-export function LabourProvider({ children }: { children: ReactNode }) {
-  const [records, setRecords] = useState<LabourRecord[]>(initialRecords);
+const calculateTotals = (workEntries: LabourWorkEntry[], payments: Payment[]) => {
+    const totalWages = workEntries.reduce((acc, entry) => acc + entry.wage, 0);
+    const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
+    const balance = totalWages - totalPaid;
+    return { totalWages, totalPaid, balance };
+};
 
-  const addRecord = useCallback((item: Omit<LabourRecord, 'id' | 'date' | 'wage'>) => {
+export function LabourProvider({ children }: { children: ReactNode }) {
+  const [labourers, setLabourers] = useState<Labourer[]>(initialLabourers);
+
+  const addWorkEntry = useCallback((labourerName: string, item: Omit<LabourWorkEntry, 'id' | 'date' | 'wage'>) => {
     let wage = 0;
     if (item.entryType === 'daily' && item.dailyRate) {
         wage = item.dailyRate;
@@ -27,17 +57,56 @@ export function LabourProvider({ children }: { children: ReactNode }) {
         wage = item.quantity * item.ratePerItem;
     }
 
-    const newRecord: LabourRecord = {
+    const newWorkEntry: LabourWorkEntry = {
         ...item,
         id: new Date().toISOString(),
         date: new Date(),
         wage,
     };
-    setRecords((prev) => [...prev, newRecord]);
+
+    setLabourers(prev => {
+        const existingLabourer = prev.find(l => l.name === labourerName);
+        if (existingLabourer) {
+            return prev.map(l => {
+                if (l.name === labourerName) {
+                    const updatedWorkEntries = [...l.workEntries, newWorkEntry];
+                    const totals = calculateTotals(updatedWorkEntries, l.payments);
+                    return { ...l, workEntries: updatedWorkEntries, ...totals };
+                }
+                return l;
+            });
+        } else {
+            const newLabourer: Labourer = {
+                id: new Date().toISOString() + '-l',
+                name: labourerName,
+                workEntries: [newWorkEntry],
+                payments: [],
+                ...calculateTotals([newWorkEntry], []),
+            };
+            return [...prev, newLabourer];
+        }
+    });
   }, []);
 
+  const addPayment = useCallback((labourerId: string, amount: number) => {
+    setLabourers(prev => prev.map(l => {
+        if(l.id === labourerId) {
+            const newPayment: Payment = {
+                id: new Date().toISOString() + '-p',
+                amount,
+                date: new Date(),
+            };
+            const updatedPayments = [...l.payments, newPayment];
+            const totals = calculateTotals(l.workEntries, updatedPayments);
+            return { ...l, payments: updatedPayments, ...totals };
+        }
+        return l;
+    }));
+  }, []);
+
+
   return (
-    <LabourContext.Provider value={{ records, addRecord }}>
+    <LabourContext.Provider value={{ labourers, addWorkEntry, addPayment }}>
       {children}
     </LabourContext.Provider>
   );
