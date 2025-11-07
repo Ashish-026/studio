@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext } from 'react';
+import { createContext, useState, useCallback, ReactNode, useContext, useMemo } from 'react';
 import type { TargetAllocation, PaddyLifted, MandiProcessingResult, MandiStockRelease } from '@/lib/types';
 
 interface MandiContextType {
@@ -8,10 +8,13 @@ interface MandiContextType {
   paddyLiftedItems: PaddyLifted[];
   processingHistory: MandiProcessingResult[];
   stockReleases: MandiStockRelease[];
+  totalRiceFromProcessing: number;
+  availableRiceForSupply: number;
   addTarget: (item: Omit<TargetAllocation, 'id'>) => void;
   addPaddyLifted: (item: Omit<PaddyLifted, 'id'>) => void;
   addProcessing: (item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
   addStockRelease: (item: Omit<MandiStockRelease, 'id'>) => void;
+  addTransferredStock: (quantity: number) => void;
 }
 
 const MandiContext = createContext<MandiContextType | null>(null);
@@ -42,6 +45,19 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   const [paddyLiftedItems, setPaddyLiftedItems] = useState<PaddyLifted[]>(initialPaddyLifted);
   const [processingHistory, setProcessingHistory] = useState<MandiProcessingResult[]>(initialProcessingHistory);
   const [stockReleases, setStockReleases] = useState<MandiStockRelease[]>(initialStockReleases);
+  const [transferredInStock, setTransferredInStock] = useState(0);
+
+  const totalRiceFromProcessing = useMemo(() => {
+    return processingHistory.reduce((acc, item) => acc + item.riceYield, 0);
+  }, [processingHistory]);
+
+  const totalRiceSupplied = useMemo(() => {
+      return stockReleases.reduce((acc, item) => acc + item.quantity, 0);
+  }, [stockReleases]);
+
+  const availableRiceForSupply = useMemo(() => {
+    return totalRiceFromProcessing + transferredInStock - totalRiceSupplied;
+  }, [totalRiceFromProcessing, transferredInStock, totalRiceSupplied]);
 
   const addTarget = useCallback((item: Omit<TargetAllocation, 'id'>) => {
     setTargetAllocations((prev) => [...prev, { ...item, id: new Date().toISOString() }]);
@@ -69,8 +85,12 @@ export function MandiProvider({ children }: { children: ReactNode }) {
       setStockReleases(prev => [...prev, newStockRelease]);
   }, []);
 
+  const addTransferredStock = useCallback((quantity: number) => {
+    setTransferredInStock(prev => prev + quantity);
+  }, []);
+
   return (
-    <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, processingHistory, stockReleases, addTarget, addPaddyLifted, addProcessing, addStockRelease }}>
+    <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, processingHistory, stockReleases, addTarget, addPaddyLifted, addProcessing, addStockRelease, availableRiceForSupply, totalRiceFromProcessing, addTransferredStock }}>
       {children}
     </MandiContext.Provider>
   );

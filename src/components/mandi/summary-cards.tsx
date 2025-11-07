@@ -7,7 +7,7 @@ import { Scale, Target, Tractor, Warehouse, Sprout, Package } from 'lucide-react
 import { useMemo } from 'react';
 
 export function SummaryCards() {
-  const { targetAllocations, paddyLiftedItems, processingHistory, stockReleases } = useMandiData();
+  const { targetAllocations, paddyLiftedItems, availableRiceForSupply, totalRiceFromProcessing } = useMandiData();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -15,20 +15,13 @@ export function SummaryCards() {
     const targetAllotted = targetAllocations.reduce((acc, item) => acc + item.target, 0);
     const totalPaddyLifted = paddyLiftedItems.reduce((acc, item) => acc + item.totalPaddyReceived, 0);
     const balanceToBeLifted = targetAllotted - totalPaddyLifted;
-
-    const totalRiceYield = processingHistory.reduce((acc, item) => acc + item.riceYield, 0);
-    const totalRiceSupplied = stockReleases.reduce((acc, item) => acc + item.quantity, 0);
-    const availableRiceStock = totalRiceYield - totalRiceSupplied;
     
-
     return {
       targetAllotted,
       totalPaddyLifted,
       balanceToBeLifted,
-      totalRiceYield,
-      availableRiceStock
     };
-  }, [targetAllocations, paddyLiftedItems, processingHistory, stockReleases]);
+  }, [targetAllocations, paddyLiftedItems]);
 
   const formatNumber = (num: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num);
 
@@ -72,7 +65,7 @@ export function SummaryCards() {
               <Sprout className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(summary.totalRiceYield)}</div>
+              <div className="text-2xl font-bold">{formatNumber(totalRiceFromProcessing)}</div>
               <p className="text-xs text-muted-foreground">From processed paddy.</p>
             </CardContent>
           </Card>
@@ -82,7 +75,7 @@ export function SummaryCards() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(summary.availableRiceStock)}</div>
+              <div className="text-2xl font-bold">{formatNumber(availableRiceForSupply)}</div>
               <p className="text-xs text-muted-foreground">Ready for supply.</p>
             </CardContent>
           </Card>

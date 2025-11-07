@@ -26,7 +26,7 @@ const supplySchema = z.object({
 });
 
 export function MandiSupply() {
-  const { processingHistory, stockReleases, addStockRelease } = useMandiData();
+  const { availableRiceForSupply, stockReleases, addStockRelease } = useMandiData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
 
@@ -35,17 +35,11 @@ export function MandiSupply() {
     defaultValues: { lotNumber: '', godownDetails: '' },
   });
 
-  const availableRiceStock = useMemo(() => {
-    const totalRiceYield = processingHistory.reduce((sum, item) => sum + item.riceYield, 0);
-    const totalRiceSupplied = stockReleases.reduce((sum, item) => sum + item.quantity, 0);
-    return totalRiceYield - totalRiceSupplied;
-  }, [processingHistory, stockReleases]);
-
   const formatNumber = (num: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num);
 
   function onSupplySubmit(values: z.infer<typeof supplySchema>) {
-    if(values.quantity > availableRiceStock) {
-        supplyForm.setError('quantity', { message: `Exceeds available rice stock of ${formatNumber(availableRiceStock)} Qtl` });
+    if(values.quantity > availableRiceForSupply) {
+        supplyForm.setError('quantity', { message: `Exceeds available rice stock of ${formatNumber(availableRiceForSupply)} Qtl` });
         return;
     }
     addStockRelease(values);
@@ -70,7 +64,7 @@ export function MandiSupply() {
            <div className="pt-2">
             <p className="text-sm font-medium">
                 Available Rice for Supply: 
-                <span className="text-primary font-bold"> {formatNumber(availableRiceStock)} Qtl</span>
+                <span className="text-primary font-bold"> {formatNumber(availableRiceForSupply)} Qtl</span>
             </p>
           </div>
         </CardHeader>

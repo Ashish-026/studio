@@ -2,6 +2,7 @@
 
 import { createContext, useContext, ReactNode, useMemo, useState, useCallback } from 'react';
 import type { StockItem, ProcessingResult, PrivatePurchase, Payment, PrivateSale, MandiProcessingResult } from '@/lib/types';
+import { useMandiData } from './mandi-context';
 
 interface StockContextType {
   privateStock: StockItem;
@@ -14,6 +15,7 @@ interface StockContextType {
   sales: PrivateSale[];
   addSale: (item: Omit<PrivateSale, 'id' | 'date' | 'totalAmount' | 'amountReceived' | 'balance' | 'payments'> & { initialPayment: number }) => void;
   addSalePayment: (saleId: string, amount: number) => void;
+  transferRiceToMandi: (quantity: number) => void;
 }
 
 const StockContext = createContext<StockContextType | null>(null);
@@ -117,9 +119,11 @@ const initialSales: PrivateSale[] = [
 
 
 export function StockProvider({ children, mandiProcessingHistory }: { children: ReactNode, mandiProcessingHistory?: MandiProcessingResult[] }) {
+  const { addTransferredStock } = useMandiData();
   const [purchases, setPurchases] = useState<PrivatePurchase[]>(initialPurchases);
   const [sales, setSales] = useState<PrivateSale[]>(initialSales);
   const [processingHistory, setProcessingHistory] = useState<ProcessingResult[]>(initialProcessingHistory);
+  const [transferredOutStock, setTransferredOutStock] = useState(0);
 
   const processedPaddyBySource = useMemo(() => {
     return processingHistory.reduce((acc, item) => {
@@ -155,11 +159,11 @@ export function StockProvider({ children, mandiProcessingHistory }: { children: 
 
     return {
       paddy: purchasedPaddy - paddyUsedForProcessing - soldPaddy,
-      rice: (purchasedRice + yields.rice) - soldRice,
+      rice: (purchasedRice + yields.rice) - soldRice - transferredOutStock,
       bran: yields.bran,
       brokenRice: yields.brokenRice,
     };
-  }, [purchases, sales, processedPaddyBySource, processedYieldsBySource]);
+  }, [purchases, sales, processedPaddyBySource, processedYieldsBySource, transferredOutStock]);
   
   const totalStock = useMemo<StockItem>(() => {
     const mandiBran = mandiProcessingHistory?.reduce((acc, item) => acc + item.branYield, 0) || 0;
@@ -253,9 +257,14 @@ export function StockProvider({ children, mandiProcessingHistory }: { children: 
     }));
   }, []);
 
+  const transferRiceToMandi = useCallback((quantity: number) => {
+      setTransferredOutStock(prev => prev + quantity);
+      addTransferredStock(quantity);
+  }, [addTransferredStock]);
+
 
   return (
-    <StockContext.Provider value={{ privateStock, totalStock, processingHistory, addProcessingResult, purchases, addPurchase, addPayment, sales, addSale, addSalePayment }}>
+    <StockContext.Provider value={{ privateStock, totalStock, processingHistory, addProcessingResult, purchases, addPurchase, addPayment, sales, addSale, addSalePayment, transferRiceToMandi }}>
       {children}
     </StockContext.Provider>
   );
