@@ -1,12 +1,13 @@
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext } from 'react';
-import type { Vehicle, Payment } from '@/lib/types';
+import type { Vehicle, Payment, VehicleTrip } from '@/lib/types';
 
 interface VehicleContextType {
   vehicles: Vehicle[];
-  addVehicle: (item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'totalRent' | 'totalPaid' | 'balance'>) => void;
+  addVehicle: (item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'trips' | 'totalRent' | 'totalPaid' | 'balance'>) => void;
   addRentPayment: (vehicleId: string, amount: number) => void;
+  addTrip: (vehicleId: string, trip: Omit<VehicleTrip, 'id' | 'date'>) => void;
 }
 
 const VehicleContext = createContext<VehicleContextType | null>(null);
@@ -20,6 +21,7 @@ const initialVehicles: Vehicle[] = [
         rentType: 'monthly',
         rentAmount: 30000,
         payments: [{ id: 'vp1', amount: 30000, date: new Date('2024-07-01') }],
+        trips: [],
         totalRent: 30000,
         totalPaid: 30000,
         balance: 0,
@@ -30,28 +32,52 @@ const initialVehicles: Vehicle[] = [
         vehicleNumber: 'OD05CD5678',
         driverName: 'Sanjay Yadav',
         ownerName: 'Yadav Logistics',
-        rentType: 'daily',
-        rentAmount: 1500,
+        rentType: 'per_trip',
+        rentAmount: 0, // Not applicable for per_trip
         payments: [],
-        totalRent: 4500, // Assuming 3 days of work
+        trips: [
+            { id: 't1', date: new Date('2024-07-02'), source: 'Bargarh', destination: 'Sambalpur', tripCharge: 2500 },
+            { id: 't2', date: new Date('2024-07-04'), source: 'Sambalpur', destination: 'Bhubaneswar', tripCharge: 6000 },
+        ],
+        totalRent: 8500,
         totalPaid: 0,
-        balance: 4500,
+        balance: 8500,
         dateAdded: new Date('2024-07-01')
     }
 ];
 
+const calculateTotals = (rentType: Vehicle['rentType'], rentAmount: number, payments: Payment[], trips: VehicleTrip[]) => {
+    let totalRent = 0;
+    if (rentType === 'per_trip') {
+        totalRent = trips.reduce((acc, trip) => acc + trip.tripCharge, 0);
+    } else {
+        // This is a simplified calculation. For daily/monthly a more complex logic might be needed based on time.
+        // For now, we'll assume totalRent is managed elsewhere or equals rentAmount for a single period.
+        totalRent = rentAmount; // Simplified for now
+    }
+    const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
+    const balance = totalRent - totalPaid;
+    return { totalRent, totalPaid, balance };
+};
+
 export function VehicleProvider({ children }: { children: ReactNode }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
 
-  const addVehicle = useCallback((item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'totalRent' | 'totalPaid' | 'balance'>) => {
+  const addVehicle = useCallback((item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'trips' | 'totalRent' | 'totalPaid' | 'balance'>) => {
+    const isPerTrip = item.rentType === 'per_trip';
+    const rentAmount = isPerTrip ? 0 : item.rentAmount;
+    const totalRent = isPerTrip ? 0 : item.rentAmount;
+
     const newVehicle: Vehicle = {
         ...item,
         id: new Date().toISOString(),
         dateAdded: new Date(),
         payments: [],
-        totalRent: item.rentType === 'monthly' || item.rentType === 'daily' ? item.rentAmount : 0, // Initial rent assumption
+        trips: [],
+        rentAmount: rentAmount,
+        totalRent: totalRent,
         totalPaid: 0,
-        balance: item.rentType === 'monthly' || item.rentType === 'daily' ? item.rentAmount : 0,
+        balance: totalRent,
     };
     setVehicles(prev => [...prev, newVehicle]);
   }, []);
@@ -65,11 +91,24 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
                 date: new Date(),
             };
             const updatedPayments = [...v.payments, newPayment];
-            const totalPaid = updatedPayments.reduce((acc, p) => acc + p.amount, 0);
-            // Note: totalRent logic might need to be more sophisticated, e.g., based on trips or days worked.
-            // For now, we assume it's manually managed or fixed.
-            const balance = v.totalRent - totalPaid;
-            return { ...v, payments: updatedPayments, totalPaid, balance };
+            const totals = calculateTotals(v.rentType, v.rentAmount, updatedPayments, v.trips);
+            return { ...v, payments: updatedPayments, ...totals };
+        }
+        return v;
+    }));
+  }, []);
+
+  const addTrip = useCallback((vehicleId: string, trip: Omit<VehicleTrip, 'id' | 'date'>) => {
+    setVehicles(prev => prev.map(v => {
+        if (v.id === vehicleId && v.rentType === 'per_trip') {
+            const newTrip: VehicleTrip = {
+                ...trip,
+                id: new Date().toISOString(),
+                date: new Date(),
+            };
+            const updatedTrips = [...v.trips, newTrip];
+            const totals = calculateTotals(v.rentType, v.rentAmount, v.payments, updatedTrips);
+            return { ...v, trips: updatedTrips, ...totals };
         }
         return v;
     }));
@@ -77,7 +116,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <VehicleContext.Provider value={{ vehicles, addVehicle, addRentPayment }}>
+    <VehicleContext.Provider value={{ vehicles, addVehicle, addRentPayment, addTrip }}>
       {children}
     </VehicleContext.Provider>
   );

@@ -12,7 +12,6 @@ export function VehicleSummaryCards() {
   const isAdmin = user?.role === 'admin';
 
   const summary = useMemo(() => {
-    // This is a simplified calculation. Real-world rent calculation might be more complex.
     const totalRent = vehicles.reduce((acc, v) => acc + v.totalRent, 0);
     const totalPaid = vehicles.reduce((acc, v) => acc + v.totalPaid, 0);
     const balance = totalRent - totalPaid;

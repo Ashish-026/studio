@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useVehicleData } from '@/context/vehicle-context';
-import { PlusCircle, ChevronDown, ChevronRight, Receipt, Car } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, Receipt, Car, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,15 +22,24 @@ const vehicleSchema = z.object({
   driverName: z.string().min(1, "Driver's name is required"),
   ownerName: z.string().min(1, "Owner's name is required"),
   rentType: z.enum(['daily', 'monthly', 'per_trip']),
-  rentAmount: z.coerce.number().positive('Rent amount must be positive'),
+  rentAmount: z.coerce.number().min(0, 'Rent amount must be non-negative'),
+}).refine(data => data.rentType === 'per_trip' || data.rentAmount > 0, {
+  message: 'Rent amount must be positive for daily or monthly types.',
+  path: ['rentAmount'],
 });
 
 const paymentFormSchema = z.object({
     amount: z.coerce.number().positive('Payment amount must be positive'),
 });
 
+const tripFormSchema = z.object({
+  source: z.string().min(1, 'Source is required'),
+  destination: z.string().min(1, 'Destination is required'),
+  tripCharge: z.coerce.number().positive('Trip charge must be positive'),
+});
+
 export function VehicleRecords() {
-  const { vehicles, addVehicle, addRentPayment } = useVehicleData();
+  const { vehicles, addVehicle, addRentPayment, addTrip } = useVehicleData();
   const { toast } = useToast();
   const [showAddVehicleForm, setShowAddVehicleForm] = useState(false);
   const [openVehicleCollapsibles, setOpenVehicleCollapsibles] = useState<Record<string, boolean>>({});
@@ -39,13 +48,20 @@ export function VehicleRecords() {
 
   const vehicleForm = useForm<z.infer<typeof vehicleSchema>>({
     resolver: zodResolver(vehicleSchema),
-    defaultValues: { vehicleNumber: '', driverName: '', ownerName: '', rentType: 'monthly' },
+    defaultValues: { vehicleNumber: '', driverName: '', ownerName: '', rentType: 'monthly', rentAmount: 0 },
   });
 
   const paymentForm = useForm<z.infer<typeof paymentFormSchema>>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: { amount: 0 },
   });
+  
+  const tripForm = useForm<z.infer<typeof tripFormSchema>>({
+    resolver: zodResolver(tripFormSchema),
+    defaultValues: { source: '', destination: '', tripCharge: 0 },
+  });
+
+  const rentType = vehicleForm.watch('rentType');
 
   const sortedVehicles = useMemo(() => {
     return [...vehicles].sort((a,b) => a.vehicleNumber.localeCompare(b.vehicleNumber));
@@ -66,6 +82,12 @@ export function VehicleRecords() {
       setPaymentDialogOpen(false);
       setSelectedVehicle(null);
     }
+  }
+
+  function onTripSubmit(vehicleId: string, values: z.infer<typeof tripFormSchema>) {
+    addTrip(vehicleId, values);
+    toast({ title: 'Success!', description: 'Trip has been added.' });
+    tripForm.reset();
   }
 
   const handlePaymentClick = (vehicleId: string) => {
@@ -122,9 +144,11 @@ export function VehicleRecords() {
                                 <FormMessage />
                             </FormItem>
                          )} />
-                        <FormField control={vehicleForm.control} name="rentAmount" render={({ field }) => (
-                           <FormItem><FormLabel>Rent Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="30000" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
+                        {rentType !== 'per_trip' && (
+                            <FormField control={vehicleForm.control} name="rentAmount" render={({ field }) => (
+                            <FormItem><FormLabel>Rent Amount (₹)</FormLabel><FormControl><Input type="number" placeholder="30000" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        )}
                         <Button type="submit" className="w-full md:w-auto lg:col-span-full bg-accent hover:bg-accent/90">Add Vehicle</Button>
                     </form>
                 </Form>
@@ -164,11 +188,56 @@ export function VehicleRecords() {
                                     <h4 className="font-semibold mb-2 flex items-center gap-2"><Car className="h-4 w-4" /> Vehicle Details</h4>
                                     <div className="text-sm space-y-1">
                                         <p><span className="font-medium">Owner:</span> {v.ownerName}</p>
-                                        <p><span className="font-medium">Rent:</span> {formatCurrency(v.rentAmount)} <span className='capitalize'>({v.rentType})</span></p>
+                                        <p><span className="font-medium">Rent Type:</span> <span className='capitalize'>{v.rentType.replace('_', ' ')}</span></p>
+                                        {v.rentType !== 'per_trip' && <p><span className="font-medium">Rent Amount:</span> {formatCurrency(v.rentAmount)}</p>}
                                         <p><span className="font-medium">Total Rent Due:</span> {formatCurrency(v.totalRent)}</p>
                                         <p><span className="font-medium">Total Paid:</span> {formatCurrency(v.totalPaid)}</p>
                                     </div>
                                 </div>
+                                
+                                {v.rentType === 'per_trip' && (
+                                    <Card>
+                                        <CardHeader><CardTitle className="text-lg">Add New Trip</CardTitle></CardHeader>
+                                        <CardContent>
+                                            <Form {...tripForm}>
+                                                <form onSubmit={tripForm.handleSubmit((values) => onTripSubmit(v.id, values))} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                                                    <FormField control={tripForm.control} name="source" render={({ field }) => (
+                                                        <FormItem><FormLabel>Source</FormLabel><FormControl><Input placeholder="e.g., Bargarh" {...field} /></FormControl><FormMessage /></FormItem>
+                                                    )} />
+                                                    <FormField control={tripForm.control} name="destination" render={({ field }) => (
+                                                        <FormItem><FormLabel>Destination</FormLabel><FormControl><Input placeholder="e.g., Sambalpur" {...field} /></FormControl><FormMessage /></FormItem>
+                                                    )} />
+                                                    <FormField control={tripForm.control} name="tripCharge" render={({ field }) => (
+                                                        <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} /></FormControl><FormMessage /></FormItem>
+                                                    )} />
+                                                    <Button type="submit" className="w-full md:w-auto md:col-span-full bg-accent hover:bg-accent/90">Add Trip</Button>
+                                                </form>
+                                            </Form>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
+                                {v.rentType === 'per_trip' && (
+                                     <div>
+                                        <h4 className="font-semibold mb-2 flex items-center gap-2"><MapPin className="h-4 w-4" /> Trip History</h4>
+                                        {v.trips.length > 0 ? (
+                                        <Table>
+                                            <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Source</TableHead><TableHead>Destination</TableHead><TableHead className="text-right">Charge (₹)</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {[...v.trips].sort((a, b) => b.date.getTime() - a.date.getTime()).map(t => (
+                                                    <TableRow key={t.id}>
+                                                        <TableCell>{format(t.date, 'dd MMM yyyy')}</TableCell>
+                                                        <TableCell>{t.source}</TableCell>
+                                                        <TableCell>{t.destination}</TableCell>
+                                                        <TableCell className="text-right">{formatCurrency(t.tripCharge)}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                        ) : <p className="text-sm text-muted-foreground">No trips recorded.</p>}
+                                    </div>
+                                )}
+
                                 <div>
                                     <h4 className="font-semibold mb-2 flex items-center gap-2"><Receipt className="h-4 w-4" /> Rent Payment History</h4>
                                      {v.payments.length > 0 ? (
