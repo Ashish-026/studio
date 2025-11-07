@@ -18,3 +18,17 @@ export type PaddyLifted = {
   totalPaddyReceived: number;
   mandiWeight: number;
 };
+
+export type PrivatePurchase = {
+  id: string;
+  mandiName: string;
+  farmerName: string;
+  paddyAmount: number;
+};
+
+export type LabourRecord = {
+    id: string;
+    name: string;
+    activity: string;
+    hoursWorked: number;
+};

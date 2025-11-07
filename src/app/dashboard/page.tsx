@@ -14,16 +14,16 @@ const registers = [
   {
     title: 'Private Register',
     description: 'Track paddy lifting from private mandis.',
-    href: '#',
-    icon: <Building className="h-8 w-8 text-muted-foreground" />,
-    enabled: false,
+    href: '/dashboard/private',
+    icon: <Building className="h-8 w-8 text-primary" />,
+    enabled: true,
   },
   {
     title: 'Labour Register',
     description: 'Maintain records for labour and related activities.',
-    href: '#',
-    icon: <Users className="h-8 w-8 text-muted-foreground" />,
-    enabled: false,
+    href: '/dashboard/labour',
+    icon: <Users className="h-8 w-8 text-primary" />,
+    enabled: true,
   },
 ];
 
