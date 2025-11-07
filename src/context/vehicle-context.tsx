@@ -36,8 +36,8 @@ const initialVehicles: Vehicle[] = [
         rentAmount: 0, // Not applicable for per_trip
         payments: [],
         trips: [
-            { id: 't1', date: new Date('2024-07-02'), source: 'Bargarh', destination: 'Sambalpur', tripCharge: 2500 },
-            { id: 't2', date: new Date('2024-07-04'), source: 'Sambalpur', destination: 'Bhubaneswar', tripCharge: 6000 },
+            { id: 't1', date: new Date('2024-07-02'), source: 'Bargarh', destination: 'Sambalpur', quantity: 120, tripCharge: 2500 },
+            { id: 't2', date: new Date('2024-07-04'), source: 'Sambalpur', destination: 'Bhubaneswar', quantity: 150, tripCharge: 6000 },
         ],
         totalRent: 8500,
         totalPaid: 0,

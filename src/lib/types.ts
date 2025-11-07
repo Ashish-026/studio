@@ -97,6 +97,7 @@ export type VehicleTrip = {
     date: Date;
     source: string;
     destination: string;
+    quantity: number;
     tripCharge: number;
 };
 

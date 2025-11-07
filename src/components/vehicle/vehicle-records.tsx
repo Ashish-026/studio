@@ -35,6 +35,7 @@ const paymentFormSchema = z.object({
 const tripFormSchema = z.object({
   source: z.string().min(1, 'Source is required'),
   destination: z.string().min(1, 'Destination is required'),
+  quantity: z.coerce.number().positive('Quantity must be positive'),
   tripCharge: z.coerce.number().positive('Trip charge must be positive'),
 });
 
@@ -59,7 +60,7 @@ export function VehicleRecords() {
   
   const tripForm = useForm<z.infer<typeof tripFormSchema>>({
     resolver: zodResolver(tripFormSchema),
-    defaultValues: { source: '', destination: '', tripCharge: 0 },
+    defaultValues: { source: '', destination: '', quantity: 0, tripCharge: 0 },
   });
 
   const rentType = vehicleForm.watch('rentType');
@@ -237,12 +238,15 @@ export function VehicleRecords() {
                                                     <CardHeader><CardTitle className="text-lg">Add New Trip</CardTitle></CardHeader>
                                                     <CardContent>
                                                         <Form {...tripForm}>
-                                                            <form onSubmit={tripForm.handleSubmit((values) => onTripSubmit(v.id, values))} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                                                            <form onSubmit={tripForm.handleSubmit((values) => onTripSubmit(v.id, values))} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                                                                 <FormField control={tripForm.control} name="source" render={({ field }) => (
                                                                     <FormItem><FormLabel>Source</FormLabel><FormControl><Input placeholder="e.g., Bargarh" {...field} /></FormControl><FormMessage /></FormItem>
                                                                 )} />
                                                                 <FormField control={tripForm.control} name="destination" render={({ field }) => (
                                                                     <FormItem><FormLabel>Destination</FormLabel><FormControl><Input placeholder="e.g., Sambalpur" {...field} /></FormControl><FormMessage /></FormItem>
+                                                                )} />
+                                                                <FormField control={tripForm.control} name="quantity" render={({ field }) => (
+                                                                    <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="150" {...field} /></FormControl><FormMessage /></FormItem>
                                                                 )} />
                                                                 <FormField control={tripForm.control} name="tripCharge" render={({ field }) => (
                                                                     <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} /></FormControl><FormMessage /></FormItem>
@@ -259,13 +263,14 @@ export function VehicleRecords() {
                                                     <h4 className="font-semibold mb-2 flex items-center gap-2"><MapPin className="h-4 w-4" /> Trip History</h4>
                                                     {v.trips.length > 0 ? (
                                                     <Table>
-                                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Source</TableHead><TableHead>Destination</TableHead><TableHead className="text-right">Charge (₹)</TableHead></TableRow></TableHeader>
+                                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Source</TableHead><TableHead>Destination</TableHead><TableHead>Quantity (Qtl)</TableHead><TableHead className="text-right">Charge (₹)</TableHead></TableRow></TableHeader>
                                                         <TableBody>
                                                             {[...v.trips].sort((a: any, b: any) => b.date.getTime() - a.date.getTime()).map((t: any) => (
                                                                 <TableRow key={t.id}>
                                                                     <TableCell>{format(t.date, 'dd MMM yyyy')}</TableCell>
                                                                     <TableCell>{t.source}</TableCell>
                                                                     <TableCell>{t.destination}</TableCell>
+                                                                    <TableCell>{t.quantity.toLocaleString('en-IN')}</TableCell>
                                                                     <TableCell className="text-right">{formatCurrency(t.tripCharge)}</TableCell>
                                                                 </TableRow>
                                                             ))}
