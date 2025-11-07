@@ -19,6 +19,7 @@ const initialProcessingHistory: ProcessingResult[] = [
     {
         id: 'p1',
         date: new Date('2024-07-20'),
+        source: 'private',
         paddyUsed: 100, // in quintals
         riceYield: 65, // in quintals
         branYield: 5,
@@ -32,8 +33,11 @@ export function StockProvider({ children }: { children: ReactNode }) {
   const { purchases, sales } = usePrivateData();
   const [processingHistory, setProcessingHistory] = useState<ProcessingResult[]>(initialProcessingHistory);
 
-  const processedPaddy = useMemo(() => {
-    return processingHistory.reduce((acc, item) => acc + item.paddyUsed, 0);
+  const processedPaddyBySource = useMemo(() => {
+    return processingHistory.reduce((acc, item) => {
+        acc[item.source] += item.paddyUsed;
+        return acc;
+    }, { oscsc: 0, private: 0 });
   }, [processingHistory]);
 
   const processedYields = useMemo(() => {
@@ -47,34 +51,43 @@ export function StockProvider({ children }: { children: ReactNode }) {
 
 
   const oscscStock = useMemo<StockItem>(() => {
-    const totalPaddy = paddyLiftedItems.reduce((acc, item) => acc + item.totalPaddyReceived, 0);
-    return { paddy: totalPaddy, rice: 0, bran: 0, brokenRice: 0 };
-  }, [paddyLiftedItems]);
+    const totalPaddyLifted = paddyLiftedItems.reduce((acc, item) => acc + item.totalPaddyReceived, 0);
+    const soldPaddy = sales.filter(s => s.source === 'oscsc' && s.itemType === 'paddy').reduce((acc, s) => acc + s.quantity, 0);
+    const paddyUsedForProcessing = processedPaddyBySource.oscsc;
+    
+    // For now, assuming OSCSC doesn't directly deal in rice/bran etc. in this context
+    return { 
+        paddy: totalPaddyLifted - soldPaddy - paddyUsedForProcessing, 
+        rice: 0, 
+        bran: 0, 
+        brokenRice: 0 
+    };
+  }, [paddyLiftedItems, sales, processedPaddyBySource]);
 
   const privateStock = useMemo<StockItem>(() => {
     const purchasedPaddy = purchases.filter(p => p.itemType === 'paddy').reduce((acc, p) => acc + p.quantity, 0);
     const purchasedRice = purchases.filter(p => p.itemType === 'rice').reduce((acc, p) => acc + p.quantity, 0);
 
-    const soldPaddy = sales.filter(s => s.itemType === 'paddy').reduce((acc, s) => acc + s.quantity, 0);
-    const soldRice = sales.filter(s => s.itemType === 'rice').reduce((acc, s) => acc + s.quantity, 0);
+    const soldPaddy = sales.filter(s => s.source === 'private' && s.itemType === 'paddy').reduce((acc, s) => acc + s.quantity, 0);
+    const soldRice = sales.filter(s => s.source === 'private' && s.itemType === 'rice').reduce((acc, s) => acc + s.quantity, 0);
 
-    // Assume paddy used for processing comes from private stock first.
-    // This logic could be more complex, e.g., allowing selection of stock source.
-    const availablePaddy = purchasedPaddy - processedPaddy;
+    const paddyUsedForProcessing = processedPaddyBySource.private;
+
+    const availablePaddy = purchasedPaddy - paddyUsedForProcessing - soldPaddy;
 
     return {
-      paddy: availablePaddy - soldPaddy,
+      paddy: availablePaddy,
       rice: (purchasedRice + processedYields.rice) - soldRice,
       bran: processedYields.bran,
-      brokenRice: processedYields.brokenRice
+      brokenRice: processedYields.brokenRice,
     };
-  }, [purchases, sales, processedPaddy, processedYields]);
+  }, [purchases, sales, processedPaddyBySource, processedYields]);
   
   const totalStock = useMemo<StockItem>(() => {
     return {
       paddy: oscscStock.paddy + privateStock.paddy,
       rice: oscscStock.rice + privateStock.rice,
-      bran: privateStock.bran,
+      bran: privateStock.bran, // Assuming bran/broken only come from private processing for now
       brokenRice: privateStock.brokenRice,
     };
   }, [oscscStock, privateStock]);

@@ -54,6 +54,7 @@ export type PrivateSale = {
   description?: string;
   date: Date;
   payments: Payment[];
+  source: 'oscsc' | 'private';
 }
 
 export type LabourWorkEntry = {
@@ -122,6 +123,7 @@ export type StockItem = {
 export type ProcessingResult = {
   id: string;
   date: Date;
+  source: 'oscsc' | 'private';
   paddyUsed: number;
   riceYield: number;
   branYield: number;

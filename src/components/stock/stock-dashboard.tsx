@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 
 const saleSchema = z.object({
+  source: z.enum(['oscsc', 'private'], { required_error: 'Stock source is required' }),
   customerName: z.string().min(1, 'Customer name is required'),
   itemType: z.enum(['paddy', 'rice']),
   quantity: z.coerce.number().positive('Quantity must be positive'),
@@ -26,6 +27,7 @@ const saleSchema = z.object({
 });
 
 const processingSchema = z.object({
+    source: z.enum(['oscsc', 'private'], { required_error: 'Stock source is required' }),
     paddyUsed: z.coerce.number().positive('Paddy quantity must be positive'),
     riceYield: z.coerce.number().positive('Rice yield must be positive'),
     branYield: z.coerce.number().min(0, 'Cannot be negative'),
@@ -52,9 +54,11 @@ export function StockDashboard() {
   const formatNumber = (num: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num);
 
   function onSaleSubmit(values: z.infer<typeof saleSchema>) {
-    const stockAvailable = values.itemType === 'paddy' ? totalStock.paddy : totalStock.rice;
+    const stockSource = values.source === 'oscsc' ? oscscStock : privateStock;
+    const stockAvailable = values.itemType === 'paddy' ? stockSource.paddy : stockSource.rice;
+    
     if (values.quantity > stockAvailable) {
-        saleForm.setError('quantity', { message: `Exceeds available stock of ${formatNumber(stockAvailable)} Qtl` });
+        saleForm.setError('quantity', { message: `Exceeds available stock of ${formatNumber(stockAvailable)} Qtl from ${values.source}` });
         return;
     }
     addSale(values);
@@ -64,8 +68,9 @@ export function StockDashboard() {
   }
 
   function onProcessingSubmit(values: z.infer<typeof processingSchema>) {
-    if(values.paddyUsed > totalStock.paddy) {
-        processingForm.setError('paddyUsed', { message: `Exceeds available paddy stock of ${formatNumber(totalStock.paddy)} Qtl` });
+    const stockSource = values.source === 'oscsc' ? oscscStock : privateStock;
+    if(values.paddyUsed > stockSource.paddy) {
+        processingForm.setError('paddyUsed', { message: `Exceeds available paddy stock of ${formatNumber(stockSource.paddy)} Qtl from ${values.source}` });
         return;
     }
     addProcessingResult(values);
@@ -198,6 +203,7 @@ export function StockDashboard() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Date</TableHead>
+                                <TableHead>Source</TableHead>
                                 <TableHead>Paddy Used (Qtl)</TableHead>
                                 <TableHead>Rice Yield (Qtl)</TableHead>
                                 <TableHead className="text-right">Yield (%)</TableHead>
@@ -205,11 +211,12 @@ export function StockDashboard() {
                         </TableHeader>
                         <TableBody>
                             {processingHistory.length === 0 ? (
-                                <TableRow><TableCell colSpan={4} className="text-center h-24">No processing history.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={5} className="text-center h-24">No processing history.</TableCell></TableRow>
                             ) : (
                                 [...processingHistory].sort((a, b) => b.date.getTime() - a.date.getTime()).map(p => (
                                     <TableRow key={p.id}>
                                         <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
+                                        <TableCell className='capitalize'>{p.source}</TableCell>
                                         <TableCell>{formatNumber(p.paddyUsed)}</TableCell>
                                         <TableCell>{formatNumber(p.riceYield)}</TableCell>
                                         <TableCell className="text-right font-medium">{formatNumber(p.yieldPercentage)}%</TableCell>
@@ -229,6 +236,9 @@ export function StockDashboard() {
             <DialogHeader><DialogTitle>Release Stock for Sale</DialogTitle></DialogHeader>
             <Form {...saleForm}>
                 <form onSubmit={saleForm.handleSubmit(onSaleSubmit)} className="space-y-4">
+                    <FormField control={saleForm.control} name="source" render={({ field }) => (
+                        <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="oscsc">OSCSC</SelectItem><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                    )} />
                     <FormField control={saleForm.control} name="customerName" render={({ field }) => (
                         <FormItem><FormLabel>Customer Name</FormLabel><FormControl><Input placeholder="e.g., Local Retail Inc." {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
@@ -259,6 +269,9 @@ export function StockDashboard() {
             <DialogHeader><DialogTitle>Release Paddy for Processing</DialogTitle></DialogHeader>
             <Form {...processingForm}>
                 <form onSubmit={processingForm.handleSubmit(onProcessingSubmit)} className="space-y-4">
+                     <FormField control={processingForm.control} name="source" render={({ field }) => (
+                        <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="oscsc">OSCSC</SelectItem><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                    )} />
                     <FormField control={processingForm.control} name="paddyUsed" render={({ field }) => (
                         <FormItem><FormLabel>Paddy to Process (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="e.g., 100" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />

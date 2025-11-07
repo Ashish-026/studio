@@ -78,7 +78,8 @@ const initialSales: PrivateSale[] = [
         date: new Date('2024-06-10'),
         payments: [
             { id: 'sp1', amount: 210000, date: new Date('2024-06-10') }
-        ]
+        ],
+        source: 'private',
     },
     {
         id: 's2',
@@ -93,7 +94,8 @@ const initialSales: PrivateSale[] = [
         date: new Date('2024-06-12'),
         payments: [
             { id: 'sp2', amount: 300000, date: new Date('2024-06-12') }
-        ]
+        ],
+        source: 'private',
     }
 ];
 
