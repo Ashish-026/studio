@@ -3,43 +3,40 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMandiData } from '@/context/mandi-context';
 import { useAuth } from '@/hooks/use-auth';
-import { Scale, Target, Tractor, Warehouse } from 'lucide-react';
+import { Scale, Target, Tractor, Warehouse, Sprout, Package } from 'lucide-react';
 import { useMemo } from 'react';
 
 export function SummaryCards() {
-  const { targetAllocations, paddyLiftedItems } = useMandiData();
+  const { targetAllocations, paddyLiftedItems, processingHistory, stockReleases } = useMandiData();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
   const summary = useMemo(() => {
     const targetAllotted = targetAllocations.reduce((acc, item) => acc + item.target, 0);
-    
-    const physicalPaddyLifted = paddyLiftedItems
-      .filter(item => item.entryType === 'physical' || !item.entryType)
-      .reduce((acc, item) => acc + item.totalPaddyReceived, 0);
-
-    const nonPhysicallyLifted = paddyLiftedItems
-      .filter(item => item.entryType === 'monetary')
-      .reduce((acc, item) => acc + item.totalPaddyReceived, 0);
-      
-    const totalPaddyLifted = physicalPaddyLifted + nonPhysicallyLifted;
+    const totalPaddyLifted = paddyLiftedItems.reduce((acc, item) => acc + item.totalPaddyReceived, 0);
     const balanceToBeLifted = targetAllotted - totalPaddyLifted;
+
+    const totalRiceYield = processingHistory.reduce((acc, item) => acc + item.riceYield, 0);
+    const totalRiceSupplied = stockReleases.reduce((acc, item) => acc + item.quantity, 0);
+    const availableRiceStock = totalRiceYield - totalRiceSupplied;
+    
 
     return {
       targetAllotted,
-      physicalPaddyLifted,
+      totalPaddyLifted,
       balanceToBeLifted,
-      nonPhysicallyLifted,
+      totalRiceYield,
+      availableRiceStock
     };
-  }, [targetAllocations, paddyLiftedItems]);
+  }, [targetAllocations, paddyLiftedItems, processingHistory, stockReleases]);
 
   const formatNumber = (num: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num);
 
   return (
-    <div className={`grid gap-4 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-2'}`}>
+    <div className={`grid gap-4 md:grid-cols-2 ${isAdmin ? 'lg:grid-cols-5' : 'lg:grid-cols-3'}`}>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Target Allotted (Quintals)</CardTitle>
+          <CardTitle className="text-sm font-medium">Target Allotted (Qtl)</CardTitle>
           <Target className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -49,11 +46,11 @@ export function SummaryCards() {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Physical Paddy Lifted (Quintals)</CardTitle>
+          <CardTitle className="text-sm font-medium">Total Paddy Lifted (Qtl)</CardTitle>
           <Tractor className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{formatNumber(summary.physicalPaddyLifted)}</div>
+          <div className="text-2xl font-bold">{formatNumber(summary.totalPaddyLifted)}</div>
           <p className="text-xs text-muted-foreground">Total paddy physically received.</p>
         </CardContent>
       </Card>
@@ -61,7 +58,7 @@ export function SummaryCards() {
         <>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Balance to be Lifted (Quintals)</CardTitle>
+              <CardTitle className="text-sm font-medium">Balance to Lift (Qtl)</CardTitle>
               <Scale className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -71,12 +68,22 @@ export function SummaryCards() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Monetary Paddy Lifted (Quintals)</CardTitle>
-              <Warehouse className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Total Rice Produced (Qtl)</CardTitle>
+              <Sprout className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(summary.nonPhysicallyLifted)}</div>
-              <p className="text-xs text-muted-foreground">Paddy equivalent from monetary entries.</p>
+              <div className="text-2xl font-bold">{formatNumber(summary.totalRiceYield)}</div>
+              <p className="text-xs text-muted-foreground">From processed paddy.</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Available Rice Stock (Qtl)</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatNumber(summary.availableRiceStock)}</div>
+              <p className="text-xs text-muted-foreground">Ready for supply.</p>
             </CardContent>
           </Card>
         </>

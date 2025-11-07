@@ -22,6 +22,24 @@ export type PaddyLifted = {
   entryType?: 'physical' | 'monetary';
 };
 
+export type MandiProcessingResult = {
+    id: string;
+    date: Date;
+    paddyUsed: number;
+    riceYield: number;
+    branYield: number;
+    brokenRiceYield: number;
+    yieldPercentage: number;
+};
+
+export type MandiStockRelease = {
+    id: string;
+    date: Date;
+    lotNumber: string;
+    godownDetails: string;
+    quantity: number;
+};
+
 export type Payment = {
   id: string;
   amount: number;
