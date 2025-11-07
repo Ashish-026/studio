@@ -12,21 +12,26 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Tractor } from 'lucide-react';
 
-const formSchema = z.object({
+const usernameSchema = z.object({
   username: z.string().min(1, 'Username is required'),
-  password: z.string().min(1, 'Password is required'),
+});
+
+const otpSchema = z.object({
+    otp: z.string().min(6, 'OTP must be 6 digits').max(6, 'OTP must be 6 digits'),
 });
 
 export function LoginForm() {
-  const { login, user, loading } = useAuth();
+  const { login, verifyOtp, user, loading, authStep, currentUsername, resetAuthStep } = useAuth();
   const router = useRouter();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      username: '',
-      password: '',
-    },
+  const usernameForm = useForm<z.infer<typeof usernameSchema>>({
+    resolver: zodResolver(usernameSchema),
+    defaultValues: { username: '' },
+  });
+
+  const otpForm = useForm<z.infer<typeof otpSchema>>({
+    resolver: zodResolver(otpSchema),
+    defaultValues: { otp: '' },
   });
 
   useEffect(() => {
@@ -39,6 +44,20 @@ export function LoginForm() {
     return null; // Or a loading spinner
   }
 
+  const handleUsernameSubmit = (values: z.infer<typeof usernameSchema>) => {
+    login(values);
+  };
+
+  const handleOtpSubmit = (values: z.infer<typeof otpSchema>) => {
+    verifyOtp(values.otp);
+  };
+
+  const handleBack = () => {
+    resetAuthStep();
+    usernameForm.reset();
+    otpForm.reset();
+  }
+
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
@@ -46,42 +65,62 @@ export function LoginForm() {
             <Tractor className="h-8 w-8 text-primary" />
         </div>
         <CardTitle className="text-2xl font-headline">Mandi Monitor</CardTitle>
-        <CardDescription>Enter your credentials to access your dashboard</CardDescription>
+        <CardDescription>
+            {authStep === 'otp' ? `Enter the OTP sent for ${currentUsername}` : 'Enter your credentials to access your dashboard'}
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(login)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input placeholder="admin or user" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
-              Log In
-            </Button>
-          </form>
-        </Form>
+        {authStep === 'credentials' && (
+            <Form {...usernameForm}>
+            <form onSubmit={usernameForm.handleSubmit(handleUsernameSubmit)} className="space-y-6">
+                <FormField
+                control={usernameForm.control}
+                name="username"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                        <Input placeholder="admin or user" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
+                Request OTP
+                </Button>
+            </form>
+            </Form>
+        )}
+
+        {authStep === 'otp' && (
+            <Form {...otpForm}>
+                <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)} className="space-y-6">
+                    <FormField
+                        control={otpForm.control}
+                        name="otp"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>One-Time Password</FormLabel>
+                            <FormControl>
+                                <Input type="text" placeholder="123456" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <div className="flex flex-col space-y-2">
+                        <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
+                            Log In
+                        </Button>
+                        <Button type="button" variant="outline" className="w-full" onClick={handleBack}>
+                            Back
+                        </Button>
+                    </div>
+                </form>
+            </Form>
+        )}
+
       </CardContent>
     </Card>
   );

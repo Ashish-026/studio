@@ -5,11 +5,17 @@ import { useRouter } from 'next/navigation';
 import type { User } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
+type AuthStep = 'credentials' | 'otp';
+
 interface AuthContextType {
   user: User | null;
-  login: (data: any) => Promise<void>;
+  login: (data: { username: string }) => void;
+  verifyOtp: (otp: string) => void;
   logout: () => void;
   loading: boolean;
+  authStep: AuthStep;
+  currentUsername: string | null;
+  resetAuthStep: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -19,9 +25,13 @@ const hardcodedUsers: Record<string, User> = {
   user: { id: '2', name: 'Regular User', role: 'user' },
 };
 
+const MOCKED_OTP = '123456';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authStep, setAuthStep] = useState<AuthStep>('credentials');
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -39,42 +49,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(async (data: any) => {
-    const { username, password } = data;
-    if (password !== 'password') {
-      toast({
-        title: 'Login Failed',
-        description: 'Invalid username or password.',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const login = useCallback((data: { username: string }) => {
+    const { username } = data;
     const foundUser = hardcodedUsers[username];
+
     if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem('mandi-monitor-user', JSON.stringify(foundUser));
-      router.push('/dashboard');
+      setCurrentUsername(username);
+      setAuthStep('otp');
       toast({
-        title: 'Login Successful',
-        description: `Welcome, ${foundUser.name}!`,
+        title: 'OTP Sent',
+        description: `Your OTP is: ${MOCKED_OTP}`,
       });
     } else {
       toast({
         title: 'Login Failed',
-        description: 'Invalid username or password.',
+        description: 'Invalid username.',
         variant: 'destructive',
       });
     }
-  }, [router, toast]);
+  }, [toast]);
+
+  const verifyOtp = useCallback((otp: string) => {
+    if (otp === MOCKED_OTP && currentUsername) {
+      const foundUser = hardcodedUsers[currentUsername];
+      if (foundUser) {
+        setUser(foundUser);
+        localStorage.setItem('mandi-monitor-user', JSON.stringify(foundUser));
+        router.push('/dashboard');
+        toast({
+          title: 'Login Successful',
+          description: `Welcome, ${foundUser.name}!`,
+        });
+        resetAuthStep();
+      }
+    } else {
+      toast({
+        title: 'Login Failed',
+        description: 'Invalid OTP.',
+        variant: 'destructive',
+      });
+    }
+  }, [currentUsername, router, toast]);
 
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('mandi-monitor-user');
+    resetAuthStep();
     router.push('/');
   }, [router]);
 
+  const resetAuthStep = () => {
+    setAuthStep('credentials');
+    setCurrentUsername(null);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, verifyOtp, logout, loading, authStep, currentUsername, resetAuthStep }}>
       {children}
     </AuthContext.Provider>
   );
