@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -20,6 +20,8 @@ import { useToast } from '@/hooks/use-toast';
 import { downloadPdf } from '@/lib/pdf-utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import type { TargetAllocation as TargetAllocationType } from '@/lib/types';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../ui/select';
+import { Label } from '../ui/label';
 
 
 const formSchema = z.object({
@@ -36,8 +38,22 @@ export function TargetAllotment() {
   const [showForm, setShowForm] = useState(false);
   const [editingTarget, setEditingTarget] = useState<TargetAllocationType | null>(null);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedMandi, setSelectedMandi] = useState('All');
 
-  const totalTarget = targetAllocations.reduce((sum, item) => sum + item.target, 0);
+  const uniqueMandis = useMemo(() => {
+    const mandiNames = targetAllocations.map((allocation) => allocation.mandiName);
+    return [...new Set(mandiNames)].sort((a,b) => a.localeCompare(b));
+  }, [targetAllocations]);
+
+  const filteredAllocations = useMemo(() => {
+    const sortedAllocations = [...targetAllocations].sort((a, b) => b.date.getTime() - a.date.getTime());
+    if (selectedMandi === 'All') {
+      return sortedAllocations;
+    }
+    return sortedAllocations.filter(item => item.mandiName === selectedMandi);
+  }, [targetAllocations, selectedMandi]);
+
+  const totalTarget = filteredAllocations.reduce((sum, item) => sum + item.target, 0);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -98,6 +114,23 @@ export function TargetAllotment() {
                 )}
             </div>
         </div>
+        <div className="flex items-center gap-4 pt-4">
+              <Label htmlFor="mandi-filter-target" className="text-sm font-medium">Filter by Mandi:</Label>
+              <Select value={selectedMandi} onValueChange={setSelectedMandi}>
+                <SelectTrigger className="w-[280px]" id="mandi-filter-target">
+                  <SelectValue placeholder="Select a mandi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Mandis</SelectLabel>
+                    <SelectItem value="All">All Mandis</SelectItem>
+                    {uniqueMandis.map((mandi) => (
+                      <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+          </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {isAdmin && showForm && (
@@ -160,10 +193,10 @@ export function TargetAllotment() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {targetAllocations.length === 0 && (
-                            <TableRow><TableCell colSpan={isAdmin ? 4 : 3} className="text-center">No targets allotted yet.</TableCell></TableRow>
+                        {filteredAllocations.length === 0 && (
+                            <TableRow><TableCell colSpan={isAdmin ? 4 : 3} className="text-center">No targets allotted for this selection.</TableCell></TableRow>
                         )}
-                        {targetAllocations.sort((a, b) => b.date.getTime() - a.date.getTime()).map((item) => (
+                        {filteredAllocations.map((item) => (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.mandiName}</TableCell>
                             <TableCell>{format(item.date, 'dd MMM yyyy')}</TableCell>
@@ -181,7 +214,7 @@ export function TargetAllotment() {
                 </Table>
             </div>
              <div className="text-right font-bold text-lg mt-4 pr-4">
-                Total Allotted: {totalTarget.toLocaleString('en-IN')} Quintals
+                Total Allotted for {selectedMandi === 'All' ? 'All Mandis' : selectedMandi}: {totalTarget.toLocaleString('en-IN')} Quintals
             </div>
         </div>
       </CardContent>
