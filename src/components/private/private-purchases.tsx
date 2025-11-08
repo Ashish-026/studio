@@ -283,6 +283,7 @@ export function PrivatePurchases() {
                                             <TableHead>Date</TableHead>
                                             <TableHead>Type</TableHead>
                                             <TableHead>Vehicle No.</TableHead>
+                                            <TableHead>Rent(₹)</TableHead>
                                             <TableHead className="text-right">Qty (Qtl)</TableHead>
                                             <TableHead className="text-right">Rate (₹)</TableHead>
                                             <TableHead className="text-right">Total (₹)</TableHead>
@@ -299,6 +300,7 @@ export function PrivatePurchases() {
                                                         <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
                                                         <TableCell className="capitalize">{p.itemType}</TableCell>
                                                         <TableCell>{p.vehicleNumber || '-'}</TableCell>
+                                                        <TableCell>{p.tripCharge ? formatCurrency(p.tripCharge) : '-'}</TableCell>
                                                         <TableCell className="text-right">{p.quantity.toLocaleString('en-IN')}</TableCell>
                                                         <TableCell className="text-right">{formatCurrency(p.rate)}</TableCell>
                                                         <TableCell className="text-right">{formatCurrency(p.totalAmount)}</TableCell>
@@ -317,7 +319,7 @@ export function PrivatePurchases() {
                                                     </TableRow>
                                                     <CollapsibleContent asChild>
                                                         <tr className="bg-muted/50 print:hidden">
-                                                            <TableCell colSpan={9} className="p-0">
+                                                            <TableCell colSpan={10} className="p-0">
                                                                 <div className="p-4">
                                                                     <h4 className="font-semibold mb-2">Payment History for Purchase on {format(p.date, 'dd MMM yyyy')}</h4>
                                                                     {p.payments.length > 0 ? (

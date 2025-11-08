@@ -288,6 +288,7 @@ export function PrivateSales() {
                                             <TableHead>Date</TableHead>
                                             <TableHead>Type</TableHead>
                                             <TableHead>Vehicle No.</TableHead>
+                                            <TableHead>Rent (₹)</TableHead>
                                             <TableHead className="text-right">Qty (Qtl)</TableHead>
                                             <TableHead className="text-right">Rate (₹)</TableHead>
                                             <TableHead className="text-right">Total (₹)</TableHead>
@@ -304,6 +305,7 @@ export function PrivateSales() {
                                                         <TableCell>{format(s.date, 'dd MMM yyyy')}</TableCell>
                                                         <TableCell className="capitalize">{s.itemType}</TableCell>
                                                         <TableCell>{s.vehicleNumber || '-'}</TableCell>
+                                                        <TableCell>{s.tripCharge ? formatCurrency(s.tripCharge) : '-'}</TableCell>
                                                         <TableCell className="text-right">{s.quantity.toLocaleString('en-IN')}</TableCell>
                                                         <TableCell className="text-right">{formatCurrency(s.rate)}</TableCell>
                                                         <TableCell className="text-right">{formatCurrency(s.totalAmount)}</TableCell>
