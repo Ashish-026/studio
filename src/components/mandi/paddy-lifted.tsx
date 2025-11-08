@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { Separator } from '@/components/ui/separator';
 import { downloadPdf } from '@/lib/pdf-utils';
@@ -42,19 +42,27 @@ export function PaddyLifted() {
   const [showMonetaryForm, setShowMonetaryForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<PaddyLiftedType | null>(null);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedMandi, setSelectedMandi] = useState('All');
 
   const uniqueMandis = useMemo(() => {
     const mandiNames = targetAllocations.map((allocation) => allocation.mandiName);
     return [...new Set(mandiNames)];
   }, [targetAllocations]);
+
+  const filteredItems = useMemo(() => {
+    if (selectedMandi === 'All') {
+      return paddyLiftedItems;
+    }
+    return paddyLiftedItems.filter(item => item.mandiName === selectedMandi);
+  }, [paddyLiftedItems, selectedMandi]);
   
   const physicalEntries = useMemo(() => 
-    paddyLiftedItems.filter(item => item.entryType === 'physical' || !item.entryType), 
-  [paddyLiftedItems]);
+    filteredItems.filter(item => item.entryType === 'physical' || !item.entryType), 
+  [filteredItems]);
 
   const monetaryEntries = useMemo(() => 
-    paddyLiftedItems.filter(item => item.entryType === 'monetary'), 
-  [paddyLiftedItems]);
+    filteredItems.filter(item => item.entryType === 'monetary'), 
+  [filteredItems]);
 
   const physicalForm = useForm<z.infer<typeof physicalFormSchema>>({
     resolver: zodResolver(physicalFormSchema),
@@ -169,6 +177,23 @@ export function PaddyLifted() {
                 </Button>
               )}
             </div>
+          </div>
+          <div className="flex items-center gap-4 pt-4">
+              <Label htmlFor="mandi-filter" className="text-sm font-medium">Filter by Mandi:</Label>
+              <Select value={selectedMandi} onValueChange={setSelectedMandi}>
+                <SelectTrigger className="w-[280px]" id="mandi-filter">
+                  <SelectValue placeholder="Select a mandi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Mandis</SelectLabel>
+                    <SelectItem value="All">All Mandis</SelectItem>
+                    {uniqueMandis.map((mandi) => (
+                      <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
           </div>
           {uniqueMandis.length === 0 && !showPhysicalForm && !showMonetaryForm && (
               <p className="text-sm text-muted-foreground pt-2">Please add a target allotment before adding a paddy lifting entry.</p>
