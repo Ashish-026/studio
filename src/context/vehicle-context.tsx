@@ -74,7 +74,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
 
         const isPerTrip = item.rentType === 'per_trip';
         const rentAmount = isPerTrip ? 0 : item.rentAmount;
-        const totalRent = isPerTrip ? 0 : item.rentAmount;
+        const totalRent = isPerTrip ? 0 : rentAmount;
         
         const newVehicle: Vehicle = {
             ...item,
@@ -111,7 +111,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
 
   const addTrip = useCallback((vehicleId: string, trip: Omit<VehicleTrip, 'id' | 'date'>) => {
     setVehicles(prev => prev.map(v => {
-        const targetVehicle = v.id === vehicleId || v.vehicleNumber === vehicleId; // Allow adding trip by vehicleNumber as well
+        const targetVehicle = v.id === vehicleId || v.vehicleNumber === vehicleId;
         if (targetVehicle && v.rentType === 'per_trip') {
             const newTrip: VehicleTrip = {
                 ...trip,
