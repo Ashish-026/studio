@@ -18,6 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { downloadPdf } from '@/lib/pdf-utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import type { PaddyLifted as PaddyLiftedType } from '@/lib/types';
+import { Label } from '../ui/label';
 
 const physicalFormSchema = z.object({
   mandiName: z.string().min(1, 'Mandi name is required'),
