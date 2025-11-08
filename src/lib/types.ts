@@ -43,6 +43,11 @@ export type MandiStockRelease = {
     lotNumber: string;
     godownDetails: string;
     quantity: number;
+    vehicleType?: 'own' | 'hired';
+    vehicleNumber?: string;
+    driverName?: string;
+    ownerName?: string;
+    tripCharge?: number;
 };
 
 export type Payment = {
