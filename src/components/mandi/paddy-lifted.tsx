@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMandiData } from '@/context/mandi-context';
-import { PlusCircle, DollarSign, Download, Edit } from 'lucide-react';
+import { useVehicleData } from '@/context/vehicle-context';
+import { PlusCircle, DollarSign, Download, Edit, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +17,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { useAuth } from '@/hooks/use-auth';
 import { Separator } from '@/components/ui/separator';
 import { downloadPdf } from '@/lib/pdf-utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import type { PaddyLifted as PaddyLiftedType } from '@/lib/types';
 import { Label } from '../ui/label';
 
@@ -25,6 +26,19 @@ const physicalFormSchema = z.object({
   farmerName: z.string().min(1, 'Farmer name is required'),
   totalPaddyReceived: z.coerce.number().positive('Must be a positive number'),
   mandiWeight: z.coerce.number().positive('Must be a positive number'),
+  vehicleType: z.enum(['farmer', 'own', 'hired'], { required_error: 'Vehicle type is required' }),
+  vehicleNumber: z.string().optional(),
+  driverName: z.string().optional(),
+  ownerName: z.string().optional(),
+  tripCharge: z.coerce.number().optional(),
+}).refine(data => {
+    if (data.vehicleType === 'hired') {
+        return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
+    }
+    return true;
+}, {
+    message: "Vehicle number, driver, owner, and a positive trip charge are required for hired vehicles.",
+    path: ['tripCharge'],
 });
 
 const monetaryFormSchema = z.object({
@@ -36,6 +50,7 @@ const monetaryFormSchema = z.object({
 
 export function PaddyLifted() {
   const { paddyLiftedItems, addPaddyLifted, updatePaddyLifted, targetAllocations } = useMandiData();
+  const { addVehicle, addTrip } = useVehicleData();
   const { toast } = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -67,13 +82,15 @@ export function PaddyLifted() {
 
   const physicalForm = useForm<z.infer<typeof physicalFormSchema>>({
     resolver: zodResolver(physicalFormSchema),
-    defaultValues: { mandiName: '', farmerName: '' },
+    defaultValues: { mandiName: '', farmerName: '', vehicleType: 'farmer' },
   });
 
   const monetaryForm = useForm<z.infer<typeof monetaryFormSchema>>({
     resolver: zodResolver(monetaryFormSchema),
     defaultValues: { mandiName: '' },
   });
+  
+  const vehicleType = physicalForm.watch('vehicleType');
 
   useEffect(() => {
     if (editingEntry) {
@@ -88,11 +105,16 @@ export function PaddyLifted() {
           mandiName: editingEntry.mandiName,
           farmerName: editingEntry.farmerName,
           totalPaddyReceived: editingEntry.totalPaddyReceived,
-          mandiWeight: editingEntry.mandiWeight
+          mandiWeight: editingEntry.mandiWeight,
+          vehicleType: editingEntry.vehicleType || 'farmer',
+          vehicleNumber: editingEntry.vehicleNumber,
+          driverName: editingEntry.driverName,
+          ownerName: editingEntry.ownerName,
+          tripCharge: editingEntry.tripCharge
         });
       }
     } else {
-      physicalForm.reset({ mandiName: '', farmerName: '' });
+      physicalForm.reset({ mandiName: '', farmerName: '', vehicleType: 'farmer' });
       monetaryForm.reset({ mandiName: '' });
     }
   }, [editingEntry, physicalForm, monetaryForm])
@@ -102,8 +124,28 @@ export function PaddyLifted() {
       updatePaddyLifted(editingEntry.id, { ...editingEntry, ...values });
       toast({ title: 'Success!', description: 'Paddy lifting record has been updated.' });
     } else {
-      addPaddyLifted({ ...values, entryType: 'physical' });
+      const newPaddyEntry = addPaddyLifted({ ...values, entryType: 'physical' });
       toast({ title: 'Success!', description: 'Physical paddy lifting record has been added.' });
+
+      if (values.vehicleType === 'hired' && values.vehicleNumber && values.tripCharge) {
+        const vehicleId = addVehicle({
+            vehicleNumber: values.vehicleNumber,
+            driverName: values.driverName || '',
+            ownerName: values.ownerName || '',
+            rentType: 'per_trip',
+            rentAmount: 0,
+        });
+
+        if (vehicleId) {
+            addTrip(vehicleId, {
+                source: values.mandiName,
+                destination: 'Mill', // Or some default value
+                quantity: values.totalPaddyReceived,
+                tripCharge: values.tripCharge,
+            });
+            toast({ title: 'Vehicle Updated', description: `Trip for ${values.vehicleNumber} has been added to Vehicle Register.` });
+        }
+      }
     }
     physicalForm.reset();
     setShowPhysicalForm(false);
@@ -208,35 +250,80 @@ export function PaddyLifted() {
               </CardHeader>
               <CardContent>
                 <Form {...physicalForm}>
-                  <form onSubmit={physicalForm.handleSubmit(onPhysicalSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                    <FormField
-                      control={physicalForm.control}
-                      name="mandiName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Mandi Name</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger><SelectValue placeholder="Select a mandi" /></SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem> ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField control={physicalForm.control} name="farmerName" render={({ field }) => (
-                      <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Patel" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (
-                      <FormItem><FormLabel>Paddy Received (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="120" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={physicalForm.control} name="mandiWeight" render={({ field }) => (
-                      <FormItem><FormLabel>Mandi Weight (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="118.5" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <Button type="submit" className="w-full md:w-auto md:col-span-full bg-accent hover:bg-accent/90">Add Entry</Button>
+                  <form onSubmit={physicalForm.handleSubmit(onPhysicalSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                      <FormField
+                        control={physicalForm.control}
+                        name="mandiName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Mandi Name</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger><SelectValue placeholder="Select a mandi" /></SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem> ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField control={physicalForm.control} name="farmerName" render={({ field }) => (
+                        <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Patel" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (
+                        <FormItem><FormLabel>Paddy Received (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="120" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={physicalForm.control} name="mandiWeight" render={({ field }) => (
+                        <FormItem><FormLabel>Mandi Weight (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="118.5" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </div>
+
+                    <Separator />
+                    
+                    <div>
+                        <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Car className="h-5 w-5" /> Vehicle Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                           <FormField
+                                control={physicalForm.control}
+                                name="vehicleType"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Vehicle Type</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="farmer">Farmer's Vehicle</SelectItem>
+                                                <SelectItem value="own">Own Vehicle</SelectItem>
+                                                <SelectItem value="hired">Hired Vehicle</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                           />
+                           {vehicleType === 'hired' && (
+                            <>
+                                <FormField control={physicalForm.control} name="vehicleNumber" render={({ field }) => (
+                                    <FormItem><FormLabel>Vehicle Number</FormLabel><FormControl><Input placeholder="OD01AB1234" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                 <FormField control={physicalForm.control} name="driverName" render={({ field }) => (
+                                    <FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input placeholder="Suresh" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={physicalForm.control} name="ownerName" render={({ field }) => (
+                                    <FormItem><FormLabel>Owner/Agency</FormLabel><FormControl><Input placeholder="Gupta Transports" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (
+                                    <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                            </>
+                           )}
+                        </div>
+                    </div>
+
+                    <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90">Add Entry</Button>
                   </form>
                 </Form>
               </CardContent>
@@ -293,19 +380,21 @@ export function PaddyLifted() {
                           <TableHead>Mandi Name</TableHead>
                           <TableHead>Farmer Name</TableHead>
                           <TableHead>Paddy Received (Qtl)</TableHead>
+                           <TableHead>Vehicle</TableHead>
                           <TableHead className="text-right">Mandi Weight (Qtl)</TableHead>
                           {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                           </TableRow>
                       </TableHeader>
                       <TableBody>
                           {physicalEntries.length === 0 && (
-                              <TableRow><TableCell colSpan={isAdmin ? 5 : 4} className="text-center">No physical paddy lifted yet.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={isAdmin ? 6 : 5} className="text-center">No physical paddy lifted yet.</TableCell></TableRow>
                           )}
                           {physicalEntries.map((item) => (
                           <TableRow key={item.id}>
                               <TableCell className="font-medium">{item.mandiName}</TableCell>
                               <TableCell>{item.farmerName}</TableCell>
                               <TableCell>{item.totalPaddyReceived.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
+                               <TableCell className="capitalize">{item.vehicleType?.replace('_', ' ')}</TableCell>
                               <TableCell className="text-right">{item.mandiWeight.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
                               {isAdmin && (
                                 <TableCell className="text-right">

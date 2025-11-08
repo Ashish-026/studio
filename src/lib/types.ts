@@ -20,6 +20,11 @@ export type PaddyLifted = {
   moneyReceived?: number;
   ratePerQuintal?: number;
   entryType?: 'physical' | 'monetary';
+  vehicleType?: 'farmer' | 'own' | 'hired';
+  vehicleNumber?: string;
+  driverName?: string;
+  ownerName?: string;
+  tripCharge?: number;
 };
 
 export type MandiProcessingResult = {

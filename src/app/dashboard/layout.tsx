@@ -7,6 +7,7 @@ import { AppHeader } from '@/components/dashboard/header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MandiProvider } from '@/context/mandi-context';
 import { StockProvider } from '@/context/stock-context';
+import { VehicleProvider } from '@/context/vehicle-context';
 
 export default function DashboardLayout({
   children,
@@ -44,11 +45,13 @@ export default function DashboardLayout({
     <div className="flex min-h-screen w-full flex-col">
       <AppHeader />
       <main className="flex flex-1 flex-col">
-        <StockProvider>
-            <MandiProvider>
-                {children}
-            </MandiProvider>
-        </StockProvider>
+        <VehicleProvider>
+          <StockProvider>
+              <MandiProvider>
+                  {children}
+              </MandiProvider>
+          </StockProvider>
+        </VehicleProvider>
       </main>
     </div>
   );

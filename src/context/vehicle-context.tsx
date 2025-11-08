@@ -5,7 +5,7 @@ import type { Vehicle, Payment, VehicleTrip } from '@/lib/types';
 
 interface VehicleContextType {
   vehicles: Vehicle[];
-  addVehicle: (item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'trips' | 'totalRent' | 'totalPaid' | 'balance'>) => void;
+  addVehicle: (item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'trips' | 'totalRent' | 'totalPaid' | 'balance'>) => string;
   addRentPayment: (vehicleId: string, amount: number) => void;
   addTrip: (vehicleId: string, trip: Omit<VehicleTrip, 'id' | 'date'>) => void;
 }
@@ -64,22 +64,33 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
 
   const addVehicle = useCallback((item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'trips' | 'totalRent' | 'totalPaid' | 'balance'>) => {
-    const isPerTrip = item.rentType === 'per_trip';
-    const rentAmount = isPerTrip ? 0 : item.rentAmount;
-    const totalRent = isPerTrip ? 0 : item.rentAmount;
+    let vehicleId = '';
+    setVehicles(prev => {
+        const existingVehicle = prev.find(v => v.vehicleNumber === item.vehicleNumber);
+        if (existingVehicle) {
+            vehicleId = existingVehicle.id;
+            return prev; // Don't add if it already exists
+        }
 
-    const newVehicle: Vehicle = {
-        ...item,
-        id: new Date().toISOString(),
-        dateAdded: new Date(),
-        payments: [],
-        trips: [],
-        rentAmount: rentAmount,
-        totalRent: totalRent,
-        totalPaid: 0,
-        balance: totalRent,
-    };
-    setVehicles(prev => [...prev, newVehicle]);
+        const isPerTrip = item.rentType === 'per_trip';
+        const rentAmount = isPerTrip ? 0 : item.rentAmount;
+        const totalRent = isPerTrip ? 0 : item.rentAmount;
+        
+        const newVehicle: Vehicle = {
+            ...item,
+            id: new Date().toISOString() + '-v',
+            dateAdded: new Date(),
+            payments: [],
+            trips: [],
+            rentAmount: rentAmount,
+            totalRent: totalRent,
+            totalPaid: 0,
+            balance: totalRent,
+        };
+        vehicleId = newVehicle.id;
+        return [...prev, newVehicle];
+    });
+    return vehicleId;
   }, []);
 
   const addRentPayment = useCallback((vehicleId: string, amount: number) => {
@@ -100,15 +111,17 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
 
   const addTrip = useCallback((vehicleId: string, trip: Omit<VehicleTrip, 'id' | 'date'>) => {
     setVehicles(prev => prev.map(v => {
-        if (v.id === vehicleId && v.rentType === 'per_trip') {
+        const targetVehicle = v.id === vehicleId || v.vehicleNumber === vehicleId; // Allow adding trip by vehicleNumber as well
+        if (targetVehicle && v.rentType === 'per_trip') {
             const newTrip: VehicleTrip = {
                 ...trip,
                 id: new Date().toISOString(),
                 date: new Date(),
             };
             const updatedTrips = [...v.trips, newTrip];
-            const totals = calculateTotals(v.rentType, v.rentAmount, v.payments, updatedTrips);
-            return { ...v, trips: updatedTrips, ...totals };
+            const totalRent = updatedTrips.reduce((acc, t) => acc + t.tripCharge, 0);
+            const balance = totalRent - v.totalPaid;
+            return { ...v, trips: updatedTrips, totalRent, balance };
         }
         return v;
     }));
