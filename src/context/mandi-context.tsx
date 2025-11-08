@@ -12,7 +12,9 @@ interface MandiContextType {
   totalRiceFromProcessing: number;
   availableRiceForSupply: number;
   addTarget: (item: Omit<TargetAllocation, 'id'>) => void;
+  updateTarget: (id: string, updatedTarget: Omit<TargetAllocation, 'id'>) => void;
   addPaddyLifted: (item: Omit<PaddyLifted, 'id'>) => void;
+  updatePaddyLifted: (id: string, updatedPaddyLifted: Omit<PaddyLifted, 'id'>) => void;
   addMandiProcessing: (item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
   addStockRelease: (item: Omit<MandiStockRelease, 'id'>) => void;
 }
@@ -54,8 +56,16 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     setTargetAllocations((prev) => [...prev, { ...item, id: new Date().toISOString() }]);
   }, []);
 
+  const updateTarget = useCallback((id: string, updatedTarget: Omit<TargetAllocation, 'id'>) => {
+    setTargetAllocations(prev => prev.map(t => t.id === id ? { ...updatedTarget, id } : t));
+  }, []);
+
   const addPaddyLifted = useCallback((item: Omit<PaddyLifted, 'id'>) => {
     setPaddyLiftedItems((prev) => [...prev, { ...item, id: new Date().toISOString() }]);
+  }, []);
+
+  const updatePaddyLifted = useCallback((id: string, updatedPaddyLifted: Omit<PaddyLifted, 'id'>) => {
+    setPaddyLiftedItems(prev => prev.map(p => p.id === id ? { ...updatedPaddyLifted, id } : p));
   }, []);
 
   const addStockRelease = useCallback((item: Omit<MandiStockRelease, 'id'>) => {
@@ -68,7 +78,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, processingHistory: mandiProcessingHistory, stockReleases, addTarget, addPaddyLifted, addMandiProcessing, addStockRelease, availableRiceForSupply, totalRiceFromProcessing }}>
+    <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, processingHistory: mandiProcessingHistory, stockReleases, addTarget, updateTarget, addPaddyLifted, updatePaddyLifted, addMandiProcessing, addStockRelease, availableRiceForSupply, totalRiceFromProcessing }}>
       {children}
     </MandiContext.Provider>
   );
