@@ -8,6 +8,7 @@ interface VehicleContextType {
   addVehicle: (item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'trips' | 'totalRent' | 'totalPaid' | 'balance'>) => string;
   addRentPayment: (vehicleId: string, amount: number) => void;
   addTrip: (vehicleId: string, trip: Omit<VehicleTrip, 'id' | 'date'>) => void;
+  updateTrip: (vehicleId: string, tripId: string, updatedTrip: VehicleTrip) => void;
 }
 
 const VehicleContext = createContext<VehicleContextType | null>(null);
@@ -140,18 +141,31 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addTrip = useCallback((vehicleId: string, trip: Omit<VehicleTrip, 'id' | 'date'>) => {
+    setVehicles(prev => {
+        return prev.map(v => {
+            const targetVehicle = v.id === vehicleId || v.vehicleNumber === vehicleId;
+            if (targetVehicle && v.rentType === 'per_trip') {
+                const newTrip: VehicleTrip = {
+                    ...trip,
+                    id: new Date().toISOString(),
+                    date: new Date(),
+                };
+                const updatedTrips = [...v.trips, newTrip];
+                const totalRent = updatedTrips.reduce((acc, t) => acc + t.tripCharge, 0);
+                const balance = totalRent - v.totalPaid;
+                return { ...v, trips: updatedTrips, totalRent, balance };
+            }
+            return v;
+        });
+    });
+  }, []);
+  
+  const updateTrip = useCallback((vehicleId: string, tripId: string, updatedTripData: VehicleTrip) => {
     setVehicles(prev => prev.map(v => {
-        const targetVehicle = v.id === vehicleId || v.vehicleNumber === vehicleId;
-        if (targetVehicle && v.rentType === 'per_trip') {
-            const newTrip: VehicleTrip = {
-                ...trip,
-                id: new Date().toISOString(),
-                date: new Date(),
-            };
-            const updatedTrips = [...v.trips, newTrip];
-            const totalRent = updatedTrips.reduce((acc, t) => acc + t.tripCharge, 0);
-            const balance = totalRent - v.totalPaid;
-            return { ...v, trips: updatedTrips, totalRent, balance };
+        if (v.id === vehicleId) {
+            const updatedTrips = v.trips.map(t => t.id === tripId ? { ...t, ...updatedTripData } : t);
+            const totals = calculateTotals(v.rentType, v.rentAmount, v.payments, updatedTrips);
+            return { ...v, trips: updatedTrips, ...totals };
         }
         return v;
     }));
@@ -159,7 +173,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <VehicleContext.Provider value={{ vehicles, addVehicle, addRentPayment, addTrip }}>
+    <VehicleContext.Provider value={{ vehicles, addVehicle, addRentPayment, addTrip, updateTrip }}>
       {children}
     </VehicleContext.Provider>
   );

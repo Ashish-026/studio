@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useVehicleData } from '@/context/vehicle-context';
-import { ChevronDown, ChevronRight, Receipt, Car, MapPin, Building } from 'lucide-react';
+import { ChevronDown, ChevronRight, Receipt, Car, MapPin, Building, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,23 +15,40 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import type { VehicleTrip } from '@/lib/types';
 
 const paymentFormSchema = z.object({
     amount: z.coerce.number().positive('Payment amount must be positive'),
 });
 
+const tripFormSchema = z.object({
+    tripCharge: z.coerce.number().positive('Trip charge must be a positive number'),
+});
+
 export function VehicleRecords() {
-  const { vehicles, addRentPayment } = useVehicleData();
+  const { vehicles, addRentPayment, updateTrip } = useVehicleData();
   const { toast } = useToast();
   const [openOwnerCollapsibles, setOpenOwnerCollapsibles] = useState<Record<string, boolean>>({});
   const [openVehicleCollapsibles, setOpenVehicleCollapsibles] = useState<Record<string, boolean>>({});
   const [isPaymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [isTripDialogOpen, setTripDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
+  const [selectedTrip, setSelectedTrip] = useState<VehicleTrip | null>(null);
 
   const paymentForm = useForm<z.infer<typeof paymentFormSchema>>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: { amount: 0 },
   });
+
+  const tripForm = useForm<z.infer<typeof tripFormSchema>>({
+    resolver: zodResolver(tripFormSchema),
+  });
+
+  useEffect(() => {
+    if (selectedTrip) {
+      tripForm.reset({ tripCharge: selectedTrip.tripCharge });
+    }
+  }, [selectedTrip, tripForm]);
 
   const ownerAggregates = useMemo(() => {
     const owners: Record<string, { id: string, name: string, vehicles: any[] }> = {};
@@ -55,9 +72,26 @@ export function VehicleRecords() {
     }
   }
 
+  function onTripSubmit(values: z.infer<typeof tripFormSchema>) {
+    if (selectedVehicle && selectedTrip) {
+        updateTrip(selectedVehicle, selectedTrip.id, { ...selectedTrip, ...values });
+        toast({ title: 'Success!', description: 'Trip charge has been updated.' });
+        tripForm.reset();
+        setTripDialogOpen(false);
+        setSelectedVehicle(null);
+        setSelectedTrip(null);
+    }
+  }
+
   const handlePaymentClick = (vehicleId: string) => {
     setSelectedVehicle(vehicleId);
     setPaymentDialogOpen(true);
+  };
+  
+  const handleTripEditClick = (vehicleId: string, trip: VehicleTrip) => {
+    setSelectedVehicle(vehicleId);
+    setSelectedTrip(trip);
+    setTripDialogOpen(true);
   };
 
   const formatCurrency = (amount: number) => {
@@ -137,7 +171,7 @@ export function VehicleRecords() {
                                                     <h4 className="font-semibold mb-2 flex items-center gap-2"><MapPin className="h-4 w-4" /> Trip History</h4>
                                                     {v.trips.length > 0 ? (
                                                     <Table>
-                                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Source</TableHead><TableHead>Destination</TableHead><TableHead>Quantity (Qtl)</TableHead><TableHead className="text-right">Charge (₹)</TableHead></TableRow></TableHeader>
+                                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Source</TableHead><TableHead>Destination</TableHead><TableHead>Quantity (Qtl)</TableHead><TableHead className="text-right">Charge (₹)</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                                                         <TableBody>
                                                             {[...v.trips].sort((a: any, b: any) => b.date.getTime() - a.date.getTime()).map((t: any) => (
                                                                 <TableRow key={t.id}>
@@ -146,6 +180,11 @@ export function VehicleRecords() {
                                                                     <TableCell>{t.destination}</TableCell>
                                                                     <TableCell>{t.quantity.toLocaleString('en-IN')}</TableCell>
                                                                     <TableCell className="text-right">{formatCurrency(t.tripCharge)}</TableCell>
+                                                                    <TableCell className="text-right">
+                                                                        <Button variant="ghost" size="icon" onClick={() => handleTripEditClick(v.id, t)}>
+                                                                            <Edit className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </TableCell>
                                                                 </TableRow>
                                                             ))}
                                                         </TableBody>
@@ -178,7 +217,7 @@ export function VehicleRecords() {
                     </Collapsible>
                 ))}
                 {ownerAggregates.length === 0 && (
-                    <div className="p-4 text-center text-muted-foreground">No vehicle records found. Add one to get started.</div>
+                    <div className="p-4 text-center text-muted-foreground">Vehicle data from other registers will appear here.</div>
                 )}
             </div>
           </div>
@@ -196,6 +235,22 @@ export function VehicleRecords() {
                           <FormItem><FormLabel>Payment Amount (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Enter amount" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Record Payment</Button>
+                  </form>
+              </Form>
+          </DialogContent>
+      </Dialog>
+
+      <Dialog open={isTripDialogOpen} onOpenChange={setTripDialogOpen}>
+          <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>Edit Trip Charge</DialogTitle>
+              </DialogHeader>
+              <Form {...tripForm}>
+                  <form onSubmit={tripForm.handleSubmit(onTripSubmit)} className="space-y-4">
+                      <FormField control={tripForm.control} name="tripCharge" render={({ field }) => (
+                          <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Enter new charge" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Save Changes</Button>
                   </form>
               </Form>
           </DialogContent>
