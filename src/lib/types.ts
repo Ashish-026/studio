@@ -68,6 +68,11 @@ export type PrivatePurchase = {
   description?: string;
   date: Date;
   payments: Payment[];
+  vehicleType?: 'farmer' | 'own' | 'hired';
+  vehicleNumber?: string;
+  driverName?: string;
+  ownerName?: string;
+  tripCharge?: number;
 };
 
 export type PrivateSale = {
@@ -83,6 +88,11 @@ export type PrivateSale = {
   date: Date;
   payments: Payment[];
   source: 'private';
+  vehicleType?: 'customer' | 'own' | 'hired';
+  vehicleNumber?: string;
+  driverName?: string;
+  ownerName?: string;
+  tripCharge?: number;
 }
 
 export type LabourWorkEntry = {

@@ -56,7 +56,8 @@ const initialPurchases: PrivatePurchase[] = [
         payments: [
             { id: 'p1', amount: 200000, date: new Date('2024-05-20') },
             { id: 'p2', amount: 50000, date: new Date('2024-06-01') },
-        ]
+        ],
+        vehicleType: 'farmer',
     },
     { 
         id: '2', 
@@ -71,7 +72,12 @@ const initialPurchases: PrivatePurchase[] = [
         date: new Date('2024-05-22'),
         payments: [
             { id: 'p3', amount: 800000, date: new Date('2024-05-22') }
-        ]
+        ],
+        vehicleType: 'hired',
+        vehicleNumber: 'UP78XY9012',
+        driverName: 'Amit',
+        ownerName: 'Yadav Logistics',
+        tripCharge: 3000,
     },
     { 
         id: '3', 
@@ -86,7 +92,8 @@ const initialPurchases: PrivatePurchase[] = [
         date: new Date('2024-06-05'),
         payments: [
             { id: 'p4', amount: 205000, date: new Date('2024-06-05') }
-        ]
+        ],
+        vehicleType: 'own'
     },
 ];
 
@@ -106,6 +113,7 @@ const initialSales: PrivateSale[] = [
             { id: 'sp1', amount: 210000, date: new Date('2024-06-10') }
         ],
         source: 'private',
+        vehicleType: 'customer',
     },
     {
         id: 's2',
@@ -122,6 +130,11 @@ const initialSales: PrivateSale[] = [
             { id: 'sp2', amount: 300000, date: new Date('2024-06-12') }
         ],
         source: 'private',
+        vehicleType: 'hired',
+        vehicleNumber: 'MH12DE3456',
+        driverName: 'Vijay',
+        ownerName: 'Deccan Transports',
+        tripCharge: 8000,
     }
 ];
 

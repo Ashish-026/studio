@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useStockData } from '@/context/stock-context';
-import { PlusCircle, ChevronDown, ChevronRight, Receipt } from 'lucide-react';
+import { useVehicleData } from '@/context/vehicle-context';
+import { PlusCircle, ChevronDown, ChevronRight, Receipt, Car } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
+import { Separator } from '../ui/separator';
 
 const saleFormSchema = z.object({
   source: z.enum(['private'], { required_error: 'Stock source is required' }),
@@ -26,6 +28,19 @@ const saleFormSchema = z.object({
   rate: z.coerce.number().positive('Rate must be positive'),
   initialPayment: z.coerce.number().min(0, 'Initial payment cannot be negative').default(0),
   description: z.string().optional(),
+  vehicleType: z.enum(['customer', 'own', 'hired'], { required_error: 'Vehicle type is required' }),
+  vehicleNumber: z.string().optional(),
+  driverName: z.string().optional(),
+  ownerName: z.string().optional(),
+  tripCharge: z.coerce.number().optional(),
+}).refine(data => {
+    if (data.vehicleType === 'hired') {
+        return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
+    }
+    return true;
+}, {
+    message: "Vehicle number, driver, owner, and a positive trip charge are required for hired vehicles.",
+    path: ['tripCharge'],
 });
 
 const paymentFormSchema = z.object({
@@ -34,6 +49,7 @@ const paymentFormSchema = z.object({
 
 export function PrivateSales() {
   const { sales, addSale, addSalePayment, privateStock } = useStockData();
+  const { addVehicle, addTrip } = useVehicleData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [openCustomerCollapsibles, setOpenCustomerCollapsibles] = useState<Record<string, boolean>>({});
@@ -50,6 +66,7 @@ export function PrivateSales() {
       rate: 0,
       initialPayment: 0,
       description: '',
+      vehicleType: 'customer',
     },
   });
 
@@ -57,6 +74,8 @@ export function PrivateSales() {
     resolver: zodResolver(paymentFormSchema),
     defaultValues: { amount: 0 },
   });
+
+  const vehicleType = saleForm.watch('vehicleType');
 
   const customerAggregates = useMemo(() => {
     const customers: Record<string, { id: string, name: string, sales: any[] }> = {};
@@ -83,6 +102,27 @@ export function PrivateSales() {
       title: 'Success!',
       description: 'New private sale has been recorded.',
     });
+
+    if (values.vehicleType === 'hired' && values.vehicleNumber && values.tripCharge) {
+        const vehicleId = addVehicle({
+            vehicleNumber: values.vehicleNumber,
+            driverName: values.driverName || '',
+            ownerName: values.ownerName || '',
+            rentType: 'per_trip',
+            rentAmount: 0,
+        });
+
+        if (vehicleId) {
+            addTrip(vehicleId, {
+                source: 'Mill', 
+                destination: values.customerName,
+                quantity: values.quantity,
+                tripCharge: values.tripCharge,
+            });
+            toast({ title: 'Vehicle Updated', description: `Trip for ${values.vehicleNumber} has been added to Vehicle Register.` });
+        }
+    }
+
     saleForm.reset();
     setShowForm(false);
   }
@@ -136,39 +176,84 @@ export function PrivateSales() {
               </CardHeader>
               <CardContent>
                 <Form {...saleForm}>
-                  <form onSubmit={saleForm.handleSubmit(onSaleSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-                    <FormField control={saleForm.control} name="source" render={({ field }) => (
-                        <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={saleForm.control} name="customerName" render={({ field }) => (
-                      <FormItem><FormLabel>Customer Name</FormLabel><FormControl><Input placeholder="e.g., Local Mill Corp" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={saleForm.control} name="itemType" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Item Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Select item type" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            <SelectItem value="paddy">Paddy</SelectItem>
-                            <SelectItem value="rice">Rice</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={saleForm.control} name="quantity" render={({ field }) => (
-                      <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="100" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={saleForm.control} name="rate" render={({ field }) => (
-                      <FormItem><FormLabel>Rate (₹ per Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="2100" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={saleForm.control} name="initialPayment" render={({ field }) => (
-                      <FormItem><FormLabel>Initial Amount Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="50000" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={saleForm.control} name="description" render={({ field }) => (
-                      <FormItem className="lg:col-span-3"><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Add any notes for this sale..." {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <Button type="submit" className="w-full md:w-auto md:col-span-full bg-accent hover:bg-accent/90">Add Sale</Button>
+                  <form onSubmit={saleForm.handleSubmit(onSaleSubmit)} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+                      <FormField control={saleForm.control} name="source" render={({ field }) => (
+                          <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={saleForm.control} name="customerName" render={({ field }) => (
+                        <FormItem><FormLabel>Customer Name</FormLabel><FormControl><Input placeholder="e.g., Local Mill Corp" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={saleForm.control} name="itemType" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Item Type</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select item type" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              <SelectItem value="paddy">Paddy</SelectItem>
+                              <SelectItem value="rice">Rice</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                      <FormField control={saleForm.control} name="quantity" render={({ field }) => (
+                        <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="100" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={saleForm.control} name="rate" render={({ field }) => (
+                        <FormItem><FormLabel>Rate (₹ per Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="2100" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={saleForm.control} name="initialPayment" render={({ field }) => (
+                        <FormItem><FormLabel>Initial Amount Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="50000" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      </div>
+                      <FormField control={saleForm.control} name="description" render={({ field }) => (
+                        <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Add any notes for this sale..." {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    
+                      <Separator />
+
+                      <div>
+                        <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Car className="h-5 w-5" /> Vehicle Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                           <FormField
+                                control={saleForm.control}
+                                name="vehicleType"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Vehicle Type</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="customer">Customer's Vehicle</SelectItem>
+                                                <SelectItem value="own">Own Vehicle</SelectItem>
+                                                <SelectItem value="hired">Hired Vehicle</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                           />
+                           {vehicleType === 'hired' && (
+                            <>
+                                <FormField control={saleForm.control} name="vehicleNumber" render={({ field }) => (
+                                    <FormItem><FormLabel>Vehicle Number</FormLabel><FormControl><Input placeholder="OD01AB1234" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                 <FormField control={saleForm.control} name="driverName" render={({ field }) => (
+                                    <FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input placeholder="Suresh" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={saleForm.control} name="ownerName" render={({ field }) => (
+                                    <FormItem><FormLabel>Owner/Agency</FormLabel><FormControl><Input placeholder="Gupta Transports" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={saleForm.control} name="tripCharge" render={({ field }) => (
+                                    <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                            </>
+                           )}
+                        </div>
+                      </div>
+
+                    <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90">Add Sale</Button>
                   </form>
                 </Form>
               </CardContent>
@@ -201,9 +286,8 @@ export function PrivateSales() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Date</TableHead>
-                                            <TableHead>Source</TableHead>
                                             <TableHead>Type</TableHead>
-                                            <TableHead>Description</TableHead>
+                                            <TableHead>Vehicle No.</TableHead>
                                             <TableHead className="text-right">Qty (Qtl)</TableHead>
                                             <TableHead className="text-right">Rate (₹)</TableHead>
                                             <TableHead className="text-right">Total (₹)</TableHead>
@@ -218,9 +302,8 @@ export function PrivateSales() {
                                                 <>
                                                     <TableRow>
                                                         <TableCell>{format(s.date, 'dd MMM yyyy')}</TableCell>
-                                                        <TableCell className="capitalize">{s.source}</TableCell>
                                                         <TableCell className="capitalize">{s.itemType}</TableCell>
-                                                        <TableCell className="max-w-[200px] truncate">{s.description || '-'}</TableCell>
+                                                        <TableCell>{s.vehicleNumber || '-'}</TableCell>
                                                         <TableCell className="text-right">{s.quantity.toLocaleString('en-IN')}</TableCell>
                                                         <TableCell className="text-right">{formatCurrency(s.rate)}</TableCell>
                                                         <TableCell className="text-right">{formatCurrency(s.totalAmount)}</TableCell>
@@ -241,7 +324,7 @@ export function PrivateSales() {
                                                         <tr className="bg-muted/50">
                                                             <TableCell colSpan={10} className="p-0">
                                                                 <div className="p-4">
-                                                                    <h4 className="font-semibold mb-2">Payment History</h4>
+                                                                    <h4 className="font-semibold mb-2">Payment History for Sale on {format(s.date, 'dd MMM yyyy')}</h4>
                                                                     {s.payments.length > 0 ? (
                                                                         <Table>
                                                                             <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
