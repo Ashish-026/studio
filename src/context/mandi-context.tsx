@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext, useMemo } from 'react';
+import { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
 import type { MandiProcessingResult, MandiStockRelease, TargetAllocation, PaddyLifted } from '@/lib/types';
 import { useStockData } from './stock-context';
 
@@ -33,12 +33,53 @@ const initialPaddyLifted: PaddyLifted[] = [
     { id: '3', mandiName: 'Bargarh Main', farmerName: 'Monetary Entry', moneyReceived: 220000, ratePerQuintal: 2200, totalPaddyReceived: 100, mandiWeight: 0, entryType: 'monetary' },
 ];
 
+const parseStoredData = (key: string, initialData: any[]) => {
+    try {
+        const stored = localStorage.getItem(key);
+        if (!stored) return initialData;
+
+        const parsed = JSON.parse(stored);
+        // Revive dates
+        return parsed.map((item: any) => ({
+            ...item,
+            date: item.date ? new Date(item.date) : undefined,
+            dateAdded: item.dateAdded ? new Date(item.dateAdded) : undefined,
+            workEntries: item.workEntries?.map((w: any) => ({...w, date: new Date(w.date)})),
+            payments: item.payments?.map((p: any) => ({...p, date: new Date(p.date)})),
+            trips: item.trips?.map((t: any) => ({...t, date: new Date(t.date)})),
+        }));
+    } catch (e) {
+        console.error(`Failed to parse ${key} from localStorage`, e);
+        return initialData;
+    }
+}
+
+
 export function MandiProvider({ children }: { children: ReactNode }) {
   const { addMandiProcessing, mandiProcessingHistory, transferredInStock } = useStockData();
 
-  const [targetAllocations, setTargetAllocations] = useState<TargetAllocation[]>(initialTargets);
-  const [paddyLiftedItems, setPaddyLiftedItems] = useState<PaddyLifted[]>(initialPaddyLifted);
+  const [targetAllocations, setTargetAllocations] = useState<TargetAllocation[]>([]);
+  const [paddyLiftedItems, setPaddyLiftedItems] = useState<PaddyLifted[]>([]);
   const [stockReleases, setStockReleases] = useState<MandiStockRelease[]>([]);
+
+  useEffect(() => {
+    setTargetAllocations(parseStoredData('targetAllocations', initialTargets));
+    setPaddyLiftedItems(parseStoredData('paddyLiftedItems', initialPaddyLifted));
+    setStockReleases(parseStoredData('stockReleases', []));
+  }, []);
+
+  useEffect(() => {
+    if (targetAllocations.length > 0) localStorage.setItem('targetAllocations', JSON.stringify(targetAllocations));
+  }, [targetAllocations]);
+
+  useEffect(() => {
+    if (paddyLiftedItems.length > 0) localStorage.setItem('paddyLiftedItems', JSON.stringify(paddyLiftedItems));
+  }, [paddyLiftedItems]);
+  
+  useEffect(() => {
+    if (stockReleases.length > 0) localStorage.setItem('stockReleases', JSON.stringify(stockReleases));
+  }, [stockReleases]);
+
 
   const totalRiceFromProcessing = useMemo(() => {
     return mandiProcessingHistory.reduce((acc, item) => acc + item.riceYield, 0);

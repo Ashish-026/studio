@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext } from 'react';
+import { createContext, useState, useCallback, ReactNode, useContext, useEffect } from 'react';
 import type { Labourer, LabourWorkEntry, Payment } from '@/lib/types';
 
 interface LabourContextType {
@@ -47,14 +47,46 @@ const calculateTotals = (workEntries: LabourWorkEntry[], payments: Payment[]) =>
     return { totalWages, totalPaid, balance };
 };
 
+const parseStoredData = (key: string, initialData: any[]) => {
+    try {
+        const stored = localStorage.getItem(key);
+        if (!stored) return initialData;
+
+        const parsed = JSON.parse(stored);
+        // Revive dates
+        return parsed.map((item: any) => ({
+            ...item,
+            date: item.date ? new Date(item.date) : undefined,
+            dateAdded: item.dateAdded ? new Date(item.dateAdded) : undefined,
+            workEntries: item.workEntries?.map((w: any) => ({...w, date: new Date(w.date)})),
+            payments: item.payments?.map((p: any) => ({...p, date: new Date(p.date)})),
+            trips: item.trips?.map((t: any) => ({...t, date: new Date(t.date)})),
+        }));
+    } catch (e) {
+        console.error(`Failed to parse ${key} from localStorage`, e);
+        return initialData;
+    }
+}
+
+
 export function LabourProvider({ children }: { children: ReactNode }) {
-  const [labourers, setLabourers] = useState<Labourer[]>(initialLabourers);
+  const [labourers, setLabourers] = useState<Labourer[]>([]);
+
+  useEffect(() => {
+    setLabourers(parseStoredData('labourers', initialLabourers));
+  }, []);
+
+  useEffect(() => {
+    if (labourers.length > 0) {
+      localStorage.setItem('labourers', JSON.stringify(labourers));
+    }
+  }, [labourers]);
 
   const addLabourer = useCallback((labourerName: string) => {
     setLabourers(prev => {
         const existingLabourer = prev.find(l => l.name === labourerName);
         if (existingLabourer) {
-            return prev; // Or maybe show a toast? For now, do nothing if exists
+            return prev;
         }
         const newLabourer: Labourer = {
             id: new Date().toISOString() + '-l',

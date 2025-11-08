@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext } from 'react';
+import { createContext, useState, useCallback, ReactNode, useContext, useEffect } from 'react';
 import type { PrivatePurchase, Payment, PrivateSale } from '@/lib/types';
 
 
@@ -99,9 +99,41 @@ const initialSales: PrivateSale[] = [
     }
 ];
 
+const parseStoredData = (key: string, initialData: any[]) => {
+    try {
+        const stored = localStorage.getItem(key);
+        if (!stored) return initialData;
+
+        const parsed = JSON.parse(stored);
+        // Revive dates
+        return parsed.map((item: any) => ({
+            ...item,
+            date: new Date(item.date),
+            payments: item.payments.map((p: any) => ({...p, date: new Date(p.date)})),
+        }));
+    } catch (e) {
+        console.error(`Failed to parse ${key} from localStorage`, e);
+        return initialData;
+    }
+}
+
 export function PrivateProvider({ children }: { children: ReactNode }) {
-  const [purchases, setPurchases] = useState<PrivatePurchase[]>(initialPurchases);
-  const [sales, setSales] = useState<PrivateSale[]>(initialSales);
+  const [purchases, setPurchases] = useState<PrivatePurchase[]>([]);
+  const [sales, setSales] = useState<PrivateSale[]>([]);
+
+  useEffect(() => {
+    setPurchases(parseStoredData('purchases', initialPurchases));
+    setSales(parseStoredData('sales', initialSales));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('purchases', JSON.stringify(purchases));
+  }, [purchases]);
+
+  useEffect(() => {
+    localStorage.setItem('sales', JSON.stringify(sales));
+  }, [sales]);
+
 
   const addPurchase = useCallback((item: Omit<PrivatePurchase, 'id' | 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { initialPayment: number }) => {
     const totalAmount = item.quantity * item.rate;

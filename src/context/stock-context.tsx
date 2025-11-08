@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, ReactNode, useMemo, useState, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useState, useCallback, useEffect } from 'react';
 import type { StockItem, ProcessingResult, PrivatePurchase, Payment, PrivateSale, MandiProcessingResult } from '@/lib/types';
 
 interface StockContextType {
@@ -125,13 +125,71 @@ const initialSales: PrivateSale[] = [
     }
 ];
 
+const parseStoredData = (key: string, initialData: any[]) => {
+    try {
+        const stored = localStorage.getItem(key);
+        if (!stored) return initialData;
+
+        const parsed = JSON.parse(stored);
+        // Revive dates
+        return parsed.map((item: any) => ({
+            ...item,
+            date: item.date ? new Date(item.date) : undefined,
+            dateAdded: item.dateAdded ? new Date(item.dateAdded) : undefined,
+            payments: item.payments?.map((p: any) => ({...p, date: new Date(p.date)})),
+        }));
+    } catch (e) {
+        console.error(`Failed to parse ${key} from localStorage`, e);
+        return initialData;
+    }
+}
+
+const parseStoredValue = (key: string, initialValue: any) => {
+    try {
+        const stored = localStorage.getItem(key);
+        if (!stored) return initialValue;
+        return JSON.parse(stored);
+    } catch (e) {
+        console.error(`Failed to parse ${key} from localStorage`, e);
+        return initialValue;
+    }
+}
+
 
 export function StockProvider({ children }: { children: ReactNode }) {
-  const [purchases, setPurchases] = useState<PrivatePurchase[]>(initialPurchases);
-  const [sales, setSales] = useState<PrivateSale[]>(initialSales);
-  const [processingHistory, setProcessingHistory] = useState<ProcessingResult[]>(initialProcessingHistory);
-  const [mandiProcessingHistory, setMandiProcessingHistory] = useState<MandiProcessingResult[]>(initialMandiProcessingHistory);
+  const [purchases, setPurchases] = useState<PrivatePurchase[]>([]);
+  const [sales, setSales] = useState<PrivateSale[]>([]);
+  const [processingHistory, setProcessingHistory] = useState<ProcessingResult[]>([]);
+  const [mandiProcessingHistory, setMandiProcessingHistory] = useState<MandiProcessingResult[]>([]);
   const [transferredOutStock, setTransferredOutStock] = useState(0);
+
+  useEffect(() => {
+    setPurchases(parseStoredData('purchases', initialPurchases));
+    setSales(parseStoredData('sales', initialSales));
+    setProcessingHistory(parseStoredData('processingHistory', initialProcessingHistory));
+    setMandiProcessingHistory(parseStoredData('mandiProcessingHistory', initialMandiProcessingHistory));
+    setTransferredOutStock(parseStoredValue('transferredOutStock', 0));
+  }, []);
+
+  useEffect(() => {
+    if (purchases.length > 0) localStorage.setItem('purchases', JSON.stringify(purchases));
+  }, [purchases]);
+
+  useEffect(() => {
+    if (sales.length > 0) localStorage.setItem('sales', JSON.stringify(sales));
+  }, [sales]);
+
+  useEffect(() => {
+    if (processingHistory.length > 0) localStorage.setItem('processingHistory', JSON.stringify(processingHistory));
+  }, [processingHistory]);
+
+  useEffect(() => {
+    if (mandiProcessingHistory.length > 0) localStorage.setItem('mandiProcessingHistory', JSON.stringify(mandiProcessingHistory));
+  }, [mandiProcessingHistory]);
+
+  useEffect(() => {
+    localStorage.setItem('transferredOutStock', JSON.stringify(transferredOutStock));
+  }, [transferredOutStock]);
 
   const processedPaddyBySource = useMemo(() => {
     return processingHistory.reduce((acc, item) => {

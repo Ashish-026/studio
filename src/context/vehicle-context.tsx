@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext } from 'react';
+import { createContext, useState, useCallback, ReactNode, useContext, useEffect } from 'react';
 import type { Vehicle, Payment, VehicleTrip } from '@/lib/types';
 
 interface VehicleContextType {
@@ -51,8 +51,6 @@ const calculateTotals = (rentType: Vehicle['rentType'], rentAmount: number, paym
     if (rentType === 'per_trip') {
         totalRent = trips.reduce((acc, trip) => acc + trip.tripCharge, 0);
     } else {
-        // This is a simplified calculation. For daily/monthly a more complex logic might be needed based on time.
-        // For now, we'll assume totalRent is managed elsewhere or equals rentAmount for a single period.
         totalRent = rentAmount; // Simplified for now
     }
     const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
@@ -60,8 +58,40 @@ const calculateTotals = (rentType: Vehicle['rentType'], rentAmount: number, paym
     return { totalRent, totalPaid, balance };
 };
 
+const parseStoredData = (key: string, initialData: any[]) => {
+    try {
+        const stored = localStorage.getItem(key);
+        if (!stored) return initialData;
+
+        const parsed = JSON.parse(stored);
+        // Revive dates
+        return parsed.map((item: any) => ({
+            ...item,
+            date: item.date ? new Date(item.date) : undefined,
+            dateAdded: item.dateAdded ? new Date(item.dateAdded) : undefined,
+            payments: item.payments?.map((p: any) => ({...p, date: new Date(p.date)})),
+            trips: item.trips?.map((t: any) => ({...t, date: new Date(t.date)})),
+        }));
+    } catch (e) {
+        console.error(`Failed to parse ${key} from localStorage`, e);
+        return initialData;
+    }
+}
+
+
 export function VehicleProvider({ children }: { children: ReactNode }) {
-  const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+
+  useEffect(() => {
+    setVehicles(parseStoredData('vehicles', initialVehicles));
+  }, []);
+
+  useEffect(() => {
+    if (vehicles.length > 0) {
+      localStorage.setItem('vehicles', JSON.stringify(vehicles));
+    }
+  }, [vehicles]);
+
 
   const addVehicle = useCallback((item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'trips' | 'totalRent' | 'totalPaid' | 'balance'>) => {
     let vehicleId = '';
