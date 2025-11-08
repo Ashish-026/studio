@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useStockData } from '@/context/stock-context';
-import { PlusCircle, ChevronDown, ChevronRight, Receipt } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, Receipt, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
+import { downloadPdf } from '@/lib/pdf-utils';
 
 const purchaseFormSchema = z.object({
   farmerName: z.string().min(1, 'Farmer name is required'),
@@ -178,13 +179,18 @@ export function PrivatePurchases() {
                                 {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                 <span className="font-medium">{farmer.name}</span>
                             </div>
-                            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); purchaseForm.setValue('farmerName', farmer.name); setShowForm(true); window.scrollTo({top: 0, behavior: 'smooth'}); }}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add Purchase
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); downloadPdf(`farmer-summary-${farmer.id}`, `purchase-summary-${farmer.name.toLowerCase().replace(/\s+/g, '-')}`) }}>
+                                    <Download className="mr-2 h-4 w-4" /> PDF
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); purchaseForm.setValue('farmerName', farmer.name); setShowForm(true); window.scrollTo({top: 0, behavior: 'smooth'}); }}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Purchase
+                                </Button>
+                            </div>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                            <div className="px-4 pb-4">
-                                <h4 className="font-semibold text-md my-2">Purchase Details</h4>
+                            <div className="px-4 pb-4" id={`farmer-summary-${farmer.id}`}>
+                                <h4 className="font-semibold text-md my-2">Purchase Details for {farmer.name}</h4>
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -196,7 +202,7 @@ export function PrivatePurchases() {
                                             <TableHead className="text-right">Total (₹)</TableHead>
                                             <TableHead className="text-right">Paid (₹)</TableHead>
                                             <TableHead className="text-right">Balance (₹)</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
+                                            <TableHead className="text-right print:hidden">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -214,7 +220,7 @@ export function PrivatePurchases() {
                                                         <TableCell className={`text-right font-semibold ${p.balance < 0 ? 'text-green-600' : p.balance > 0 ? 'text-destructive' : ''}`}>
                                                             {p.balance < 0 ? `${formatCurrency(Math.abs(p.balance))} (Adv)` : formatCurrency(p.balance)}
                                                         </TableCell>
-                                                        <TableCell className="text-right">
+                                                        <TableCell className="text-right print:hidden">
                                                             <div className="flex gap-2 justify-end">
                                                                 <Button size="sm" variant="secondary" onClick={() => handlePaymentClick(p.id)}>Pay</Button>
                                                                 <CollapsibleTrigger asChild>
@@ -224,7 +230,7 @@ export function PrivatePurchases() {
                                                         </TableCell>
                                                     </TableRow>
                                                     <CollapsibleContent asChild>
-                                                        <tr className="bg-muted/50">
+                                                        <tr className="bg-muted/50 print:hidden">
                                                             <TableCell colSpan={9} className="p-0">
                                                                 <div className="p-4">
                                                                     <h4 className="font-semibold mb-2">Payment History</h4>

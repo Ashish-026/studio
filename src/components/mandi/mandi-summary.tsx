@@ -4,6 +4,9 @@ import { useMemo } from 'react';
 import { useMandiData } from '@/context/mandi-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '../ui/button';
+import { Download } from 'lucide-react';
+import { downloadPdf } from '@/lib/pdf-utils';
 
 type MandiSummaryData = {
   mandiName: string;
@@ -48,11 +51,19 @@ export function MandiSummary() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Mandi-wise Summary</CardTitle>
-        <CardDescription>Performance overview for each mandi.</CardDescription>
+        <div className="flex justify-between items-start">
+            <div>
+                <CardTitle>Mandi-wise Summary</CardTitle>
+                <CardDescription>Performance overview for each mandi.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => downloadPdf('mandi-summary-table', 'mandi-summary')}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+            </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="border rounded-lg">
+        <div id="mandi-summary-table" className="border rounded-lg">
             <Table>
             <TableHeader>
                 <TableRow>
