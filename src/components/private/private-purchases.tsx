@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useStockData } from '@/context/stock-context';
@@ -21,6 +21,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { format } from 'date-fns';
 import { downloadPdf } from '@/lib/pdf-utils';
 import { Separator } from '../ui/separator';
+import type { PrivatePurchase } from '@/lib/types';
+
+
+const labourDetailsSchema = z.object({
+  numberOfLabours: z.coerce.number().min(0).default(0),
+  labourerIds: z.array(z.object({ value: z.string().min(1, "Please select a labourer.") })).default([]),
+  labourWageType: z.enum(['per_item', 'total_amount']).default('total_amount'),
+  labourCharge: z.coerce.number().min(0).default(0),
+});
 
 const purchaseFormSchema = z.object({
   farmerName: z.string().min(1, 'Farmer name is required'),
@@ -36,9 +45,7 @@ const purchaseFormSchema = z.object({
   tripCharge: z.coerce.number().optional(),
   source: z.string().optional(),
   destination: z.string().optional(),
-  labourerId: z.string().optional(),
-  labourCharge: z.coerce.number().optional(),
-}).refine(data => {
+}).merge(labourDetailsSchema).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
     }
@@ -55,7 +62,7 @@ const paymentFormSchema = z.object({
 export function PrivatePurchases() {
   const { purchases, addPurchase, addPayment } = useStockData();
   const { addVehicle, addTrip } = useVehicleData();
-  const { labourers, addWorkEntry } = useLabourData();
+  const { labourers, addGroupWorkEntry } = useLabourData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [openFarmerCollapsibles, setOpenFarmerCollapsibles] = useState<Record<string, boolean>>({});
@@ -78,10 +85,33 @@ export function PrivatePurchases() {
       ownerName: '',
       tripCharge: 0,
       source: '',
-      labourerId: undefined,
+      numberOfLabours: 0,
+      labourerIds: [],
       labourCharge: 0,
+      labourWageType: 'total_amount',
     },
   });
+  
+  const { fields, append, remove } = useFieldArray({
+    control: purchaseForm.control,
+    name: "labourerIds"
+  });
+
+  const numberOfLabours = purchaseForm.watch('numberOfLabours');
+
+  useMemo(() => {
+    const currentCount = fields.length;
+    if (numberOfLabours > currentCount) {
+        for(let i = currentCount; i < numberOfLabours; i++) {
+            append({ value: '' });
+        }
+    } else if (numberOfLabours < currentCount) {
+        for(let i = currentCount; i > numberOfLabours; i--) {
+            remove(i-1);
+        }
+    }
+  }, [numberOfLabours, fields.length, append, remove]);
+
 
   const paymentForm = useForm<z.infer<typeof paymentFormSchema>>({
     resolver: zodResolver(paymentFormSchema),
@@ -110,8 +140,8 @@ export function PrivatePurchases() {
   }, [purchases]);
 
   function onPurchaseSubmit(values: z.infer<typeof purchaseFormSchema>) {
-    const labourerId = values.labourerId === "none" ? undefined : values.labourerId;
-    const submissionValues = { ...values, labourerId };
+    const labourerIds = values.labourerIds.map(l => l.value).filter(Boolean);
+    const submissionValues = { ...values, labourerIds };
 
     addPurchase(submissionValues);
     toast({
@@ -139,14 +169,8 @@ export function PrivatePurchases() {
         }
     }
     
-    if (submissionValues.labourerId && submissionValues.labourCharge) {
-        addWorkEntry(submissionValues.labourerId, {
-            description: `Unloading ${submissionValues.itemType} from ${submissionValues.farmerName}`,
-            entryType: 'item_rate',
-            itemName: `${submissionValues.itemType} unloaded`,
-            quantity: submissionValues.quantity,
-            ratePerItem: submissionValues.labourCharge / submissionValues.quantity,
-        });
+    if (labourerIds.length > 0 && submissionValues.labourCharge > 0) {
+        addGroupWorkEntry(labourerIds, submissionValues.labourCharge, `Unloading ${submissionValues.itemType} from ${submissionValues.farmerName}`, submissionValues.quantity);
         toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
 
@@ -288,29 +312,34 @@ export function PrivatePurchases() {
                     <div>
                         <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                control={purchaseForm.control}
-                                name="labourerId"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Assign Labourer (Optional)</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="none">None</SelectItem>
-                                        {labourers.map((l) => (
-                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
+                            <FormField control={purchaseForm.control} name="numberOfLabours" render={({ field }) => (
+                                <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
                             <FormField control={purchaseForm.control} name="labourCharge" render={({ field }) => (
                                 <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 400" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                         </div>
+                        {fields.map((field, index) => (
+                           <FormField
+                            key={field.id}
+                            control={purchaseForm.control}
+                            name={`labourerIds.${index}.value`}
+                            render={({ field }) => (
+                                <FormItem className="mt-4">
+                                <FormLabel>Labourer {index + 1}</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    {labourers.map((l) => (
+                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        ))}
                     </div>
 
 

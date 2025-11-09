@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMandiData } from '@/context/mandi-context';
@@ -17,25 +17,51 @@ import { PlusCircle, Users } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
 
+const labourDetailsSchema = z.object({
+  numberOfLabours: z.coerce.number().min(0).default(0),
+  labourerIds: z.array(z.object({ value: z.string().min(1, "Please select a labourer.") })).default([]),
+  labourWageType: z.enum(['per_item', 'total_amount']).default('total_amount'),
+  labourCharge: z.coerce.number().min(0).default(0),
+});
+
 const processingSchema = z.object({
     paddyUsed: z.coerce.number().positive('Paddy quantity must be positive'),
     riceYield: z.coerce.number().positive('Rice yield must be positive'),
     branYield: z.coerce.number().min(0, 'Cannot be negative'),
     brokenRiceYield: z.coerce.number().min(0, 'Cannot be negative'),
-    labourerId: z.string().optional(),
-    labourCharge: z.coerce.number().optional(),
-});
+}).merge(labourDetailsSchema);
 
 export function MandiProcessing() {
   const { paddyLiftedItems, processingHistory, addMandiProcessing } = useMandiData();
-  const { labourers, addWorkEntry } = useLabourData();
+  const { labourers, addGroupWorkEntry } = useLabourData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
 
   const processingForm = useForm<z.infer<typeof processingSchema>>({
     resolver: zodResolver(processingSchema),
-    defaultValues: { paddyUsed: 0, riceYield: 0, branYield: 0, brokenRiceYield: 0 }
+    defaultValues: { paddyUsed: 0, riceYield: 0, branYield: 0, brokenRiceYield: 0, numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount' }
   });
+  
+  const { fields, append, remove } = useFieldArray({
+    control: processingForm.control,
+    name: "labourerIds"
+  });
+
+  const numberOfLabours = processingForm.watch('numberOfLabours');
+
+  useMemo(() => {
+    const currentCount = fields.length;
+    if (numberOfLabours > currentCount) {
+        for(let i = currentCount; i < numberOfLabours; i++) {
+            append({ value: '' });
+        }
+    } else if (numberOfLabours < currentCount) {
+        for(let i = currentCount; i > numberOfLabours; i--) {
+            remove(i-1);
+        }
+    }
+  }, [numberOfLabours, fields.length, append, remove]);
+
 
   const availablePaddy = useMemo(() => {
     const totalLifted = paddyLiftedItems.reduce((sum, item) => sum + item.totalPaddyReceived, 0);
@@ -51,20 +77,14 @@ export function MandiProcessing() {
         return;
     }
     
-    const labourerId = values.labourerId === "none" ? undefined : values.labourerId;
-    const submissionValues = { ...values, labourerId };
+    const labourerIds = values.labourerIds.map(l => l.value).filter(Boolean);
+    const submissionValues = { ...values, labourerIds };
 
     addMandiProcessing(submissionValues);
     toast({ title: 'Success!', description: 'Processing has been recorded and stock updated.' });
 
-    if (submissionValues.labourerId && submissionValues.labourCharge) {
-        addWorkEntry(submissionValues.labourerId, {
-            description: `Mandi paddy processing`,
-            entryType: 'item_rate',
-            itemName: 'Paddy processed',
-            quantity: submissionValues.paddyUsed,
-            ratePerItem: submissionValues.labourCharge / submissionValues.paddyUsed,
-        });
+    if (labourerIds.length > 0 && values.labourCharge > 0) {
+        addGroupWorkEntry(labourerIds, values.labourCharge, 'Mandi paddy processing', values.paddyUsed);
         toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
 
@@ -123,29 +143,34 @@ export function MandiProcessing() {
                       <div>
                         <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                                control={processingForm.control}
-                                name="labourerId"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Assign Labourer (Optional)</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="none">None</SelectItem>
-                                        {labourers.map((l) => (
-                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
+                            <FormField control={processingForm.control} name="numberOfLabours" render={({ field }) => (
+                                <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
                             <FormField control={processingForm.control} name="labourCharge" render={({ field }) => (
                                 <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 800" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                         </div>
+                        {fields.map((field, index) => (
+                           <FormField
+                            key={field.id}
+                            control={processingForm.control}
+                            name={`labourerIds.${index}.value`}
+                            render={({ field }) => (
+                                <FormItem className="mt-4">
+                                <FormLabel>Labourer {index + 1}</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                    {labourers.map((l) => (
+                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                    ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        ))}
                       </div>
                       <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Record Processing</Button>
                   </form>

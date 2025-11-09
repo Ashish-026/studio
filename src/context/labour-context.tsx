@@ -7,6 +7,7 @@ interface LabourContextType {
   labourers: Labourer[];
   addLabourer: (labourerName: string) => void;
   addWorkEntry: (labourerId: string, item: Omit<LabourWorkEntry, 'id' | 'date' | 'wage'>) => void;
+  addGroupWorkEntry: (labourerIds: string[], totalCharge: number, description: string, quantity: number) => void;
   addPayment: (labourerId: string, amount: number) => void;
 }
 
@@ -128,6 +129,35 @@ export function LabourProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const addGroupWorkEntry = useCallback((labourerIds: string[], totalCharge: number, description: string, quantity: number) => {
+    if (labourerIds.length === 0) return;
+    
+    const wagePerLabourer = totalCharge / labourerIds.length;
+    const ratePerItem = totalCharge / quantity;
+
+    setLabourers(prev => {
+      return prev.map(l => {
+        if (labourerIds.includes(l.id)) {
+          const newWorkEntry: LabourWorkEntry = {
+            id: new Date().toISOString() + `-${l.id}`,
+            date: new Date(),
+            description: description,
+            entryType: 'item_rate',
+            itemName: 'Group Work',
+            quantity: quantity / labourerIds.length, // Distribute quantity
+            ratePerItem: ratePerItem, // Rate is same for all
+            wage: wagePerLabourer
+          };
+          const updatedWorkEntries = [...l.workEntries, newWorkEntry];
+          const totals = calculateTotals(updatedWorkEntries, l.payments);
+          return { ...l, workEntries: updatedWorkEntries, ...totals };
+        }
+        return l;
+      });
+    });
+  }, []);
+
+
   const addPayment = useCallback((labourerId: string, amount: number) => {
     setLabourers(prev => prev.map(l => {
         if(l.id === labourerId) {
@@ -146,7 +176,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <LabourContext.Provider value={{ labourers, addLabourer, addWorkEntry, addPayment }}>
+    <LabourContext.Provider value={{ labourers, addLabourer, addWorkEntry, addGroupWorkEntry, addPayment }}>
       {children}
     </LabourContext.Provider>
   );
