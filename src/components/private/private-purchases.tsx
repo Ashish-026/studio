@@ -76,15 +76,15 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Vehicle Type</TableHead>
-                        <TableHead>Rent(₹)</TableHead>
-                        <TableHead className="text-right">Qty (Qtl)</TableHead>
-                        <TableHead className="text-right">Rate (₹)</TableHead>
-                        <TableHead className="text-right">Total (₹)</TableHead>
-                        <TableHead className="text-right">Paid (₹)</TableHead>
-                        <TableHead className="text-right">Balance (₹)</TableHead>
+                        <TableHead style={{width: '10%'}}>Date</TableHead>
+                        <TableHead style={{width: '8%'}}>Type</TableHead>
+                        <TableHead style={{width: '12%'}}>Vehicle Type</TableHead>
+                        <TableHead style={{width: '10%'}}>Rent(₹)</TableHead>
+                        <TableHead style={{width: '10%'}} className="text-right">Qty (Qtl)</TableHead>
+                        <TableHead style={{width: '10%'}} className="text-right">Rate (₹)</TableHead>
+                        <TableHead style={{width: '12%'}} className="text-right">Total (₹)</TableHead>
+                        <TableHead style={{width: '12%'}} className="text-right">Paid (₹)</TableHead>
+                        <TableHead style={{width: '16%'}} className="text-right">Balance (₹)</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -93,7 +93,7 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
                             <TableRow>
                                 <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
                                 <TableCell className="capitalize">{p.itemType}</TableCell>
-                                <TableCell className="capitalize">{p.vehicleType?.replace('_', ' ') || 'N/A'}</TableCell>
+                                <TableCell className="capitalize break-words">{p.vehicleType?.replace('_', ' ') || 'N/A'}</TableCell>
                                 <TableCell>{p.tripCharge ? formatCurrency(p.tripCharge) : '-'}</TableCell>
                                 <TableCell className="text-right">{p.quantity.toLocaleString('en-IN')}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(p.rate)}</TableCell>
@@ -483,7 +483,7 @@ export function PrivatePurchases() {
                                     </TableHeader>
                                     <TableBody>
                                         {farmer.purchases.map((p: PrivatePurchase) => (
-                                             <React.Fragment key={p.id}>
+                                            <React.Fragment key={p.id}>
                                                 <TableRow>
                                                     <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
                                                     <TableCell className="capitalize">{p.itemType}</TableCell>
@@ -502,28 +502,30 @@ export function PrivatePurchases() {
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
-                                                <CollapsibleContent asChild>
-                                                    <tr className="bg-muted/50">
-                                                        <TableCell colSpan={10} className="p-0">
-                                                            <div className="p-4">
-                                                                <h4 className="font-semibold mb-2">Payment History for Purchase on {format(p.date, 'dd MMM yyyy')}</h4>
-                                                                {p.payments.length > 0 ? (
-                                                                    <Table>
-                                                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
-                                                                        <TableBody>
-                                                                            {[...p.payments].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((payment: any) => (
-                                                                                <TableRow key={payment.id}>
-                                                                                    <TableCell>{format(payment.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
-                                                                                    <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
-                                                                                </TableRow>
-                                                                            ))}
-                                                                        </TableBody>
-                                                                    </Table>
-                                                                ) : <p className="text-sm text-muted-foreground">No payments recorded for this purchase yet.</p>}
-                                                            </div>
-                                                        </TableCell>
-                                                    </tr>
-                                                </CollapsibleContent>
+                                                <TableRow>
+                                                    <TableCell colSpan={10} className="p-0">
+                                                        <Collapsible>
+                                                            <CollapsibleContent>
+                                                                <div className="p-4">
+                                                                    <h4 className="font-semibold mb-2">Payment History for Purchase on {format(p.date, 'dd MMM yyyy')}</h4>
+                                                                    {p.payments.length > 0 ? (
+                                                                        <Table>
+                                                                            <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
+                                                                            <TableBody>
+                                                                                {[...p.payments].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((payment: any) => (
+                                                                                    <TableRow key={payment.id}>
+                                                                                        <TableCell>{format(payment.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
+                                                                                        <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
+                                                                                    </TableRow>
+                                                                                ))}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    ) : <p className="text-sm text-muted-foreground">No payments recorded for this purchase yet.</p>}
+                                                                </div>
+                                                            </CollapsibleContent>
+                                                        </Collapsible>
+                                                    </TableCell>
+                                                </TableRow>
                                             </React.Fragment>
                                         ))}
                                     </TableBody>
