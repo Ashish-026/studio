@@ -13,7 +13,7 @@ interface MillContextType {
 export const MillContext = createContext<MillContextType | null>(null);
 
 const hardcodedMills: Mill[] = [
-  { id: '1', name: 'Konoorada Mill', location: 'Konoorada' },
+  { id: '1', name: 'Konkorada Mill', location: 'Konkorada' },
   { id: '2', name: 'Rambha Mill', location: 'Rambha' },
 ];
 
