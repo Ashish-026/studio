@@ -151,22 +151,24 @@ export function LabourRecords() {
                         onOpenChange={(isOpen) => setOpenLabourerCollapsibles(prev => ({...prev, [l.id]: isOpen}))}
                         className="border-b last:border-b-0"
                     >
-                        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                        <CollapsibleTrigger asChild>
+                            <div className="flex flex-1 items-center gap-2 cursor-pointer">
                                 {openLabourerCollapsibles[l.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                 <span className="font-medium">{l.name}</span>
                             </div>
-                            <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                    <div className="font-semibold">{formatCurrency(l.balance)}</div>
-                                    <div className="text-xs text-muted-foreground">Balance</div>
-                                </div>
-                                <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); handlePaymentClick(l.id); }}>
-                                    <Receipt className="mr-2 h-4 w-4" /> Pay
-                                </Button>
-                            </div>
                         </CollapsibleTrigger>
-                        <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
+                        <div className="flex items-center gap-4">
+                            <div className="text-right">
+                                <div className="font-semibold">{formatCurrency(l.balance)}</div>
+                                <div className="text-xs text-muted-foreground">Balance</div>
+                            </div>
+                            <Button size="sm" variant="secondary" onClick={() => handlePaymentClick(l.id)}>
+                                <Receipt className="mr-2 h-4 w-4" /> Pay
+                            </Button>
+                        </div>
+                      </div>
+                      <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
                             <div className="p-4 space-y-6">
                                 <Card>
                                     <CardHeader><CardTitle className="text-lg">Add New Work Entry</CardTitle></CardHeader>
