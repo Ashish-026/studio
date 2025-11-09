@@ -375,12 +375,10 @@ export function PrivateSales() {
                         onOpenChange={(isOpen) => setOpenCustomerCollapsibles(prev => ({...prev, [customer.id]: isOpen}))}
                         className="border-b last:border-b-0"
                     >
-                        <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
-                            <CollapsibleTrigger asChild>
-                                <div className="flex items-center gap-2 flex-grow cursor-pointer">
-                                    {openCustomerCollapsibles[customer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                    <span className="font-medium">{customer.name}</span>
-                                </div>
+                         <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
+                            <CollapsibleTrigger className="flex items-center gap-2 flex-grow cursor-pointer">
+                                {openCustomerCollapsibles[customer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                <span className="font-medium">{customer.name}</span>
                             </CollapsibleTrigger>
                             <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); saleForm.setValue('customerName', customer.name); setShowForm(true); window.scrollTo({top: 0, behavior: 'smooth'}); }}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Sale
@@ -406,8 +404,8 @@ export function PrivateSales() {
                                     </TableHeader>
                                     <TableBody>
                                         {customer.sales.map((s: PrivateSale) => (
-                                             <Collapsible key={s.id}>
-                                                
+                                             <Collapsible key={s.id} asChild>
+                                                <>
                                                     <TableRow>
                                                         <TableCell>{format(s.date, 'dd MMM yyyy')}</TableCell>
                                                         <TableCell className="capitalize">{s.itemType}</TableCell>
@@ -451,6 +449,7 @@ export function PrivateSales() {
                                                             </TableCell>
                                                         </tr>
                                                     </CollapsibleContent>
+                                                </>
                                             </Collapsible>
                                         ))}
                                     </TableBody>
@@ -460,7 +459,7 @@ export function PrivateSales() {
                     </Collapsible>
                 ))}
                 {customerAggregates.length === 0 && (
-                    <div className="p-4 text-center text-muted-foreground">No sale records found.</div>
+                    <TableRow><TableCell colSpan={10} className="p-4 text-center text-muted-foreground">No sale records found.</TableCell></TableRow>
                 )}
             </div>
           </div>

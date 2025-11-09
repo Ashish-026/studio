@@ -36,7 +36,7 @@ const purchaseFormSchema = z.object({
   itemType: z.enum(['paddy', 'rice']),
   quantity: z.coerce.number().positive('Quantity must be a positive number'),
   rate: z.coerce.number().positive('Rate must be a positive number'),
-  initialPayment: z.coerce.number().min(0, 'Initial payment cannot be negative'),
+  initialPayment: z.coerce.number().min(0, 'Initial payment cannot be negative').default(0),
   description: z.string().optional(),
   vehicleType: z.enum(['farmer', 'own', 'hired'], { required_error: 'Vehicle type is required' }),
   vehicleNumber: z.string().optional(),
@@ -364,12 +364,10 @@ export function PrivatePurchases() {
                         onOpenChange={(isOpen) => setOpenFarmerCollapsibles(prev => ({...prev, [farmer.id]: isOpen}))}
                         className="border-b last:border-b-0"
                     >
-                        <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
-                            <CollapsibleTrigger asChild>
-                                <div className="flex items-center gap-2 flex-grow cursor-pointer">
-                                    {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                    <span className="font-medium">{farmer.name}</span>
-                                </div>
+                         <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
+                            <CollapsibleTrigger className="flex items-center gap-2 flex-grow cursor-pointer">
+                                {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                <span className="font-medium">{farmer.name}</span>
                             </CollapsibleTrigger>
                             <div className="flex items-center gap-2">
                                 <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); downloadPdf(`farmer-summary-${farmer.id}`, `purchase-summary-${farmer.name.toLowerCase().replace(/\s+/g, '-')}`) }}>
@@ -400,7 +398,8 @@ export function PrivatePurchases() {
                                     </TableHeader>
                                     <TableBody>
                                         {farmer.purchases.map((p: PrivatePurchase) => (
-                                             <Collapsible key={p.id}>
+                                             <Collapsible key={p.id} asChild>
+                                                <>
                                                     <TableRow>
                                                         <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
                                                         <TableCell className="capitalize">{p.itemType}</TableCell>
@@ -444,6 +443,7 @@ export function PrivatePurchases() {
                                                             </TableCell>
                                                         </tr>
                                                     </CollapsibleContent>
+                                                </>
                                             </Collapsible>
                                         ))}
                                     </TableBody>
@@ -453,7 +453,7 @@ export function PrivatePurchases() {
                     </Collapsible>
                 ))}
                 {farmerAggregates.length === 0 && (
-                    <div className="p-4 text-center text-muted-foreground">No purchase records found.</div>
+                    <TableRow><TableCell colSpan={10} className="p-4 text-center text-muted-foreground">No purchase records found.</TableCell></TableRow>
                 )}
             </div>
           </div>
