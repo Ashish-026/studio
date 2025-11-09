@@ -12,18 +12,21 @@ import { LabourProvider } from '@/context/labour-context';
 import { MillProvider } from '@/context/mill-context';
 import { useMill } from '@/hooks/use-mill';
 
-function DashboardContent({ children }: { children: React.ReactNode }) {
+function ProtectedDashboard({ children }: { children: React.ReactNode }) {
+  const { user, loading: userLoading } = useAuth();
   const { selectedMill, loading: millLoading } = useMill();
   const router = useRouter();
 
   useEffect(() => {
-    if (!millLoading && !selectedMill) {
+    if (!userLoading && !user) {
+      router.replace('/');
+    } else if (!millLoading && !selectedMill) {
       router.replace('/select-mill');
     }
-  }, [selectedMill, millLoading, router]);
+  }, [user, userLoading, selectedMill, millLoading, router]);
 
-  if (millLoading || !selectedMill) {
-     return (
+  if (userLoading || millLoading || !user || !selectedMill) {
+    return (
       <div className="flex flex-col min-h-screen">
         <header className="sticky top-0 z-50 w-full border-b bg-card">
           <div className="container flex h-16 items-center px-4 md:px-6">
@@ -35,7 +38,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         </header>
         <main className="flex-1 container py-8">
             <div className="flex justify-center items-center h-64">
-                <p>Loading mill data...</p>
+                <p>Loading user and mill data...</p>
             </div>
         </main>
       </div>
@@ -64,38 +67,11 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/');
-    }
-  }, [user, loading, router]);
-
-  if (loading || !user) {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <header className="sticky top-0 z-50 w-full border-b bg-card">
-          <div className="container flex h-16 items-center px-4 md:px-6">
-            <Skeleton className="h-8 w-32" />
-            <div className="ml-auto">
-              <Skeleton className="h-10 w-10 rounded-full" />
-            </div>
-          </div>
-        </header>
-        <main className="flex-1 container py-8">
-            <Skeleton className="h-64 w-full" />
-        </main>
-      </div>
-    );
-  }
-
   return (
     <MillProvider>
-      <DashboardContent>
-        {children}
-      </DashboardContent>
+        <ProtectedDashboard>
+            {children}
+        </ProtectedDashboard>
     </MillProvider>
   );
 }
