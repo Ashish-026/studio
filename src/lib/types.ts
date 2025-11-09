@@ -25,6 +25,8 @@ export type PaddyLifted = {
   driverName?: string;
   ownerName?: string;
   tripCharge?: number;
+  source?: string;
+  destination?: string;
 };
 
 export type MandiProcessingResult = {
@@ -48,6 +50,8 @@ export type MandiStockRelease = {
     driverName?: string;
     ownerName?: string;
     tripCharge?: number;
+    source?: string;
+    destination?: string;
 };
 
 export type Payment = {
@@ -73,6 +77,8 @@ export type PrivatePurchase = {
   driverName?: string;
   ownerName?: string;
   tripCharge?: number;
+  source?: string;
+  destination?: string;
 };
 
 export type PrivateSale = {
@@ -93,6 +99,8 @@ export type PrivateSale = {
   driverName?: string;
   ownerName?: string;
   tripCharge?: number;
+  source?: string;
+  destination?: string;
 }
 
 export type LabourWorkEntry = {

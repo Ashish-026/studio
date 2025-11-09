@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -33,6 +33,8 @@ const purchaseFormSchema = z.object({
   driverName: z.string().optional(),
   ownerName: z.string().optional(),
   tripCharge: z.coerce.number().optional(),
+  source: z.string().optional(),
+  destination: z.string().optional(),
 }).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
@@ -66,6 +68,7 @@ export function PrivatePurchases() {
       initialPayment: 0,
       description: '',
       vehicleType: 'farmer',
+      destination: 'Mill',
     },
   });
 
@@ -75,6 +78,13 @@ export function PrivatePurchases() {
   });
 
   const vehicleType = purchaseForm.watch('vehicleType');
+  const farmerNameValue = purchaseForm.watch('farmerName');
+
+  useEffect(() => {
+    if (farmerNameValue) {
+        purchaseForm.setValue('source', farmerNameValue);
+    }
+  }, [farmerNameValue, purchaseForm]);
 
   const farmerAggregates = useMemo(() => {
     const farmers: Record<string, { id: string, name: string, purchases: any[] }> = {};
@@ -106,8 +116,8 @@ export function PrivatePurchases() {
 
         if (vehicleId) {
             addTrip(vehicleId, {
-                source: values.farmerName, 
-                destination: 'Mill',
+                source: values.source || values.farmerName, 
+                destination: values.destination || 'Mill',
                 quantity: values.quantity,
                 tripCharge: values.tripCharge,
             });
@@ -236,6 +246,12 @@ export function PrivatePurchases() {
                                 )} />
                                 <FormField control={purchaseForm.control} name="tripCharge" render={({ field }) => (
                                     <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={purchaseForm.control} name="source" render={({ field }) => (
+                                    <FormItem><FormLabel>Source</FormLabel><FormControl><Input placeholder="Source location" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={purchaseForm.control} name="destination" render={({ field }) => (
+                                    <FormItem><FormLabel>Destination</FormLabel><FormControl><Input placeholder="Destination location" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
                             </>
                            )}

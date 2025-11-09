@@ -31,6 +31,8 @@ const supplySchema = z.object({
     driverName: z.string().optional(),
     ownerName: z.string().optional(),
     tripCharge: z.coerce.number().optional(),
+    source: z.string().optional(),
+    destination: z.string().optional(),
 }).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
@@ -49,10 +51,17 @@ export function MandiSupply() {
 
   const supplyForm = useForm<z.infer<typeof supplySchema>>({
     resolver: zodResolver(supplySchema),
-    defaultValues: { lotNumber: '', godownDetails: '', vehicleType: 'own' },
+    defaultValues: { lotNumber: '', godownDetails: '', vehicleType: 'own', source: 'Mill' },
   });
 
   const vehicleType = supplyForm.watch('vehicleType');
+  const godownDetailsValue = supplyForm.watch('godownDetails');
+  
+  useMemo(() => {
+    if (godownDetailsValue) {
+      supplyForm.setValue('destination', godownDetailsValue);
+    }
+  }, [godownDetailsValue, supplyForm]);
 
   const formatNumber = (num: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num);
 
@@ -76,8 +85,8 @@ export function MandiSupply() {
 
         if (vehicleId) {
             addTrip(vehicleId, {
-                source: 'Mill', 
-                destination: values.godownDetails,
+                source: values.source || 'Mill', 
+                destination: values.destination || values.godownDetails,
                 quantity: values.quantity,
                 tripCharge: values.tripCharge,
             });
@@ -176,6 +185,12 @@ export function MandiSupply() {
                                 )} />
                                 <FormField control={supplyForm.control} name="tripCharge" render={({ field }) => (
                                     <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={supplyForm.control} name="source" render={({ field }) => (
+                                    <FormItem><FormLabel>Source</FormLabel><FormControl><Input placeholder="Source location" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={supplyForm.control} name="destination" render={({ field }) => (
+                                    <FormItem><FormLabel>Destination</FormLabel><FormControl><Input placeholder="Destination location" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
                             </>
                            )}

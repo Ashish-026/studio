@@ -31,6 +31,8 @@ const physicalFormSchema = z.object({
   driverName: z.string().optional(),
   ownerName: z.string().optional(),
   tripCharge: z.coerce.number().optional(),
+  source: z.string().optional(),
+  destination: z.string().optional(),
 }).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
@@ -82,7 +84,7 @@ export function PaddyLifted() {
 
   const physicalForm = useForm<z.infer<typeof physicalFormSchema>>({
     resolver: zodResolver(physicalFormSchema),
-    defaultValues: { mandiName: '', farmerName: '', vehicleType: 'farmer' },
+    defaultValues: { mandiName: '', farmerName: '', vehicleType: 'farmer', destination: 'Mill' },
   });
 
   const monetaryForm = useForm<z.infer<typeof monetaryFormSchema>>({
@@ -91,6 +93,14 @@ export function PaddyLifted() {
   });
   
   const vehicleType = physicalForm.watch('vehicleType');
+  const mandiNameValue = physicalForm.watch('mandiName');
+
+  useEffect(() => {
+    if (mandiNameValue) {
+      physicalForm.setValue('source', mandiNameValue);
+    }
+  }, [mandiNameValue, physicalForm]);
+
 
   useEffect(() => {
     if (editingEntry) {
@@ -110,11 +120,13 @@ export function PaddyLifted() {
           vehicleNumber: editingEntry.vehicleNumber,
           driverName: editingEntry.driverName,
           ownerName: editingEntry.ownerName,
-          tripCharge: editingEntry.tripCharge
+          tripCharge: editingEntry.tripCharge,
+          source: editingEntry.mandiName,
+          destination: 'Mill',
         });
       }
     } else {
-      physicalForm.reset({ mandiName: '', farmerName: '', vehicleType: 'farmer' });
+      physicalForm.reset({ mandiName: '', farmerName: '', vehicleType: 'farmer', destination: 'Mill' });
       monetaryForm.reset({ mandiName: '' });
     }
   }, [editingEntry, physicalForm, monetaryForm])
@@ -138,8 +150,8 @@ export function PaddyLifted() {
 
         if (vehicleId) {
             addTrip(vehicleId, {
-                source: values.mandiName,
-                destination: 'Mill', // Or some default value
+                source: values.source || values.mandiName,
+                destination: values.destination || 'Mill',
                 quantity: values.totalPaddyReceived,
                 tripCharge: values.tripCharge,
             });
@@ -317,6 +329,12 @@ export function PaddyLifted() {
                                 )} />
                                 <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (
                                     <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={physicalForm.control} name="source" render={({ field }) => (
+                                    <FormItem><FormLabel>Source</FormLabel><FormControl><Input placeholder="Source location" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={physicalForm.control} name="destination" render={({ field }) => (
+                                    <FormItem><FormLabel>Destination</FormLabel><FormControl><Input placeholder="Destination location" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
                             </>
                            )}

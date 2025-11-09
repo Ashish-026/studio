@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -33,6 +33,8 @@ const saleFormSchema = z.object({
   driverName: z.string().optional(),
   ownerName: z.string().optional(),
   tripCharge: z.coerce.number().optional(),
+  source: z.string().optional(),
+  destination: z.string().optional(),
 }).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
@@ -67,6 +69,7 @@ export function PrivateSales() {
       initialPayment: 0,
       description: '',
       vehicleType: 'customer',
+      source: 'Mill'
     },
   });
 
@@ -76,6 +79,14 @@ export function PrivateSales() {
   });
 
   const vehicleType = saleForm.watch('vehicleType');
+  const customerNameValue = saleForm.watch('customerName');
+
+  useEffect(() => {
+    if (customerNameValue) {
+      saleForm.setValue('destination', customerNameValue);
+    }
+  }, [customerNameValue, saleForm]);
+
 
   const customerAggregates = useMemo(() => {
     const customers: Record<string, { id: string, name: string, sales: any[] }> = {};
@@ -114,8 +125,8 @@ export function PrivateSales() {
 
         if (vehicleId) {
             addTrip(vehicleId, {
-                source: 'Mill', 
-                destination: values.customerName,
+                source: values.source || 'Mill', 
+                destination: values.destination || values.customerName,
                 quantity: values.quantity,
                 tripCharge: values.tripCharge,
             });
@@ -247,6 +258,12 @@ export function PrivateSales() {
                                 )} />
                                 <FormField control={saleForm.control} name="tripCharge" render={({ field }) => (
                                     <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={saleForm.control} name="source" render={({ field }) => (
+                                    <FormItem><FormLabel>Source</FormLabel><FormControl><Input placeholder="Source location" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={saleForm.control} name="destination" render={({ field }) => (
+                                    <FormItem><FormLabel>Destination</FormLabel><FormControl><Input placeholder="Destination location" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
                             </>
                            )}
