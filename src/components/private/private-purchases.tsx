@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { useStockData } from '@/context/stock-context';
 import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
-import { PlusCircle, ChevronDown, ChevronRight, Download, Car, Users } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, Download, Car, Users, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { format } from 'date-fns';
 import { downloadPdf } from '@/lib/pdf-utils';
 import { Separator } from '../ui/separator';
-import type { PrivatePurchase } from '@/lib/types';
+import type { PrivatePurchase, Payment } from '@/lib/types';
 
 
 const labourDetailsSchema = z.object({
@@ -452,25 +452,27 @@ export function PrivatePurchases() {
                         onOpenChange={(isOpen) => setOpenFarmerCollapsibles(prev => ({...prev, [farmer.id]: isOpen}))}
                         className="border-b last:border-b-0"
                     >
-                        <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
-                            <CollapsibleTrigger className="flex items-center gap-2 flex-grow cursor-pointer text-left">
+                        <div className="flex flex-col md:flex-row w-full p-4 items-start md:items-center justify-between hover:bg-muted/50 transition-colors gap-4">
+                            <CollapsibleTrigger className="flex items-center gap-3 flex-grow cursor-pointer text-left">
                                 {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                <span className="font-medium">{farmer.name}</span>
-                            </CollapsibleTrigger>
-                             <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                    <div className={`font-semibold ${farmer.totalBalance < 0 ? 'text-green-600' : farmer.totalBalance > 0 ? 'text-destructive' : ''}`}>
-                                        {formatCurrency(Math.abs(farmer.totalBalance))}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                        {farmer.totalBalance < 0 ? 'Advance' : 'Payable'}
+                                <UserIcon className="h-5 w-5 text-muted-foreground" />
+                                <div className="flex-1">
+                                    <span className="font-medium">{farmer.name}</span>
+                                    <div className="text-sm">
+                                        <span className="text-muted-foreground">Balance: </span>
+                                        <span className={`font-semibold ${farmer.totalBalance < 0 ? 'text-green-600' : farmer.totalBalance > 0 ? 'text-destructive' : ''}`}>
+                                            {formatCurrency(Math.abs(farmer.totalBalance))}
+                                            {farmer.totalBalance < 0 ? ' (Adv)' : farmer.totalBalance > 0 ? ' (Payable)' : ''}
+                                        </span>
                                     </div>
                                 </div>
+                            </CollapsibleTrigger>
+                             <div className="flex items-center gap-2 self-end md:self-center ml-auto pl-8 md:pl-0">
                                 <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(farmer.id, farmer.name); }}>
                                     <Download className="mr-2 h-4 w-4" /> PDF
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); purchaseForm.setValue('farmerName', farmer.name); setShowForm(true); window.scrollTo({top: 0, behavior: 'smooth'}); }}>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Purchase
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Purchase
                                 </Button>
                             </div>
                         </div>
@@ -480,70 +482,72 @@ export function PrivatePurchases() {
                              </div>
                             <div className="px-4 pb-4">
                                 <h4 className="font-semibold text-md my-2">Purchase Details for {farmer.name}</h4>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Vehicle Type</TableHead>
-                                            <TableHead>Rent(₹)</TableHead>
-                                            <TableHead className="text-right">Qty (Qtl)</TableHead>
-                                            <TableHead className="text-right">Rate (₹)</TableHead>
-                                            <TableHead className="text-right">Total (₹)</TableHead>
-                                            <TableHead className="text-right">Paid (₹)</TableHead>
-                                            <TableHead className="text-right">Balance (₹)</TableHead>
-                                            <TableHead className="text-right print:hidden">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {farmer.purchases.map((p: PrivatePurchase) => (
-                                            <React.Fragment key={p.id}>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
                                             <TableRow>
-                                                <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
-                                                <TableCell className="capitalize">{p.itemType}</TableCell>
-                                                <TableCell className="capitalize">{p.vehicleType?.replace('_', ' ') || 'N/A'}</TableCell>
-                                                <TableCell>{p.tripCharge ? formatCurrency(p.tripCharge) : '-'}</TableCell>
-                                                <TableCell className="text-right">{p.quantity.toLocaleString('en-IN')}</TableCell>
-                                                <TableCell className="text-right">{formatCurrency(p.rate)}</TableCell>
-                                                <TableCell className="text-right">{formatCurrency(p.totalAmount)}</TableCell>
-                                                <TableCell className="text-right">{formatCurrency(p.amountPaid)}</TableCell>
-                                                <TableCell className={`text-right font-semibold ${p.balance < 0 ? 'text-green-600' : p.balance > 0 ? 'text-destructive' : ''}`}>
-                                                    {p.balance < 0 ? `${formatCurrency(Math.abs(p.balance))} (Adv)` : formatCurrency(p.balance)}
-                                                </TableCell>
-                                                <TableCell className="text-right print:hidden">
-                                                    <div className="flex gap-2 justify-end">
-                                                        <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, p.id)}>Pay</Button>
-                                                    </div>
-                                                </TableCell>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Vehicle Type</TableHead>
+                                                <TableHead>Rent(₹)</TableHead>
+                                                <TableHead className="text-right">Qty (Qtl)</TableHead>
+                                                <TableHead className="text-right">Rate (₹)</TableHead>
+                                                <TableHead className="text-right">Total (₹)</TableHead>
+                                                <TableHead className="text-right">Paid (₹)</TableHead>
+                                                <TableHead className="text-right">Balance (₹)</TableHead>
+                                                <TableHead className="text-right print:hidden">Actions</TableHead>
                                             </TableRow>
-                                            <Collapsible asChild>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {farmer.purchases.map((p: PrivatePurchase) => (
+                                                <React.Fragment key={p.id}>
                                                 <TableRow>
-                                                    <TableCell colSpan={10} className="p-0">
-                                                        <CollapsibleContent>
-                                                            <div className="p-4">
-                                                                <h4 className="font-semibold mb-2">Payment History for Purchase on {format(p.date, 'dd MMM yyyy')}</h4>
-                                                                {p.payments.length > 0 ? (
-                                                                    <Table>
-                                                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
-                                                                        <TableBody>
-                                                                            {[...p.payments].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((payment: any) => (
-                                                                                <TableRow key={payment.id}>
-                                                                                    <TableCell>{format(payment.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
-                                                                                    <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
-                                                                                </TableRow>
-                                                                            ))}
-                                                                        </TableBody>
-                                                                    </Table>
-                                                                ) : <p className="text-sm text-muted-foreground">No payments recorded for this purchase yet.</p>}
-                                                            </div>
-                                                        </CollapsibleContent>
+                                                    <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
+                                                    <TableCell className="capitalize">{p.itemType}</TableCell>
+                                                    <TableCell className="capitalize">{p.vehicleType?.replace('_', ' ') || 'N/A'}</TableCell>
+                                                    <TableCell>{p.tripCharge ? formatCurrency(p.tripCharge) : '-'}</TableCell>
+                                                    <TableCell className="text-right">{p.quantity.toLocaleString('en-IN')}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(p.rate)}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(p.totalAmount)}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(p.amountPaid)}</TableCell>
+                                                    <TableCell className={`text-right font-semibold ${p.balance < 0 ? 'text-green-600' : p.balance > 0 ? 'text-destructive' : ''}`}>
+                                                        {p.balance < 0 ? `${formatCurrency(Math.abs(p.balance))} (Adv)` : formatCurrency(p.balance)}
+                                                    </TableCell>
+                                                    <TableCell className="text-right print:hidden">
+                                                        <div className="flex gap-2 justify-end">
+                                                            <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, p.id)}>Pay</Button>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
-                                            </Collapsible>
-                                            </React.Fragment>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                                {p.payments.length > 0 && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={10} className="p-0">
+                                                            <Collapsible>
+                                                                <CollapsibleContent>
+                                                                    <div className="p-4 bg-muted/20">
+                                                                        <h4 className="font-semibold mb-2">Payment History for Purchase on {format(p.date, 'dd MMM yyyy')}</h4>
+                                                                        <Table>
+                                                                            <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
+                                                                            <TableBody>
+                                                                                {[...p.payments].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((payment: any) => (
+                                                                                    <TableRow key={payment.id}>
+                                                                                        <TableCell>{format(payment.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
+                                                                                        <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
+                                                                                    </TableRow>
+                                                                                ))}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    </div>
+                                                                </CollapsibleContent>
+                                                            </Collapsible>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                                </React.Fragment>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
