@@ -74,7 +74,14 @@ export function PrivateSales() {
       initialPayment: 0,
       description: '',
       vehicleType: 'customer',
-      sourceLocation: 'Mill'
+      sourceLocation: 'Mill',
+      vehicleNumber: '',
+      driverName: '',
+      ownerName: '',
+      tripCharge: 0,
+      destination: '',
+      labourerId: undefined,
+      labourCharge: 0,
     },
   });
 

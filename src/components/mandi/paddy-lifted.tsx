@@ -88,12 +88,26 @@ export function PaddyLifted() {
 
   const physicalForm = useForm<z.infer<typeof physicalFormSchema>>({
     resolver: zodResolver(physicalFormSchema),
-    defaultValues: { mandiName: '', farmerName: '', vehicleType: 'farmer', destination: 'Mill' },
+    defaultValues: {
+        mandiName: '',
+        farmerName: '',
+        vehicleType: 'farmer',
+        destination: 'Mill',
+        totalPaddyReceived: 0,
+        mandiWeight: 0,
+        vehicleNumber: '',
+        driverName: '',
+        ownerName: '',
+        tripCharge: 0,
+        source: '',
+        labourerId: undefined,
+        labourCharge: 0,
+    },
   });
 
   const monetaryForm = useForm<z.infer<typeof monetaryFormSchema>>({
     resolver: zodResolver(monetaryFormSchema),
-    defaultValues: { mandiName: '' },
+    defaultValues: { mandiName: '', moneyReceived: 0, ratePerQuintal: 0 },
   });
   
   const vehicleType = physicalForm.watch('vehicleType');
@@ -121,19 +135,33 @@ export function PaddyLifted() {
           totalPaddyReceived: editingEntry.totalPaddyReceived,
           mandiWeight: editingEntry.mandiWeight,
           vehicleType: editingEntry.vehicleType || 'farmer',
-          vehicleNumber: editingEntry.vehicleNumber,
-          driverName: editingEntry.driverName,
-          ownerName: editingEntry.ownerName,
-          tripCharge: editingEntry.tripCharge,
+          vehicleNumber: editingEntry.vehicleNumber || '',
+          driverName: editingEntry.driverName || '',
+          ownerName: editingEntry.ownerName || '',
+          tripCharge: editingEntry.tripCharge || 0,
           source: editingEntry.source || editingEntry.mandiName,
           destination: editingEntry.destination || 'Mill',
           labourerId: editingEntry.labourerId,
-          labourCharge: editingEntry.labourCharge,
+          labourCharge: editingEntry.labourCharge || 0,
         });
       }
     } else {
-      physicalForm.reset({ mandiName: '', farmerName: '', vehicleType: 'farmer', destination: 'Mill', source: '' });
-      monetaryForm.reset({ mandiName: '' });
+      physicalForm.reset({
+          mandiName: '',
+          farmerName: '',
+          vehicleType: 'farmer',
+          destination: 'Mill',
+          totalPaddyReceived: 0,
+          mandiWeight: 0,
+          vehicleNumber: '',
+          driverName: '',
+          ownerName: '',
+          tripCharge: 0,
+          source: '',
+          labourerId: undefined,
+          labourCharge: 0,
+      });
+      monetaryForm.reset({ mandiName: '', moneyReceived: 0, ratePerQuintal: 0 });
     }
   }, [editingEntry, physicalForm, monetaryForm])
 

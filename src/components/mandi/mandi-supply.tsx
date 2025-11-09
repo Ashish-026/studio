@@ -55,7 +55,20 @@ export function MandiSupply() {
 
   const supplyForm = useForm<z.infer<typeof supplySchema>>({
     resolver: zodResolver(supplySchema),
-    defaultValues: { lotNumber: '', godownDetails: '', vehicleType: 'own', source: 'Mill' },
+    defaultValues: {
+        lotNumber: '',
+        godownDetails: '',
+        vehicleType: 'own',
+        source: 'Mill',
+        quantity: 0,
+        vehicleNumber: '',
+        driverName: '',
+        ownerName: '',
+        tripCharge: 0,
+        destination: '',
+        labourerId: undefined,
+        labourCharge: 0,
+    },
   });
 
   const vehicleType = supplyForm.watch('vehicleType');

@@ -73,6 +73,13 @@ export function PrivatePurchases() {
       description: '',
       vehicleType: 'farmer',
       destination: 'Mill',
+      vehicleNumber: '',
+      driverName: '',
+      ownerName: '',
+      tripCharge: 0,
+      source: '',
+      labourerId: undefined,
+      labourCharge: 0,
     },
   });
 
