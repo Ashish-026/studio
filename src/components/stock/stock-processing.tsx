@@ -20,9 +20,17 @@ import { Separator } from '../ui/separator';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
-  labourerIds: z.array(z.object({ value: z.string().min(1, "Please select a labourer.") })).default([]),
+  labourerIds: z.array(z.object({ value: z.string() })).default([]),
   labourWageType: z.enum(['per_item', 'total_amount']).default('total_amount'),
   labourCharge: z.coerce.number().min(0).default(0),
+}).refine(data => {
+    if (data.numberOfLabours > 0) {
+        return data.labourerIds.length === data.numberOfLabours && data.labourerIds.every(l => l.value && l.value !== 'none');
+    }
+    return true;
+}, {
+    message: "Please select all labourers.",
+    path: ['labourerIds'],
 });
 
 const paddyProcessingSchema = z.object({
@@ -48,12 +56,12 @@ export function StockProcessing() {
 
   const paddyProcessingForm = useForm<z.infer<typeof paddyProcessingSchema>>({
     resolver: zodResolver(paddyProcessingSchema),
-    defaultValues: { source: 'private', numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount' }
+    defaultValues: { source: 'private', paddyUsed: 0, riceYield: 0, branYield: 0, brokenRiceYield: 0, numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount' }
   });
 
   const riceProcessingForm = useForm<z.infer<typeof riceProcessingSchema>>({
     resolver: zodResolver(riceProcessingSchema),
-    defaultValues: { source: 'private', numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount' }
+    defaultValues: { source: 'private', riceUsed: 0, finalRiceYield: 0, brokenRiceYield: 0, numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount' }
   });
 
   const { fields: paddyFields, append: paddyAppend, remove: paddyRemove } = useFieldArray({ control: paddyProcessingForm.control, name: "labourerIds" });
@@ -132,7 +140,6 @@ export function StockProcessing() {
     setShowForm(false);
   }
 
-
   return (
     <Card>
         <CardHeader>
@@ -205,9 +212,10 @@ export function StockProcessing() {
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                            {labourers.map((l) => (
-                                                <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                                            ))}
+                                                <SelectItem value="none">None</SelectItem>
+                                                {labourers.map((l) => (
+                                                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -245,7 +253,7 @@ export function StockProcessing() {
                                 <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField control={riceProcessingForm.control} name="numberOfLabours" render={({ field }) => (
-                                        <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormMessage>
+                                        <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <FormField control={riceProcessingForm.control} name="labourCharge" render={({ field }) => (
                                         <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 300" {...field} /></FormControl><FormMessage /></FormItem>
@@ -262,9 +270,10 @@ export function StockProcessing() {
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                {labourers.map((l) => (
-                                                    <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                                                ))}
+                                                    <SelectItem value="none">None</SelectItem>
+                                                    {labourers.map((l) => (
+                                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -321,5 +330,3 @@ export function StockProcessing() {
     </Card>
   );
 }
-
-    
