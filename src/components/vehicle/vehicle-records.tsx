@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import type { VehicleTrip } from '@/lib/types';
+import type { Vehicle, VehicleTrip } from '@/lib/types';
 
 const paymentFormSchema = z.object({
     amount: z.coerce.number().positive('Payment amount must be positive'),
@@ -51,7 +51,7 @@ export function VehicleRecords() {
   }, [selectedTrip, tripForm]);
 
   const ownerAggregates = useMemo(() => {
-    const owners: Record<string, { id: string, name: string, vehicles: any[] }> = {};
+    const owners: Record<string, { id: string, name: string, vehicles: Vehicle[] }> = {};
     vehicles.forEach(v => {
       if (!owners[v.ownerName]) {
         owners[v.ownerName] = { id: v.ownerName.replace(/\s+/g, '-').toLowerCase(), name: v.ownerName, vehicles: [] };
@@ -115,20 +115,22 @@ export function VehicleRecords() {
           <div>
             <h3 className="text-lg font-semibold mb-2">Vehicle Owner Accounts</h3>
             <div className="border rounded-lg">
-                {ownerAggregates.map(owner => (
+                {ownerAggregates.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground">Vehicle data from other registers will appear here.</div>
+                ) : ownerAggregates.map(owner => (
                     <Collapsible 
                         key={owner.id}
                         open={openOwnerCollapsibles[owner.id] || false}
                         onOpenChange={(isOpen) => setOpenOwnerCollapsibles(prev => ({...prev, [owner.id]: isOpen}))}
                         className="border-b last:border-b-0"
                     >
-                        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                           <div className="flex items-center gap-2">
-                                {openOwnerCollapsibles[owner.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                <Building className="h-5 w-5 text-muted-foreground" />
-                                <span className="font-medium">{owner.name}</span>
-                            </div>
-                        </CollapsibleTrigger>
+                        <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
+                          <CollapsibleTrigger className="flex items-center gap-2 flex-grow cursor-pointer">
+                              {openOwnerCollapsibles[owner.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              <Building className="h-5 w-5 text-muted-foreground" />
+                              <span className="font-medium">{owner.name}</span>
+                          </CollapsibleTrigger>
+                        </div>
                         <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
                             <div className="p-4 space-y-4">
                                 {owner.vehicles.sort((a,b) => a.vehicleNumber.localeCompare(b.vehicleNumber)).map(v => (
@@ -139,25 +141,23 @@ export function VehicleRecords() {
                                         className="border rounded-lg"
                                     >
                                         <div className="w-full p-4 flex items-center justify-between bg-card hover:bg-muted/50 transition-colors">
-                                            <CollapsibleTrigger asChild>
-                                                <div className="flex items-center gap-3 flex-grow cursor-pointer">
-                                                    {openVehicleCollapsibles[v.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                                    <Car className="h-5 w-5 text-primary" />
-                                                    <div>
-                                                        <div className="font-medium">{v.vehicleNumber}</div>
-                                                        <div className="text-sm text-muted-foreground">{v.driverName}</div>
-                                                    </div>
-                                                </div>
-                                            </CollapsibleTrigger>
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-right">
-                                                    <div className="font-semibold text-destructive">{formatCurrency(v.balance)}</div>
-                                                    <div className="text-xs text-muted-foreground">Balance</div>
-                                                </div>
-                                                <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, v.id)}>
-                                                    <Receipt className="mr-2 h-4 w-4" /> Pay
-                                                </Button>
-                                            </div>
+                                          <CollapsibleTrigger className="flex items-center gap-3 flex-grow cursor-pointer">
+                                              {openVehicleCollapsibles[v.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                              <Car className="h-5 w-5 text-primary" />
+                                              <div>
+                                                  <div className="font-medium">{v.vehicleNumber}</div>
+                                                  <div className="text-sm text-muted-foreground">{v.driverName}</div>
+                                              </div>
+                                          </CollapsibleTrigger>
+                                          <div className="flex items-center gap-4">
+                                              <div className="text-right">
+                                                  <div className="font-semibold text-destructive">{formatCurrency(v.balance)}</div>
+                                                  <div className="text-xs text-muted-foreground">Balance</div>
+                                              </div>
+                                              <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, v.id)}>
+                                                  <Receipt className="mr-2 h-4 w-4" /> Pay
+                                              </Button>
+                                          </div>
                                         </div>
                                         <CollapsibleContent className="p-4 space-y-6">
                                             <div>
@@ -220,9 +220,6 @@ export function VehicleRecords() {
                         </CollapsibleContent>
                     </Collapsible>
                 ))}
-                {ownerAggregates.length === 0 && (
-                    <div className="p-4 text-center text-muted-foreground">Vehicle data from other registers will appear here.</div>
-                )}
             </div>
           </div>
         </CardContent>

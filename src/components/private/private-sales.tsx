@@ -368,7 +368,9 @@ export function PrivateSales() {
           <div>
             <h3 className="text-lg font-semibold mb-2">Customer Sale History</h3>
             <div className="border rounded-lg">
-                {customerAggregates.map(customer => (
+                {customerAggregates.length === 0 ? (
+                    <div className="p-4 text-center text-muted-foreground">No sale records found.</div>
+                ) : customerAggregates.map(customer => (
                     <Collapsible 
                         key={customer.id}
                         open={openCustomerCollapsibles[customer.id] || false}
@@ -404,52 +406,50 @@ export function PrivateSales() {
                                     </TableHeader>
                                     <TableBody>
                                         {customer.sales.map((s: PrivateSale) => (
-                                             <Collapsible key={s.id} asChild>
-                                                <>
-                                                    <TableRow>
-                                                        <TableCell>{format(s.date, 'dd MMM yyyy')}</TableCell>
-                                                        <TableCell className="capitalize">{s.itemType}</TableCell>
-                                                        <TableCell className="capitalize">{s.vehicleType?.replace('_', ' ') || 'N/A'}</TableCell>
-                                                        <TableCell>{s.tripCharge ? formatCurrency(s.tripCharge) : '-'}</TableCell>
-                                                        <TableCell className="text-right">{s.quantity.toLocaleString('en-IN')}</TableCell>
-                                                        <TableCell className="text-right">{formatCurrency(s.rate)}</TableCell>
-                                                        <TableCell className="text-right">{formatCurrency(s.totalAmount)}</TableCell>
-                                                        <TableCell className="text-right">{formatCurrency(s.amountReceived)}</TableCell>
-                                                        <TableCell className={`text-right font-semibold ${s.balance < 0 ? 'text-green-600' : s.balance > 0 ? 'text-destructive' : ''}`}>
-                                                            {s.balance < 0 ? `${formatCurrency(Math.abs(s.balance))} (Credit)` : formatCurrency(s.balance)}
-                                                        </TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex gap-2 justify-end">
-                                                                <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, s.id)}>Receive</Button>
-                                                                <CollapsibleTrigger asChild>
-                                                                    <Button size="sm" variant="ghost"><Receipt className="h-4 w-4" /></Button>
-                                                                </CollapsibleTrigger>
+                                             <Collapsible key={s.id}>
+                                                <TableRow>
+                                                    <TableCell>{format(s.date, 'dd MMM yyyy')}</TableCell>
+                                                    <TableCell className="capitalize">{s.itemType}</TableCell>
+                                                    <TableCell className="capitalize">{s.vehicleType?.replace('_', ' ') || 'N/A'}</TableCell>
+                                                    <TableCell>{s.tripCharge ? formatCurrency(s.tripCharge) : '-'}</TableCell>
+                                                    <TableCell className="text-right">{s.quantity.toLocaleString('en-IN')}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(s.rate)}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(s.totalAmount)}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(s.amountReceived)}</TableCell>
+                                                    <TableCell className={`text-right font-semibold ${s.balance < 0 ? 'text-green-600' : s.balance > 0 ? 'text-destructive' : ''}`}>
+                                                        {s.balance < 0 ? `${formatCurrency(Math.abs(s.balance))} (Credit)` : formatCurrency(s.balance)}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex gap-2 justify-end">
+                                                            <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, s.id)}>Receive</Button>
+                                                            <CollapsibleTrigger asChild>
+                                                                <Button size="sm" variant="ghost"><Receipt className="h-4 w-4" /></Button>
+                                                            </CollapsibleTrigger>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                                <CollapsibleContent asChild>
+                                                    <tr className="bg-muted/50">
+                                                        <TableCell colSpan={10} className="p-0">
+                                                            <div className="p-4">
+                                                                <h4 className="font-semibold mb-2">Payment History for Sale on {format(s.date, 'dd MMM yyyy')}</h4>
+                                                                {s.payments.length > 0 ? (
+                                                                    <Table>
+                                                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
+                                                                        <TableBody>
+                                                                            {[...s.payments].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((payment: any) => (
+                                                                                <TableRow key={payment.id}>
+                                                                                    <TableCell>{format(payment.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
+                                                                                    <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
+                                                                                </TableRow>
+                                                                            ))}
+                                                                        </TableBody>
+                                                                    </Table>
+                                                                ) : <p className="text-sm text-muted-foreground">No payments received for this sale yet.</p>}
                                                             </div>
                                                         </TableCell>
-                                                    </TableRow>
-                                                    <CollapsibleContent asChild>
-                                                        <tr className="bg-muted/50">
-                                                            <TableCell colSpan={10} className="p-0">
-                                                                <div className="p-4">
-                                                                    <h4 className="font-semibold mb-2">Payment History for Sale on {format(s.date, 'dd MMM yyyy')}</h4>
-                                                                    {s.payments.length > 0 ? (
-                                                                        <Table>
-                                                                            <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
-                                                                            <TableBody>
-                                                                                {[...s.payments].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((payment: any) => (
-                                                                                    <TableRow key={payment.id}>
-                                                                                        <TableCell>{format(payment.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
-                                                                                        <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
-                                                                                    </TableRow>
-                                                                                ))}
-                                                                            </TableBody>
-                                                                        </Table>
-                                                                    ) : <p className="text-sm text-muted-foreground">No payments received for this sale yet.</p>}
-                                                                </div>
-                                                            </TableCell>
-                                                        </tr>
-                                                    </CollapsibleContent>
-                                                </>
+                                                    </tr>
+                                                </CollapsibleContent>
                                             </Collapsible>
                                         ))}
                                     </TableBody>
@@ -458,9 +458,6 @@ export function PrivateSales() {
                         </CollapsibleContent>
                     </Collapsible>
                 ))}
-                {customerAggregates.length === 0 && (
-                    <TableRow><TableCell colSpan={10} className="p-4 text-center text-muted-foreground">No sale records found.</TableCell></TableRow>
-                )}
             </div>
           </div>
         </CardContent>
