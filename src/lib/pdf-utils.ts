@@ -1,10 +1,9 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-export const downloadPdf = async (elementId: string, fileName: string) => {
-  const input = document.getElementById(elementId);
-  if (!input) {
-    console.error(`Element with id ${elementId} not found.`);
+export const downloadPdf = async (element: HTMLElement, fileName: string) => {
+  if (!element) {
+    console.error(`Element for PDF generation not found.`);
     return;
   }
 
@@ -14,7 +13,7 @@ export const downloadPdf = async (elementId: string, fileName: string) => {
   printContainer.style.left = '-9999px'; // Position off-screen
   
   // Clone the original element to avoid altering the live DOM
-  const clonedInput = input.cloneNode(true) as HTMLElement;
+  const clonedInput = element.cloneNode(true) as HTMLElement;
   clonedInput.style.width = '1200px'; // A fixed, wider width for better layout in PDF
   clonedInput.style.background = 'white'; // Ensure background is not transparent
   

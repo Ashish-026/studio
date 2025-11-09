@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, forwardRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -59,6 +59,80 @@ const paymentFormSchema = z.object({
   amount: z.coerce.number().positive('Payment amount must be positive'),
 });
 
+
+const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; name: string; purchases: any[] } }>(({ farmer }, ref) => {
+    
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-IN', {
+          style: 'currency',
+          currency: 'INR',
+          minimumFractionDigits: 2,
+        }).format(amount);
+    }
+    
+    return (
+        <div ref={ref} className="px-4 pb-4">
+            <h4 className="font-semibold text-md my-2">Purchase Details for {farmer.name}</h4>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Vehicle Type</TableHead>
+                        <TableHead>Rent(₹)</TableHead>
+                        <TableHead className="text-right">Qty (Qtl)</TableHead>
+                        <TableHead className="text-right">Rate (₹)</TableHead>
+                        <TableHead className="text-right">Total (₹)</TableHead>
+                        <TableHead className="text-right">Paid (₹)</TableHead>
+                        <TableHead className="text-right">Balance (₹)</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {farmer.purchases.map((p: PrivatePurchase) => (
+                        <React.Fragment key={p.id}>
+                            <TableRow>
+                                <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
+                                <TableCell className="capitalize">{p.itemType}</TableCell>
+                                <TableCell className="capitalize">{p.vehicleType?.replace('_', ' ') || 'N/A'}</TableCell>
+                                <TableCell>{p.tripCharge ? formatCurrency(p.tripCharge) : '-'}</TableCell>
+                                <TableCell className="text-right">{p.quantity.toLocaleString('en-IN')}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(p.rate)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(p.totalAmount)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(p.amountPaid)}</TableCell>
+                                <TableCell className={`text-right font-semibold ${p.balance < 0 ? 'text-green-600' : p.balance > 0 ? 'text-destructive' : ''}`}>
+                                    {p.balance < 0 ? `${formatCurrency(Math.abs(p.balance))} (Adv)` : formatCurrency(p.balance)}
+                                </TableCell>
+                            </TableRow>
+                            {p.payments.length > 0 && (
+                                 <tr className="bg-muted/50">
+                                    <TableCell colSpan={10} className="p-0">
+                                        <div className="p-4">
+                                            <h4 className="font-semibold mb-2 text-sm">Payment History</h4>
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {[...p.payments].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((payment: any) => (
+                                                        <TableRow key={payment.id}>
+                                                            <TableCell className="text-xs">{format(payment.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
+                                                            <TableCell className="text-right text-xs">{formatCurrency(payment.amount)}</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    </TableCell>
+                                </tr>
+                            )}
+                        </React.Fragment>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    );
+});
+FarmerPurchaseTable.displayName = 'FarmerPurchaseTable';
+
+
 export function PrivatePurchases() {
   const { purchases, addPurchase, addPayment } = useStockData();
   const { addVehicle, addTrip } = useVehicleData();
@@ -68,6 +142,7 @@ export function PrivatePurchases() {
   const [openFarmerCollapsibles, setOpenFarmerCollapsibles] = useState<Record<string, boolean>>({});
   const [isPaymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<string | null>(null);
+  const farmerRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
   const purchaseForm = useForm<z.infer<typeof purchaseFormSchema>>({
     resolver: zodResolver(purchaseFormSchema),
@@ -204,6 +279,13 @@ export function PrivatePurchases() {
       currency: 'INR',
       minimumFractionDigits: 2,
     }).format(amount);
+  }
+
+  const handleDownload = (farmerId: string, farmerName: string) => {
+    const elementToPrint = farmerRefs.current[farmerId];
+    if (elementToPrint) {
+        downloadPdf(elementToPrint, `purchase-summary-${farmerName.toLowerCase().replace(/\s+/g, '-')}`);
+    }
   }
 
   return (
@@ -365,12 +447,14 @@ export function PrivatePurchases() {
                         className="border-b last:border-b-0"
                     >
                         <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
-                            <CollapsibleTrigger className="flex items-center gap-2 flex-grow cursor-pointer">
-                                {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                <span className="font-medium">{farmer.name}</span>
+                            <CollapsibleTrigger asChild>
+                                <button className="flex items-center gap-2 flex-grow cursor-pointer text-left">
+                                    {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                    <span className="font-medium">{farmer.name}</span>
+                                </button>
                             </CollapsibleTrigger>
                             <div className="flex items-center gap-2">
-                                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); downloadPdf(`farmer-summary-${farmer.id}`, `purchase-summary-${farmer.name.toLowerCase().replace(/\s+/g, '-')}`) }}>
+                                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(farmer.id, farmer.name); }}>
                                     <Download className="mr-2 h-4 w-4" /> PDF
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); purchaseForm.setValue('farmerName', farmer.name); setShowForm(true); window.scrollTo({top: 0, behavior: 'smooth'}); }}>
@@ -379,7 +463,10 @@ export function PrivatePurchases() {
                             </div>
                         </div>
                         <CollapsibleContent>
-                            <div className="px-4 pb-4" id={`farmer-summary-${farmer.id}`}>
+                             <div className="hidden">
+                                <FarmerPurchaseTable ref={el => farmerRefs.current[farmer.id] = el} farmer={farmer} />
+                             </div>
+                            <div className="px-4 pb-4">
                                 <h4 className="font-semibold text-md my-2">Purchase Details for {farmer.name}</h4>
                                 <Table>
                                     <TableHeader>
@@ -421,7 +508,7 @@ export function PrivatePurchases() {
                                                     </TableCell>
                                                 </TableRow>
                                                 <CollapsibleContent asChild>
-                                                    <tr className="bg-muted/50 print:hidden">
+                                                    <tr className="bg-muted/50">
                                                         <TableCell colSpan={10} className="p-0">
                                                             <div className="p-4">
                                                                 <h4 className="font-semibold mb-2">Payment History for Purchase on {format(p.date, 'dd MMM yyyy')}</h4>
