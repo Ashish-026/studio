@@ -118,6 +118,7 @@ export function PaddyLifted() {
   });
 
   const numberOfLabours = physicalForm.watch('numberOfLabours');
+  const selectedLabourerIds = physicalForm.watch('labourerIds').map(l => l.value);
 
   useMemo(() => {
     const currentCount = fields.length;
@@ -169,7 +170,8 @@ export function PaddyLifted() {
           tripCharge: editingEntry.tripCharge || 0,
           source: editingEntry.source || editingEntry.mandiName,
           destination: editingEntry.destination || 'Mill',
-          labourerIds: [],
+          numberOfLabours: editingEntry.labourerIds?.length || 0,
+          labourerIds: editingEntry.labourerIds?.map(id => ({ value: id })) || [],
           labourCharge: editingEntry.labourCharge || 0,
         });
       }
@@ -436,7 +438,9 @@ export function PaddyLifted() {
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                    {labourers.map((l) => (
+                                    {labourers
+                                        .filter(l => !selectedLabourerIds.includes(l.id) || l.id === field.value)
+                                        .map((l) => (
                                         <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                     ))}
                                     </SelectContent>
@@ -650,5 +654,3 @@ export function PaddyLifted() {
     </>
   );
 }
-
-    

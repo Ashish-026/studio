@@ -98,6 +98,7 @@ export function PrivateSales() {
   });
 
   const numberOfLabours = saleForm.watch('numberOfLabours');
+  const selectedLabourerIds = saleForm.watch('labourerIds').map(l => l.value);
 
   useMemo(() => {
     const currentCount = fields.length;
@@ -149,7 +150,7 @@ export function PrivateSales() {
     }
     
     const labourerIds = values.labourerIds.map(l => l.value).filter(Boolean);
-    const submissionValues = { ...values, labourerIds, source: values.sourceLocation };
+    const submissionValues = { ...values, labourerIds, source: values.sourceLocation || 'Mill' };
 
 
     addSale(submissionValues);
@@ -342,7 +343,9 @@ export function PrivateSales() {
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                    {labourers.map((l) => (
+                                    {labourers
+                                        .filter(l => !selectedLabourerIds.includes(l.id) || l.id === field.value)
+                                        .map((l) => (
                                         <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                     ))}
                                     </SelectContent>
@@ -480,5 +483,3 @@ export function PrivateSales() {
     </>
   );
 }
-
-    

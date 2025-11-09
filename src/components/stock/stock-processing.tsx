@@ -20,17 +20,9 @@ import { Separator } from '../ui/separator';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
-  labourerIds: z.array(z.object({ value: z.string() })).default([]),
+  labourerIds: z.array(z.object({ value: z.string().min(1, "Please select a labourer.") })).default([]),
   labourWageType: z.enum(['per_item', 'total_amount']).default('total_amount'),
   labourCharge: z.coerce.number().min(0).default(0),
-}).refine(data => {
-    if (data.numberOfLabours > 0) {
-        return data.labourerIds.length === data.numberOfLabours && data.labourerIds.every(l => l.value && l.value !== 'none');
-    }
-    return true;
-}, {
-    message: "Please select all labourers.",
-    path: ['labourerIds'],
 });
 
 const paddyProcessingSchema = z.object({
@@ -68,7 +60,10 @@ export function StockProcessing() {
   const { fields: riceFields, append: riceAppend, remove: riceRemove } = useFieldArray({ control: riceProcessingForm.control, name: "labourerIds" });
   
   const paddyNumberOfLabours = paddyProcessingForm.watch('numberOfLabours');
+  const selectedPaddyLabourerIds = paddyProcessingForm.watch('labourerIds').map(l => l.value);
+  
   const riceNumberOfLabours = riceProcessingForm.watch('numberOfLabours');
+  const selectedRiceLabourerIds = riceProcessingForm.watch('labourerIds').map(l => l.value);
 
   useMemo(() => {
     const currentCount = paddyFields.length;
@@ -213,7 +208,9 @@ export function StockProcessing() {
                                             <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                             <SelectContent>
                                                 <SelectItem value="none">None</SelectItem>
-                                                {labourers.map((l) => (
+                                                {labourers
+                                                    .filter(l => !selectedPaddyLabourerIds.includes(l.id) || l.id === field.value)
+                                                    .map((l) => (
                                                     <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -271,7 +268,9 @@ export function StockProcessing() {
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                                 <SelectContent>
                                                     <SelectItem value="none">None</SelectItem>
-                                                    {labourers.map((l) => (
+                                                    {labourers
+                                                        .filter(l => !selectedRiceLabourerIds.includes(l.id) || l.id === field.value)
+                                                        .map((l) => (
                                                         <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                                     ))}
                                                 </SelectContent>

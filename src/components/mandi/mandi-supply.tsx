@@ -84,6 +84,7 @@ export function MandiSupply() {
   });
 
   const numberOfLabours = supplyForm.watch('numberOfLabours');
+  const selectedLabourerIds = supplyForm.watch('labourerIds').map(l => l.value);
 
   useMemo(() => {
     const currentCount = fields.length;
@@ -273,7 +274,9 @@ export function MandiSupply() {
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                    {labourers.map((l) => (
+                                    {labourers
+                                        .filter(l => !selectedLabourerIds.includes(l.id) || l.id === field.value)
+                                        .map((l) => (
                                         <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                     ))}
                                     </SelectContent>
@@ -337,5 +340,3 @@ export function MandiSupply() {
     </Card>
   );
 }
-
-    
