@@ -406,8 +406,8 @@ export function PrivateSales() {
                                     </TableHeader>
                                     <TableBody>
                                         {customer.sales.map((s: PrivateSale) => (
-                                             <Collapsible key={s.id} asChild>
-                                                <>
+                                             <Collapsible key={s.id}>
+                                                
                                                     <TableRow>
                                                         <TableCell>{format(s.date, 'dd MMM yyyy')}</TableCell>
                                                         <TableCell className="capitalize">{s.itemType}</TableCell>
@@ -451,7 +451,6 @@ export function PrivateSales() {
                                                             </TableCell>
                                                         </tr>
                                                     </CollapsibleContent>
-                                                </>
                                             </Collapsible>
                                         ))}
                                     </TableBody>

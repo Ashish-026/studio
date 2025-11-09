@@ -400,8 +400,7 @@ export function PrivatePurchases() {
                                     </TableHeader>
                                     <TableBody>
                                         {farmer.purchases.map((p: PrivatePurchase) => (
-                                             <Collapsible key={p.id} asChild>
-                                                <>
+                                             <Collapsible key={p.id}>
                                                     <TableRow>
                                                         <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
                                                         <TableCell className="capitalize">{p.itemType}</TableCell>
@@ -445,7 +444,6 @@ export function PrivatePurchases() {
                                                             </TableCell>
                                                         </tr>
                                                     </CollapsibleContent>
-                                                </>
                                             </Collapsible>
                                         ))}
                                     </TableBody>
