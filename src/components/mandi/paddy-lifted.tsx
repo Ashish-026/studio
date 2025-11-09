@@ -6,7 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMandiData } from '@/context/mandi-context';
 import { useVehicleData } from '@/context/vehicle-context';
-import { PlusCircle, DollarSign, Download, Edit, Car } from 'lucide-react';
+import { useLabourData } from '@/context/labour-context';
+import { PlusCircle, DollarSign, Download, Edit, Car, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +34,8 @@ const physicalFormSchema = z.object({
   tripCharge: z.coerce.number().optional(),
   source: z.string().optional(),
   destination: z.string().optional(),
+  labourerId: z.string().optional(),
+  labourCharge: z.coerce.number().optional(),
 }).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
@@ -53,6 +56,7 @@ const monetaryFormSchema = z.object({
 export function PaddyLifted() {
   const { paddyLiftedItems, addPaddyLifted, updatePaddyLifted, targetAllocations } = useMandiData();
   const { addVehicle, addTrip } = useVehicleData();
+  const { addWorkEntry, labourers } = useLabourData();
   const { toast } = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -121,12 +125,14 @@ export function PaddyLifted() {
           driverName: editingEntry.driverName,
           ownerName: editingEntry.ownerName,
           tripCharge: editingEntry.tripCharge,
-          source: editingEntry.mandiName,
-          destination: 'Mill',
+          source: editingEntry.source || editingEntry.mandiName,
+          destination: editingEntry.destination || 'Mill',
+          labourerId: editingEntry.labourerId,
+          labourCharge: editingEntry.labourCharge,
         });
       }
     } else {
-      physicalForm.reset({ mandiName: '', farmerName: '', vehicleType: 'farmer', destination: 'Mill' });
+      physicalForm.reset({ mandiName: '', farmerName: '', vehicleType: 'farmer', destination: 'Mill', source: '' });
       monetaryForm.reset({ mandiName: '' });
     }
   }, [editingEntry, physicalForm, monetaryForm])
@@ -157,6 +163,17 @@ export function PaddyLifted() {
             });
             toast({ title: 'Vehicle Updated', description: `Trip for ${values.vehicleNumber} has been added to Vehicle Register.` });
         }
+      }
+
+      if (values.labourerId && values.labourCharge) {
+        addWorkEntry(values.labourerId, {
+            description: `Paddy lifting from ${values.mandiName}`,
+            entryType: 'item_rate',
+            itemName: 'Paddy lifted',
+            quantity: values.totalPaddyReceived,
+            ratePerItem: values.labourCharge / values.totalPaddyReceived,
+        });
+        toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
       }
     }
     physicalForm.reset();
@@ -340,6 +357,37 @@ export function PaddyLifted() {
                            )}
                         </div>
                     </div>
+
+                    <Separator />
+
+                    <div>
+                        <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={physicalForm.control}
+                                name="labourerId"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Assign Labourer (Optional)</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="">None</SelectItem>
+                                        {labourers.map((l) => (
+                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField control={physicalForm.control} name="labourCharge" render={({ field }) => (
+                                <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 800" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
+                    </div>
+
 
                     <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90">Add Entry</Button>
                   </form>

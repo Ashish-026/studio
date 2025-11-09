@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useStockData } from '@/context/stock-context';
+import { useLabourData } from '@/context/labour-context';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,8 +14,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Separator } from '../ui/separator';
 
 const paddyProcessingSchema = z.object({
     source: z.enum(['private'], { required_error: 'Stock source is required' }),
@@ -22,6 +24,8 @@ const paddyProcessingSchema = z.object({
     riceYield: z.coerce.number().positive('Rice yield must be positive'),
     branYield: z.coerce.number().min(0, 'Cannot be negative'),
     brokenRiceYield: z.coerce.number().min(0, 'Cannot be negative'),
+    labourerId: z.string().optional(),
+    labourCharge: z.coerce.number().optional(),
 });
 
 const riceProcessingSchema = z.object({
@@ -29,10 +33,13 @@ const riceProcessingSchema = z.object({
     riceUsed: z.coerce.number().positive('Rice quantity must be positive'),
     finalRiceYield: z.coerce.number().positive('Final rice yield must be positive'),
     brokenRiceYield: z.coerce.number().min(0, 'Cannot be negative'),
+    labourerId: z.string().optional(),
+    labourCharge: z.coerce.number().optional(),
 });
 
 export function StockProcessing() {
   const { privateStock, processingHistory, addProcessingResult } = useStockData();
+  const { labourers, addWorkEntry } = useLabourData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
 
@@ -56,6 +63,18 @@ export function StockProcessing() {
     }
     addProcessingResult({ ...values, type: 'paddy' });
     toast({ title: 'Success!', description: 'Paddy processing has been recorded and stock updated.' });
+
+    if (values.labourerId && values.labourCharge) {
+        addWorkEntry(values.labourerId, {
+            description: `Private stock processing (Paddy)`,
+            entryType: 'item_rate',
+            itemName: 'Paddy processed',
+            quantity: values.paddyUsed,
+            ratePerItem: values.labourCharge / values.paddyUsed,
+        });
+        toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
+    }
+
     paddyProcessingForm.reset();
     setShowForm(false);
   }
@@ -74,6 +93,18 @@ export function StockProcessing() {
         branYield: 0,
      });
     toast({ title: 'Success!', description: 'Rice processing has been recorded and stock updated.' });
+
+    if (values.labourerId && values.labourCharge) {
+        addWorkEntry(values.labourerId, {
+            description: `Private stock processing (Rice)`,
+            entryType: 'item_rate',
+            itemName: 'Rice re-processed',
+            quantity: values.riceUsed,
+            ratePerItem: values.labourCharge / values.riceUsed,
+        });
+        toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
+    }
+
     riceProcessingForm.reset();
     setShowForm(false);
   }
@@ -108,7 +139,7 @@ export function StockProcessing() {
                     </TabsList>
                     <TabsContent value="paddy" className="pt-4">
                         <Form {...paddyProcessingForm}>
-                        <form onSubmit={paddyProcessingForm.handleSubmit(onPaddyProcessingSubmit)} className="space-y-4">
+                        <form onSubmit={paddyProcessingForm.handleSubmit(onPaddyProcessingSubmit)} className="space-y-6">
                             <FormField control={paddyProcessingForm.control} name="source" render={({ field }) => (
                                 <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                             )} />
@@ -127,13 +158,43 @@ export function StockProcessing() {
                                     <FormItem><FormLabel>Broken Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
                             </div>
+
+                            <Separator />
+
+                            <div>
+                                <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={paddyProcessingForm.control}
+                                        name="labourerId"
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Assign Labourer (Optional)</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="">None</SelectItem>
+                                                {labourers.map((l) => (
+                                                <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    <FormField control={paddyProcessingForm.control} name="labourCharge" render={({ field }) => (
+                                        <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 500" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                </div>
+                            </div>
                             <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Record Paddy Processing</Button>
                         </form>
                         </Form>
                     </TabsContent>
                     <TabsContent value="rice" className="pt-4">
                         <Form {...riceProcessingForm}>
-                        <form onSubmit={riceProcessingForm.handleSubmit(onRiceProcessingSubmit)} className="space-y-4">
+                        <form onSubmit={riceProcessingForm.handleSubmit(onRiceProcessingSubmit)} className="space-y-6">
                             <FormField control={riceProcessingForm.control} name="source" render={({ field }) => (
                                 <FormItem><FormLabel>Stock Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select a source..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="private">Private</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                             )} />
@@ -148,6 +209,36 @@ export function StockProcessing() {
                                 <FormField control={riceProcessingForm.control} name="brokenRiceYield" render={({ field }) => (
                                     <FormItem><FormLabel>Broken Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
+                            </div>
+
+                            <Separator />
+                            
+                            <div>
+                                <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={riceProcessingForm.control}
+                                        name="labourerId"
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Assign Labourer (Optional)</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="">None</SelectItem>
+                                                {labourers.map((l) => (
+                                                <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    <FormField control={riceProcessingForm.control} name="labourCharge" render={({ field }) => (
+                                        <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 300" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                </div>
                             </div>
                             <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Record Rice Processing</Button>
                         </form>

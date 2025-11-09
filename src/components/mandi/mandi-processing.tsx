@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMandiData } from '@/context/mandi-context';
+import { useLabourData } from '@/context/labour-context';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,17 +13,22 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Users } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Separator } from '../ui/separator';
 
 const processingSchema = z.object({
     paddyUsed: z.coerce.number().positive('Paddy quantity must be positive'),
     riceYield: z.coerce.number().positive('Rice yield must be positive'),
     branYield: z.coerce.number().min(0, 'Cannot be negative'),
     brokenRiceYield: z.coerce.number().min(0, 'Cannot be negative'),
+    labourerId: z.string().optional(),
+    labourCharge: z.coerce.number().optional(),
 });
 
 export function MandiProcessing() {
   const { paddyLiftedItems, processingHistory, addMandiProcessing } = useMandiData();
+  const { labourers, addWorkEntry } = useLabourData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
 
@@ -46,6 +52,18 @@ export function MandiProcessing() {
     }
     addMandiProcessing(values);
     toast({ title: 'Success!', description: 'Processing has been recorded and stock updated.' });
+
+    if (values.labourerId && values.labourCharge) {
+        addWorkEntry(values.labourerId, {
+            description: `Mandi paddy processing`,
+            entryType: 'item_rate',
+            itemName: 'Paddy processed',
+            quantity: values.paddyUsed,
+            ratePerItem: values.labourCharge / values.paddyUsed,
+        });
+        toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
+    }
+
     processingForm.reset();
     setShowForm(false);
   }
@@ -79,7 +97,7 @@ export function MandiProcessing() {
               </CardHeader>
               <CardContent>
                 <Form {...processingForm}>
-                  <form onSubmit={processingForm.handleSubmit(onProcessingSubmit)} className="space-y-4">
+                  <form onSubmit={processingForm.handleSubmit(onProcessingSubmit)} className="space-y-6">
                       <FormField control={processingForm.control} name="paddyUsed" render={({ field }) => (
                           <FormItem><FormLabel>Paddy to Process (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="e.g., 100" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
@@ -94,6 +112,36 @@ export function MandiProcessing() {
                            <FormField control={processingForm.control} name="brokenRiceYield" render={({ field }) => (
                               <FormItem><FormLabel>Broken Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
                           )} />
+                      </div>
+
+                      <Separator />
+
+                      <div>
+                        <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={processingForm.control}
+                                name="labourerId"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Assign Labourer (Optional)</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="">None</SelectItem>
+                                        {labourers.map((l) => (
+                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField control={processingForm.control} name="labourCharge" render={({ field }) => (
+                                <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 800" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                        </div>
                       </div>
                       <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Record Processing</Button>
                   </form>

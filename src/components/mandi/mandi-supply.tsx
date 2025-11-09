@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMandiData } from '@/context/mandi-context';
 import { useVehicleData } from '@/context/vehicle-context';
+import { useLabourData } from '@/context/labour-context';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
-import { PlusCircle, Calendar as CalendarIcon, Car } from 'lucide-react';
+import { PlusCircle, Calendar as CalendarIcon, Car, Users } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
@@ -33,6 +34,8 @@ const supplySchema = z.object({
     tripCharge: z.coerce.number().optional(),
     source: z.string().optional(),
     destination: z.string().optional(),
+    labourerId: z.string().optional(),
+    labourCharge: z.coerce.number().optional(),
 }).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
@@ -46,6 +49,7 @@ const supplySchema = z.object({
 export function MandiSupply() {
   const { availableRiceForSupply, stockReleases, addStockRelease } = useMandiData();
   const { addVehicle, addTrip } = useVehicleData();
+  const { labourers, addWorkEntry } = useLabourData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
 
@@ -92,7 +96,18 @@ export function MandiSupply() {
             });
             toast({ title: 'Vehicle Updated', description: `Trip for ${values.vehicleNumber} has been added to Vehicle Register.` });
         }
-      }
+    }
+    
+    if (values.labourerId && values.labourCharge) {
+        addWorkEntry(values.labourerId, {
+            description: `Rice supply to ${values.godownDetails}`,
+            entryType: 'item_rate',
+            itemName: 'Rice supplied',
+            quantity: values.quantity,
+            ratePerItem: values.labourCharge / values.quantity,
+        });
+        toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
+    }
 
     supplyForm.reset();
     setShowForm(false);
@@ -194,6 +209,36 @@ export function MandiSupply() {
                                 )} />
                             </>
                            )}
+                        </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                        <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={supplyForm.control}
+                                name="labourerId"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Assign Labourer (Optional)</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="">None</SelectItem>
+                                        {labourers.map((l) => (
+                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField control={supplyForm.control} name="labourCharge" render={({ field }) => (
+                                <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 600" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
                         </div>
                     </div>
 

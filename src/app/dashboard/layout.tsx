@@ -49,9 +49,9 @@ export default function DashboardLayout({
         <LabourProvider>
           <VehicleProvider>
             <StockProvider>
-                <MandiProvider>
-                    {children}
-                </MandiProvider>
+              <MandiProvider>
+                {children}
+              </MandiProvider>
             </StockProvider>
           </VehicleProvider>
         </LabourProvider>

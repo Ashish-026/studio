@@ -27,6 +27,8 @@ export type PaddyLifted = {
   tripCharge?: number;
   source?: string;
   destination?: string;
+  labourerId?: string;
+  labourCharge?: number;
 };
 
 export type MandiProcessingResult = {
@@ -37,6 +39,8 @@ export type MandiProcessingResult = {
     branYield: number;
     brokenRiceYield: number;
     yieldPercentage: number;
+    labourerId?: string;
+    labourCharge?: number;
 };
 
 export type MandiStockRelease = {
@@ -52,6 +56,8 @@ export type MandiStockRelease = {
     tripCharge?: number;
     source?: string;
     destination?: string;
+    labourerId?: string;
+    labourCharge?: number;
 };
 
 export type Payment = {
@@ -79,6 +85,8 @@ export type PrivatePurchase = {
   tripCharge?: number;
   source?: string;
   destination?: string;
+  labourerId?: string;
+  labourCharge?: number;
 };
 
 export type PrivateSale = {
@@ -101,6 +109,8 @@ export type PrivateSale = {
   tripCharge?: number;
   source?: string;
   destination?: string;
+  labourerId?: string;
+  labourCharge?: number;
 }
 
 export type LabourWorkEntry = {
@@ -178,4 +188,6 @@ export type ProcessingResult = {
   branYield: number;
   brokenRiceYield: number;
   yieldPercentage: number;
+  labourerId?: string;
+  labourCharge?: number;
 };

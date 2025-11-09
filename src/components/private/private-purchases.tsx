@@ -6,7 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useStockData } from '@/context/stock-context';
 import { useVehicleData } from '@/context/vehicle-context';
-import { PlusCircle, ChevronDown, ChevronRight, Receipt, Download, Car } from 'lucide-react';
+import { useLabourData } from '@/context/labour-context';
+import { PlusCircle, ChevronDown, ChevronRight, Receipt, Download, Car, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +36,8 @@ const purchaseFormSchema = z.object({
   tripCharge: z.coerce.number().optional(),
   source: z.string().optional(),
   destination: z.string().optional(),
+  labourerId: z.string().optional(),
+  labourCharge: z.coerce.number().optional(),
 }).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
@@ -52,6 +55,7 @@ const paymentFormSchema = z.object({
 export function PrivatePurchases() {
   const { purchases, addPurchase, addPayment } = useStockData();
   const { addVehicle, addTrip } = useVehicleData();
+  const { labourers, addWorkEntry } = useLabourData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [openFarmerCollapsibles, setOpenFarmerCollapsibles] = useState<Record<string, boolean>>({});
@@ -123,7 +127,18 @@ export function PrivatePurchases() {
             });
             toast({ title: 'Vehicle Updated', description: `Trip for ${values.vehicleNumber} has been added to Vehicle Register.` });
         }
-      }
+    }
+    
+    if (values.labourerId && values.labourCharge) {
+        addWorkEntry(values.labourerId, {
+            description: `Unloading ${values.itemType} from ${values.farmerName}`,
+            entryType: 'item_rate',
+            itemName: `${values.itemType} unloaded`,
+            quantity: values.quantity,
+            ratePerItem: values.labourCharge / values.quantity,
+        });
+        toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
+    }
 
     purchaseForm.reset();
     setShowForm(false);
@@ -255,6 +270,36 @@ export function PrivatePurchases() {
                                 )} />
                             </>
                            )}
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                        <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                                control={purchaseForm.control}
+                                name="labourerId"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Assign Labourer (Optional)</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="">None</SelectItem>
+                                        {labourers.map((l) => (
+                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField control={purchaseForm.control} name="labourCharge" render={({ field }) => (
+                                <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 400" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
                         </div>
                     </div>
 

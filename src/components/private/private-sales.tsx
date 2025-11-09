@@ -6,7 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useStockData } from '@/context/stock-context';
 import { useVehicleData } from '@/context/vehicle-context';
-import { PlusCircle, ChevronDown, ChevronRight, Receipt, Car } from 'lucide-react';
+import { useLabourData } from '@/context/labour-context';
+import { PlusCircle, ChevronDown, ChevronRight, Receipt, Car, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +36,8 @@ const saleFormSchema = z.object({
   tripCharge: z.coerce.number().optional(),
   source: z.string().optional(),
   destination: z.string().optional(),
+  labourerId: z.string().optional(),
+  labourCharge: z.coerce.number().optional(),
 }).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
@@ -52,6 +55,7 @@ const paymentFormSchema = z.object({
 export function PrivateSales() {
   const { sales, addSale, addSalePayment, privateStock } = useStockData();
   const { addVehicle, addTrip } = useVehicleData();
+  const { labourers, addWorkEntry } = useLabourData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [openCustomerCollapsibles, setOpenCustomerCollapsibles] = useState<Record<string, boolean>>({});
@@ -132,6 +136,17 @@ export function PrivateSales() {
             });
             toast({ title: 'Vehicle Updated', description: `Trip for ${values.vehicleNumber} has been added to Vehicle Register.` });
         }
+    }
+
+    if (values.labourerId && values.labourCharge) {
+        addWorkEntry(values.labourerId, {
+            description: `Loading ${values.itemType} for ${values.customerName}`,
+            entryType: 'item_rate',
+            itemName: `${values.itemType} loaded`,
+            quantity: values.quantity,
+            ratePerItem: values.labourCharge / values.quantity,
+        });
+        toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
 
     saleForm.reset();
@@ -268,6 +283,36 @@ export function PrivateSales() {
                             </>
                            )}
                         </div>
+                      </div>
+
+                      <Separator />
+
+                      <div>
+                          <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <FormField
+                                  control={saleForm.control}
+                                  name="labourerId"
+                                  render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Assign Labourer (Optional)</FormLabel>
+                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                      <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
+                                      <SelectContent>
+                                          <SelectItem value="">None</SelectItem>
+                                          {labourers.map((l) => (
+                                          <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
+                                          ))}
+                                      </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                  </FormItem>
+                                  )}
+                              />
+                              <FormField control={saleForm.control} name="labourCharge" render={({ field }) => (
+                                  <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 250" {...field} /></FormControl><FormMessage /></FormItem>
+                              )} />
+                          </div>
                       </div>
 
                     <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90">Add Sale</Button>
