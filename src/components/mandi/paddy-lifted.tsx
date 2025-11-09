@@ -290,39 +290,41 @@ export function PaddyLifted() {
               <CardTitle>Paddy Lifting Records</CardTitle>
               <CardDescription>View and manage paddy lifting entries from various mandis.</CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => downloadPdf('paddy-lifted-table', 'paddy-lifted-summary')}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download PDF
-              </Button>
-              <Button onClick={handleTogglePhysicalForm} size="sm" disabled={uniqueMandis.length === 0}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                {showPhysicalForm ? 'Cancel' : 'Add Physical Entry'}
-              </Button>
-              {isAdmin && (
-                <Button onClick={handleToggleMonetaryForm} size="sm" variant="secondary" disabled={uniqueMandis.length === 0}>
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  {showMonetaryForm ? 'Cancel' : 'Add Monetary Entry'}
-                </Button>
-              )}
-            </div>
+             <Button variant="outline" size="sm" onClick={() => downloadPdf(document.getElementById('paddy-lifted-table')!, 'paddy-lifted-summary')}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+            </Button>
           </div>
-          <div className="flex items-center gap-4 pt-4">
-              <Label htmlFor="mandi-filter" className="text-sm font-medium">Filter by Mandi:</Label>
-              <Select value={selectedMandi} onValueChange={setSelectedMandi}>
-                <SelectTrigger className="w-[280px]" id="mandi-filter">
-                  <SelectValue placeholder="Select a mandi" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Mandis</SelectLabel>
-                    <SelectItem value="All">All Mandis</SelectItem>
-                    {uniqueMandis.map((mandi) => (
-                      <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pt-4">
+              <div className="flex items-center gap-4">
+                <Label htmlFor="mandi-filter" className="text-sm font-medium">Filter by Mandi:</Label>
+                <Select value={selectedMandi} onValueChange={setSelectedMandi}>
+                  <SelectTrigger className="w-[280px]" id="mandi-filter">
+                    <SelectValue placeholder="Select a mandi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Mandis</SelectLabel>
+                      <SelectItem value="All">All Mandis</SelectItem>
+                      {uniqueMandis.map((mandi) => (
+                        <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleTogglePhysicalForm} size="sm" disabled={uniqueMandis.length === 0}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  {showPhysicalForm ? 'Cancel' : 'Add Physical Entry'}
+                </Button>
+                {isAdmin && (
+                  <Button onClick={handleToggleMonetaryForm} size="sm" variant="secondary" disabled={uniqueMandis.length === 0}>
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    {showMonetaryForm ? 'Cancel' : 'Add Monetary Entry'}
+                  </Button>
+                )}
+              </div>
           </div>
           {uniqueMandis.length === 0 && !showPhysicalForm && !showMonetaryForm && (
               <p className="text-sm text-muted-foreground pt-2">Please add a target allotment before adding a paddy lifting entry.</p>
