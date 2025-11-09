@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, forwardRef } from 'react';
+import React, { useState, useMemo, useEffect, forwardRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -71,7 +71,7 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
     }
     
     return (
-        <div ref={ref} className="px-4 pb-4">
+        <div ref={ref} className="p-4 bg-white">
             <h4 className="font-semibold text-md my-2">Purchase Details for {farmer.name}</h4>
             <Table>
                 <TableHeader>
@@ -104,7 +104,7 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
                                 </TableCell>
                             </TableRow>
                             {p.payments.length > 0 && (
-                                 <tr className="bg-muted/50">
+                                 <tr className="bg-muted/20">
                                     <TableCell colSpan={10} className="p-0">
                                         <div className="p-4">
                                             <h4 className="font-semibold mb-2 text-sm">Payment History</h4>
@@ -447,11 +447,9 @@ export function PrivatePurchases() {
                         className="border-b last:border-b-0"
                     >
                         <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
-                            <CollapsibleTrigger asChild>
-                                <button className="flex items-center gap-2 flex-grow cursor-pointer text-left">
-                                    {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                    <span className="font-medium">{farmer.name}</span>
-                                </button>
+                            <CollapsibleTrigger className="flex items-center gap-2 flex-grow cursor-pointer text-left">
+                                {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                <span className="font-medium">{farmer.name}</span>
                             </CollapsibleTrigger>
                             <div className="flex items-center gap-2">
                                 <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(farmer.id, farmer.name); }}>
@@ -485,7 +483,7 @@ export function PrivatePurchases() {
                                     </TableHeader>
                                     <TableBody>
                                         {farmer.purchases.map((p: PrivatePurchase) => (
-                                             <Collapsible key={p.id}>
+                                             <React.Fragment key={p.id}>
                                                 <TableRow>
                                                     <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
                                                     <TableCell className="capitalize">{p.itemType}</TableCell>
@@ -501,9 +499,6 @@ export function PrivatePurchases() {
                                                     <TableCell className="text-right print:hidden">
                                                         <div className="flex gap-2 justify-end">
                                                             <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, p.id)}>Pay</Button>
-                                                            <CollapsibleTrigger asChild>
-                                                                <Button size="sm" variant="ghost"><Receipt className="h-4 w-4" /></Button>
-                                                            </CollapsibleTrigger>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -529,7 +524,7 @@ export function PrivatePurchases() {
                                                         </TableCell>
                                                     </tr>
                                                 </CollapsibleContent>
-                                            </Collapsible>
+                                            </React.Fragment>
                                         ))}
                                     </TableBody>
                                 </Table>
