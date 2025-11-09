@@ -9,6 +9,55 @@ import { MandiProvider } from '@/context/mandi-context';
 import { StockProvider } from '@/context/stock-context';
 import { VehicleProvider } from '@/context/vehicle-context';
 import { LabourProvider } from '@/context/labour-context';
+import { MillProvider } from '@/context/mill-context';
+import { useMill } from '@/hooks/use-mill';
+
+function DashboardContent({ children }: { children: React.ReactNode }) {
+  const { selectedMill, loading: millLoading } = useMill();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!millLoading && !selectedMill) {
+      router.replace('/select-mill');
+    }
+  }, [selectedMill, millLoading, router]);
+
+  if (millLoading || !selectedMill) {
+     return (
+      <div className="flex flex-col min-h-screen">
+        <header className="sticky top-0 z-50 w-full border-b bg-card">
+          <div className="container flex h-16 items-center px-4 md:px-6">
+            <Skeleton className="h-8 w-32" />
+            <div className="ml-auto">
+              <Skeleton className="h-10 w-10 rounded-full" />
+            </div>
+          </div>
+        </header>
+        <main className="flex-1 container py-8">
+            <div className="flex justify-center items-center h-64">
+                <p>Loading mill data...</p>
+            </div>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen w-full flex-col">
+      <AppHeader />
+      <main className="flex flex-1 flex-col">
+        <LabourProvider>
+          <VehicleProvider>
+            <StockProvider>
+              <MandiProvider>{children}</MandiProvider>
+            </StockProvider>
+          </VehicleProvider>
+        </LabourProvider>
+      </main>
+    </div>
+  );
+}
+
 
 export default function DashboardLayout({
   children,
@@ -43,19 +92,10 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <AppHeader />
-      <main className="flex flex-1 flex-col">
-        <LabourProvider>
-          <VehicleProvider>
-            <StockProvider>
-              <MandiProvider>
-                {children}
-              </MandiProvider>
-            </StockProvider>
-          </VehicleProvider>
-        </LabourProvider>
-      </main>
-    </div>
+    <MillProvider>
+      <DashboardContent>
+        {children}
+      </DashboardContent>
+    </MillProvider>
   );
 }

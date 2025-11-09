@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (foundUser) {
         setUser(foundUser);
         localStorage.setItem('mandi-monitor-user', JSON.stringify(foundUser));
-        router.push('/dashboard');
+        router.push('/select-mill'); // Changed from '/dashboard'
         toast({
           title: 'Login Successful',
           description: `Welcome, ${foundUser.name}!`,
@@ -94,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('mandi-monitor-user');
+    localStorage.removeItem('mandi-monitor-mill');
     resetAuthStep();
     router.push('/');
   }, [router]);

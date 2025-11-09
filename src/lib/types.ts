@@ -4,6 +4,12 @@ export type User = {
   role: 'admin' | 'user';
 };
 
+export type Mill = {
+  id: string;
+  name: string;
+  location: string;
+};
+
 export type TargetAllocation = {
   id:string;
   mandiName: string;
@@ -112,6 +118,7 @@ export type PrivateSale = {
   ownerName?: string;
   tripCharge?: number;
   destination?: string;
+  sourceLocation?: string;
   labourerIds?: string[];
   labourCharge?: number;
   labourWageType?: 'per_item' | 'total_amount';
