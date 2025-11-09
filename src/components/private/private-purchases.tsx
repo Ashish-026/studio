@@ -192,7 +192,8 @@ export function PrivatePurchases() {
     }
   }
 
-  const handlePaymentClick = (purchaseId: string) => {
+  const handlePaymentClick = (e: React.MouseEvent, purchaseId: string) => {
+    e.stopPropagation();
     setSelectedPurchase(purchaseId);
     setPaymentDialogOpen(true);
   };
@@ -363,11 +364,13 @@ export function PrivatePurchases() {
                         onOpenChange={(isOpen) => setOpenFarmerCollapsibles(prev => ({...prev, [farmer.id]: isOpen}))}
                         className="border-b last:border-b-0"
                     >
-                        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center gap-2">
-                                {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                <span className="font-medium">{farmer.name}</span>
-                            </div>
+                        <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
+                            <CollapsibleTrigger asChild>
+                                <div className="flex items-center gap-2 flex-grow cursor-pointer">
+                                    {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                    <span className="font-medium">{farmer.name}</span>
+                                </div>
+                            </CollapsibleTrigger>
                             <div className="flex items-center gap-2">
                                 <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); downloadPdf(`farmer-summary-${farmer.id}`, `purchase-summary-${farmer.name.toLowerCase().replace(/\s+/g, '-')}`) }}>
                                     <Download className="mr-2 h-4 w-4" /> PDF
@@ -376,7 +379,7 @@ export function PrivatePurchases() {
                                     <PlusCircle className="mr-2 h-4 w-4" /> Add Purchase
                                 </Button>
                             </div>
-                        </CollapsibleTrigger>
+                        </div>
                         <CollapsibleContent>
                             <div className="px-4 pb-4" id={`farmer-summary-${farmer.id}`}>
                                 <h4 className="font-semibold text-md my-2">Purchase Details for {farmer.name}</h4>
@@ -413,7 +416,7 @@ export function PrivatePurchases() {
                                                         </TableCell>
                                                         <TableCell className="text-right print:hidden">
                                                             <div className="flex gap-2 justify-end">
-                                                                <Button size="sm" variant="secondary" onClick={() => handlePaymentClick(p.id)}>Pay</Button>
+                                                                <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, p.id)}>Pay</Button>
                                                                 <CollapsibleTrigger asChild>
                                                                     <Button size="sm" variant="ghost"><Receipt className="h-4 w-4" /></Button>
                                                                 </CollapsibleTrigger>

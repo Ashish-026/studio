@@ -100,7 +100,8 @@ export function LabourRecords() {
     }
   }
 
-  const handlePaymentClick = (labourerId: string) => {
+  const handlePaymentClick = (e: React.MouseEvent, labourerId: string) => {
+    e.stopPropagation();
     setSelectedLabourer(labourerId);
     setPaymentDialogOpen(true);
   };
@@ -163,7 +164,7 @@ export function LabourRecords() {
                                 <div className="font-semibold">{formatCurrency(l.balance)}</div>
                                 <div className="text-xs text-muted-foreground">Balance</div>
                             </div>
-                            <Button size="sm" variant="secondary" onClick={() => handlePaymentClick(l.id)}>
+                            <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, l.id)}>
                                 <Receipt className="mr-2 h-4 w-4" /> Pay
                             </Button>
                         </div>

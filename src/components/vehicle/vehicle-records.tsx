@@ -83,12 +83,14 @@ export function VehicleRecords() {
     }
   }
 
-  const handlePaymentClick = (vehicleId: string) => {
+  const handlePaymentClick = (e: React.MouseEvent, vehicleId: string) => {
+    e.stopPropagation();
     setSelectedVehicle(vehicleId);
     setPaymentDialogOpen(true);
   };
   
-  const handleTripEditClick = (vehicleId: string, trip: VehicleTrip) => {
+  const handleTripEditClick = (e: React.MouseEvent, vehicleId: string, trip: VehicleTrip) => {
+    e.stopPropagation();
     setSelectedVehicle(vehicleId);
     setSelectedTrip(trip);
     setTripDialogOpen(true);
@@ -136,25 +138,27 @@ export function VehicleRecords() {
                                         onOpenChange={(isOpen) => setOpenVehicleCollapsibles(prev => ({...prev, [v.id]: isOpen}))}
                                         className="border rounded-lg"
                                     >
-                                        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between bg-card hover:bg-muted/50 transition-colors">
-                                            <div className="flex items-center gap-3">
-                                                {openVehicleCollapsibles[v.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                                <Car className="h-5 w-5 text-primary" />
-                                                <div>
-                                                    <div className="font-medium">{v.vehicleNumber}</div>
-                                                    <div className="text-sm text-muted-foreground">{v.driverName}</div>
+                                        <div className="w-full p-4 flex items-center justify-between bg-card hover:bg-muted/50 transition-colors">
+                                            <CollapsibleTrigger asChild>
+                                                <div className="flex items-center gap-3 flex-grow cursor-pointer">
+                                                    {openVehicleCollapsibles[v.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                                    <Car className="h-5 w-5 text-primary" />
+                                                    <div>
+                                                        <div className="font-medium">{v.vehicleNumber}</div>
+                                                        <div className="text-sm text-muted-foreground">{v.driverName}</div>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            </CollapsibleTrigger>
                                             <div className="flex items-center gap-4">
                                                 <div className="text-right">
                                                     <div className="font-semibold text-destructive">{formatCurrency(v.balance)}</div>
                                                     <div className="text-xs text-muted-foreground">Balance</div>
                                                 </div>
-                                                <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); handlePaymentClick(v.id); }}>
+                                                <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, v.id)}>
                                                     <Receipt className="mr-2 h-4 w-4" /> Pay
                                                 </Button>
                                             </div>
-                                        </CollapsibleTrigger>
+                                        </div>
                                         <CollapsibleContent className="p-4 space-y-6">
                                             <div>
                                                 <h4 className="font-semibold mb-2 flex items-center gap-2"><Car className="h-4 w-4" /> Vehicle Details</h4>
@@ -181,7 +185,7 @@ export function VehicleRecords() {
                                                                     <TableCell>{t.quantity.toLocaleString('en-IN')}</TableCell>
                                                                     <TableCell className="text-right">{formatCurrency(t.tripCharge)}</TableCell>
                                                                     <TableCell className="text-right">
-                                                                        <Button variant="ghost" size="icon" onClick={() => handleTripEditClick(v.id, t)}>
+                                                                        <Button variant="ghost" size="icon" onClick={(e) => handleTripEditClick(e, v.id, t)}>
                                                                             <Edit className="h-4 w-4" />
                                                                         </Button>
                                                                     </TableCell>

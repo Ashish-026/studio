@@ -201,7 +201,8 @@ export function PrivateSales() {
     }
   }
 
-  const handlePaymentClick = (saleId: string) => {
+  const handlePaymentClick = (e: React.MouseEvent, saleId: string) => {
+    e.stopPropagation();
     setSelectedSale(saleId);
     setPaymentDialogOpen(true);
   };
@@ -374,15 +375,17 @@ export function PrivateSales() {
                         onOpenChange={(isOpen) => setOpenCustomerCollapsibles(prev => ({...prev, [customer.id]: isOpen}))}
                         className="border-b last:border-b-0"
                     >
-                        <CollapsibleTrigger className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center gap-2">
-                                {openCustomerCollapsibles[customer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                <span className="font-medium">{customer.name}</span>
-                            </div>
+                        <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
+                            <CollapsibleTrigger asChild>
+                                <div className="flex items-center gap-2 flex-grow cursor-pointer">
+                                    {openCustomerCollapsibles[customer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                    <span className="font-medium">{customer.name}</span>
+                                </div>
+                            </CollapsibleTrigger>
                             <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); saleForm.setValue('customerName', customer.name); setShowForm(true); window.scrollTo({top: 0, behavior: 'smooth'}); }}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Sale
                             </Button>
-                        </CollapsibleTrigger>
+                        </div>
                         <CollapsibleContent>
                             <div className="px-4 pb-4">
                                 <h4 className="font-semibold text-md my-2">Sale Details</h4>
@@ -419,7 +422,7 @@ export function PrivateSales() {
                                                         </TableCell>
                                                         <TableCell className="text-right">
                                                             <div className="flex gap-2 justify-end">
-                                                                <Button size="sm" variant="secondary" onClick={() => handlePaymentClick(s.id)}>Receive</Button>
+                                                                <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, s.id)}>Receive</Button>
                                                                 <CollapsibleTrigger asChild>
                                                                     <Button size="sm" variant="ghost"><Receipt className="h-4 w-4" /></Button>
                                                                 </CollapsibleTrigger>
