@@ -138,40 +138,43 @@ export function PaddyLifted() {
   }, [editingEntry, physicalForm, monetaryForm])
 
   function onPhysicalSubmit(values: z.infer<typeof physicalFormSchema>) {
+    const labourerId = values.labourerId === "none" ? undefined : values.labourerId;
+    const submissionValues = { ...values, labourerId };
+
     if (editingEntry) {
-      updatePaddyLifted(editingEntry.id, { ...editingEntry, ...values });
+      updatePaddyLifted(editingEntry.id, { ...editingEntry, ...submissionValues });
       toast({ title: 'Success!', description: 'Paddy lifting record has been updated.' });
     } else {
-      const newPaddyEntry = addPaddyLifted({ ...values, entryType: 'physical' });
+      const newPaddyEntry = addPaddyLifted({ ...submissionValues, entryType: 'physical' });
       toast({ title: 'Success!', description: 'Physical paddy lifting record has been added.' });
 
-      if (values.vehicleType === 'hired' && values.vehicleNumber && values.tripCharge) {
+      if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
         const vehicleId = addVehicle({
-            vehicleNumber: values.vehicleNumber,
-            driverName: values.driverName || '',
-            ownerName: values.ownerName || '',
+            vehicleNumber: submissionValues.vehicleNumber,
+            driverName: submissionValues.driverName || '',
+            ownerName: submissionValues.ownerName || '',
             rentType: 'per_trip',
             rentAmount: 0,
         });
 
         if (vehicleId) {
             addTrip(vehicleId, {
-                source: values.source || values.mandiName,
-                destination: values.destination || 'Mill',
-                quantity: values.totalPaddyReceived,
-                tripCharge: values.tripCharge,
+                source: submissionValues.source || submissionValues.mandiName,
+                destination: submissionValues.destination || 'Mill',
+                quantity: submissionValues.totalPaddyReceived,
+                tripCharge: submissionValues.tripCharge,
             });
-            toast({ title: 'Vehicle Updated', description: `Trip for ${values.vehicleNumber} has been added to Vehicle Register.` });
+            toast({ title: 'Vehicle Updated', description: `Trip for ${submissionValues.vehicleNumber} has been added to Vehicle Register.` });
         }
       }
 
-      if (values.labourerId && values.labourCharge) {
-        addWorkEntry(values.labourerId, {
-            description: `Paddy lifting from ${values.mandiName}`,
+      if (submissionValues.labourerId && submissionValues.labourCharge) {
+        addWorkEntry(submissionValues.labourerId, {
+            description: `Paddy lifting from ${submissionValues.mandiName}`,
             entryType: 'item_rate',
             itemName: 'Paddy lifted',
-            quantity: values.totalPaddyReceived,
-            ratePerItem: values.labourCharge / values.totalPaddyReceived,
+            quantity: submissionValues.totalPaddyReceived,
+            ratePerItem: submissionValues.labourCharge / submissionValues.totalPaddyReceived,
         });
         toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
       }
@@ -372,7 +375,7 @@ export function PaddyLifted() {
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                        <SelectItem value="">None</SelectItem>
+                                        <SelectItem value="none">None</SelectItem>
                                         {labourers.map((l) => (
                                         <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                         ))}
@@ -590,3 +593,5 @@ export function PaddyLifted() {
     </>
   );
 }
+
+    

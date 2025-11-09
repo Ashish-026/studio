@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import { Separator } from '../ui/separator';
+import type { PrivateSale } from '@/lib/types';
 
 const saleFormSchema = z.object({
   source: z.enum(['private'], { required_error: 'Stock source is required' }),
@@ -34,7 +35,7 @@ const saleFormSchema = z.object({
   driverName: z.string().optional(),
   ownerName: z.string().optional(),
   tripCharge: z.coerce.number().optional(),
-  source: z.string().optional(),
+  sourceLocation: z.string().optional(),
   destination: z.string().optional(),
   labourerId: z.string().optional(),
   labourCharge: z.coerce.number().optional(),
@@ -73,7 +74,7 @@ export function PrivateSales() {
       initialPayment: 0,
       description: '',
       vehicleType: 'customer',
-      source: 'Mill'
+      sourceLocation: 'Mill'
     },
   });
 
@@ -111,40 +112,44 @@ export function PrivateSales() {
         saleForm.setError('quantity', { message: `Exceeds available stock of ${stockAvailable.toLocaleString()} Qtl` });
         return;
     }
+    
+    const labourerId = values.labourerId === "none" ? undefined : values.labourerId;
+    const submissionValues = { ...values, labourerId, source: values.sourceLocation };
 
-    addSale(values);
+
+    addSale(submissionValues);
     toast({
       title: 'Success!',
       description: 'New private sale has been recorded.',
     });
 
-    if (values.vehicleType === 'hired' && values.vehicleNumber && values.tripCharge) {
+    if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
         const vehicleId = addVehicle({
-            vehicleNumber: values.vehicleNumber,
-            driverName: values.driverName || '',
-            ownerName: values.ownerName || '',
+            vehicleNumber: submissionValues.vehicleNumber,
+            driverName: submissionValues.driverName || '',
+            ownerName: submissionValues.ownerName || '',
             rentType: 'per_trip',
             rentAmount: 0,
         });
 
         if (vehicleId) {
             addTrip(vehicleId, {
-                source: values.source || 'Mill', 
-                destination: values.destination || values.customerName,
-                quantity: values.quantity,
-                tripCharge: values.tripCharge,
+                source: submissionValues.source || 'Mill', 
+                destination: submissionValues.destination || submissionValues.customerName,
+                quantity: submissionValues.quantity,
+                tripCharge: submissionValues.tripCharge,
             });
-            toast({ title: 'Vehicle Updated', description: `Trip for ${values.vehicleNumber} has been added to Vehicle Register.` });
+            toast({ title: 'Vehicle Updated', description: `Trip for ${submissionValues.vehicleNumber} has been added to Vehicle Register.` });
         }
     }
 
-    if (values.labourerId && values.labourCharge) {
-        addWorkEntry(values.labourerId, {
-            description: `Loading ${values.itemType} for ${values.customerName}`,
+    if (submissionValues.labourerId && submissionValues.labourCharge) {
+        addWorkEntry(submissionValues.labourerId, {
+            description: `Loading ${submissionValues.itemType} for ${submissionValues.customerName}`,
             entryType: 'item_rate',
-            itemName: `${values.itemType} loaded`,
-            quantity: values.quantity,
-            ratePerItem: values.labourCharge / values.quantity,
+            itemName: `${submissionValues.itemType} loaded`,
+            quantity: submissionValues.quantity,
+            ratePerItem: submissionValues.labourCharge / submissionValues.quantity,
         });
         toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
@@ -274,7 +279,7 @@ export function PrivateSales() {
                                 <FormField control={saleForm.control} name="tripCharge" render={({ field }) => (
                                     <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
-                                <FormField control={saleForm.control} name="source" render={({ field }) => (
+                                <FormField control={saleForm.control} name="sourceLocation" render={({ field }) => (
                                     <FormItem><FormLabel>Source</FormLabel><FormControl><Input placeholder="Source location" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={saleForm.control} name="destination" render={({ field }) => (
@@ -299,7 +304,7 @@ export function PrivateSales() {
                                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                                       <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                       <SelectContent>
-                                          <SelectItem value="">None</SelectItem>
+                                          <SelectItem value="none">None</SelectItem>
                                           {labourers.map((l) => (
                                           <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                           ))}
@@ -360,7 +365,7 @@ export function PrivateSales() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {customer.sales.map((s: any) => (
+                                        {customer.sales.map((s: PrivateSale) => (
                                              <Collapsible key={s.id} asChild>
                                                 <>
                                                     <TableRow>
@@ -441,3 +446,5 @@ export function PrivateSales() {
     </>
   );
 }
+
+    

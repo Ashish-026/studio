@@ -103,39 +103,42 @@ export function PrivatePurchases() {
   }, [purchases]);
 
   function onPurchaseSubmit(values: z.infer<typeof purchaseFormSchema>) {
-    addPurchase(values);
+    const labourerId = values.labourerId === "none" ? undefined : values.labourerId;
+    const submissionValues = { ...values, labourerId };
+
+    addPurchase(submissionValues);
     toast({
       title: 'Success!',
       description: 'New private purchase has been recorded.',
     });
 
-    if (values.vehicleType === 'hired' && values.vehicleNumber && values.tripCharge) {
+    if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
         const vehicleId = addVehicle({
-            vehicleNumber: values.vehicleNumber,
-            driverName: values.driverName || '',
-            ownerName: values.ownerName || '',
+            vehicleNumber: submissionValues.vehicleNumber,
+            driverName: submissionValues.driverName || '',
+            ownerName: submissionValues.ownerName || '',
             rentType: 'per_trip',
             rentAmount: 0,
         });
 
         if (vehicleId) {
             addTrip(vehicleId, {
-                source: values.source || values.farmerName, 
-                destination: values.destination || 'Mill',
-                quantity: values.quantity,
-                tripCharge: values.tripCharge,
+                source: submissionValues.source || submissionValues.farmerName, 
+                destination: submissionValues.destination || 'Mill',
+                quantity: submissionValues.quantity,
+                tripCharge: submissionValues.tripCharge,
             });
-            toast({ title: 'Vehicle Updated', description: `Trip for ${values.vehicleNumber} has been added to Vehicle Register.` });
+            toast({ title: 'Vehicle Updated', description: `Trip for ${submissionValues.vehicleNumber} has been added to Vehicle Register.` });
         }
     }
     
-    if (values.labourerId && values.labourCharge) {
-        addWorkEntry(values.labourerId, {
-            description: `Unloading ${values.itemType} from ${values.farmerName}`,
+    if (submissionValues.labourerId && submissionValues.labourCharge) {
+        addWorkEntry(submissionValues.labourerId, {
+            description: `Unloading ${submissionValues.itemType} from ${submissionValues.farmerName}`,
             entryType: 'item_rate',
-            itemName: `${values.itemType} unloaded`,
-            quantity: values.quantity,
-            ratePerItem: values.labourCharge / values.quantity,
+            itemName: `${submissionValues.itemType} unloaded`,
+            quantity: submissionValues.quantity,
+            ratePerItem: submissionValues.labourCharge / submissionValues.quantity,
         });
         toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
@@ -287,7 +290,7 @@ export function PrivatePurchases() {
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                        <SelectItem value="">None</SelectItem>
+                                        <SelectItem value="none">None</SelectItem>
                                         {labourers.map((l) => (
                                         <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                         ))}
@@ -354,7 +357,7 @@ export function PrivatePurchases() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {farmer.purchases.map((p: any) => (
+                                        {farmer.purchases.map((p: PrivatePurchase) => (
                                              <Collapsible key={p.id} asChild>
                                                 <>
                                                     <TableRow>
@@ -435,3 +438,5 @@ export function PrivatePurchases() {
     </>
   );
 }
+
+    

@@ -75,36 +75,39 @@ export function MandiSupply() {
         return;
     }
     
-    addStockRelease(values);
+    const labourerId = values.labourerId === "none" ? undefined : values.labourerId;
+    const submissionValues = { ...values, labourerId };
+
+    addStockRelease(submissionValues);
     toast({ title: 'Success!', description: 'Rice supply has been recorded.' });
 
-    if (values.vehicleType === 'hired' && values.vehicleNumber && values.tripCharge) {
+    if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
         const vehicleId = addVehicle({
-            vehicleNumber: values.vehicleNumber,
-            driverName: values.driverName || '',
-            ownerName: values.ownerName || '',
+            vehicleNumber: submissionValues.vehicleNumber,
+            driverName: submissionValues.driverName || '',
+            ownerName: submissionValues.ownerName || '',
             rentType: 'per_trip',
             rentAmount: 0,
         });
 
         if (vehicleId) {
             addTrip(vehicleId, {
-                source: values.source || 'Mill', 
-                destination: values.destination || values.godownDetails,
-                quantity: values.quantity,
-                tripCharge: values.tripCharge,
+                source: submissionValues.source || 'Mill', 
+                destination: submissionValues.destination || submissionValues.godownDetails,
+                quantity: submissionValues.quantity,
+                tripCharge: submissionValues.tripCharge,
             });
-            toast({ title: 'Vehicle Updated', description: `Trip for ${values.vehicleNumber} has been added to Vehicle Register.` });
+            toast({ title: 'Vehicle Updated', description: `Trip for ${submissionValues.vehicleNumber} has been added to Vehicle Register.` });
         }
     }
     
-    if (values.labourerId && values.labourCharge) {
-        addWorkEntry(values.labourerId, {
-            description: `Rice supply to ${values.godownDetails}`,
+    if (submissionValues.labourerId && submissionValues.labourCharge) {
+        addWorkEntry(submissionValues.labourerId, {
+            description: `Rice supply to ${submissionValues.godownDetails}`,
             entryType: 'item_rate',
             itemName: 'Rice supplied',
-            quantity: values.quantity,
-            ratePerItem: values.labourCharge / values.quantity,
+            quantity: submissionValues.quantity,
+            ratePerItem: submissionValues.labourCharge / submissionValues.quantity,
         });
         toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
@@ -226,7 +229,7 @@ export function MandiSupply() {
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                        <SelectItem value="">None</SelectItem>
+                                        <SelectItem value="none">None</SelectItem>
                                         {labourers.map((l) => (
                                         <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                         ))}
@@ -294,3 +297,5 @@ export function MandiSupply() {
     </Card>
   );
 }
+
+    

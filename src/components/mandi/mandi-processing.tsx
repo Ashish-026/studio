@@ -50,16 +50,20 @@ export function MandiProcessing() {
         processingForm.setError('paddyUsed', { message: `Exceeds available paddy stock of ${formatNumber(availablePaddy)} Qtl` });
         return;
     }
-    addMandiProcessing(values);
+    
+    const labourerId = values.labourerId === "none" ? undefined : values.labourerId;
+    const submissionValues = { ...values, labourerId };
+
+    addMandiProcessing(submissionValues);
     toast({ title: 'Success!', description: 'Processing has been recorded and stock updated.' });
 
-    if (values.labourerId && values.labourCharge) {
-        addWorkEntry(values.labourerId, {
+    if (submissionValues.labourerId && submissionValues.labourCharge) {
+        addWorkEntry(submissionValues.labourerId, {
             description: `Mandi paddy processing`,
             entryType: 'item_rate',
             itemName: 'Paddy processed',
-            quantity: values.paddyUsed,
-            ratePerItem: values.labourCharge / values.paddyUsed,
+            quantity: submissionValues.paddyUsed,
+            ratePerItem: submissionValues.labourCharge / submissionValues.paddyUsed,
         });
         toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
@@ -128,7 +132,7 @@ export function MandiProcessing() {
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                        <SelectItem value="">None</SelectItem>
+                                        <SelectItem value="none">None</SelectItem>
                                         {labourers.map((l) => (
                                         <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                         ))}
@@ -187,3 +191,5 @@ export function MandiProcessing() {
     </Card>
   );
 }
+
+    

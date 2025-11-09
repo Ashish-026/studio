@@ -61,16 +61,20 @@ export function StockProcessing() {
         paddyProcessingForm.setError('paddyUsed', { message: `Exceeds available paddy stock of ${formatNumber(stockSource.paddy)} Qtl from ${values.source}` });
         return;
     }
-    addProcessingResult({ ...values, type: 'paddy' });
+
+    const labourerId = values.labourerId === "none" ? undefined : values.labourerId;
+    const submissionValues = { ...values, labourerId };
+
+    addProcessingResult({ ...submissionValues, type: 'paddy' });
     toast({ title: 'Success!', description: 'Paddy processing has been recorded and stock updated.' });
 
-    if (values.labourerId && values.labourCharge) {
-        addWorkEntry(values.labourerId, {
+    if (submissionValues.labourerId && submissionValues.labourCharge) {
+        addWorkEntry(submissionValues.labourerId, {
             description: `Private stock processing (Paddy)`,
             entryType: 'item_rate',
             itemName: 'Paddy processed',
-            quantity: values.paddyUsed,
-            ratePerItem: values.labourCharge / values.paddyUsed,
+            quantity: submissionValues.paddyUsed,
+            ratePerItem: submissionValues.labourCharge / submissionValues.paddyUsed,
         });
         toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
@@ -85,8 +89,12 @@ export function StockProcessing() {
         riceProcessingForm.setError('riceUsed', { message: `Exceeds available rice stock of ${formatNumber(stockSource.rice)} Qtl from ${values.source}` });
         return;
     }
+
+    const labourerId = values.labourerId === "none" ? undefined : values.labourerId;
+    const submissionValues = { ...values, labourerId };
+
     addProcessingResult({ 
-        ...values, 
+        ...submissionValues, 
         type: 'rice',
         paddyUsed: 0,
         riceYield: values.finalRiceYield,
@@ -94,13 +102,13 @@ export function StockProcessing() {
      });
     toast({ title: 'Success!', description: 'Rice processing has been recorded and stock updated.' });
 
-    if (values.labourerId && values.labourCharge) {
-        addWorkEntry(values.labourerId, {
+    if (submissionValues.labourerId && submissionValues.labourCharge) {
+        addWorkEntry(submissionValues.labourerId, {
             description: `Private stock processing (Rice)`,
             entryType: 'item_rate',
             itemName: 'Rice re-processed',
-            quantity: values.riceUsed,
-            ratePerItem: values.labourCharge / values.riceUsed,
+            quantity: submissionValues.riceUsed,
+            ratePerItem: submissionValues.labourCharge / submissionValues.riceUsed,
         });
         toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
@@ -173,7 +181,7 @@ export function StockProcessing() {
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                <SelectItem value="">None</SelectItem>
+                                                <SelectItem value="none">None</SelectItem>
                                                 {labourers.map((l) => (
                                                 <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                                 ))}
@@ -225,7 +233,7 @@ export function StockProcessing() {
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                <SelectItem value="">None</SelectItem>
+                                                <SelectItem value="none">None</SelectItem>
                                                 {labourers.map((l) => (
                                                 <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                                                 ))}
@@ -288,3 +296,5 @@ export function StockProcessing() {
     </Card>
   );
 }
+
+    
