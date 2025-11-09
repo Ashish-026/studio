@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useLabourData } from '@/context/labour-context';
-import { PlusCircle, ChevronDown, ChevronRight, Receipt, Briefcase } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, Receipt, Briefcase, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -152,18 +152,22 @@ export function LabourRecords() {
                         onOpenChange={(isOpen) => setOpenLabourerCollapsibles(prev => ({...prev, [l.id]: isOpen}))}
                         className="border-b last:border-b-0"
                     >
-                      <div className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                        <CollapsibleTrigger asChild>
-                            <div className="flex flex-1 items-center gap-2 cursor-pointer">
-                                {openLabourerCollapsibles[l.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      <div className="flex flex-col md:flex-row w-full p-4 items-start md:items-center justify-between hover:bg-muted/50 transition-colors gap-4">
+                        <CollapsibleTrigger className="flex items-center gap-3 flex-grow cursor-pointer text-left">
+                            {openLabourerCollapsibles[l.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            <UserIcon className="h-5 w-5 text-muted-foreground" />
+                            <div className="flex-1">
                                 <span className="font-medium">{l.name}</span>
+                                <div className="text-sm">
+                                    <span className="text-muted-foreground">Balance: </span>
+                                    <span className={`font-semibold ${l.balance < 0 ? 'text-green-600' : l.balance > 0 ? 'text-destructive' : ''}`}>
+                                        {formatCurrency(Math.abs(l.balance))}
+                                        {l.balance < 0 ? ' (Adv)' : l.balance > 0 ? ' (Payable)' : ''}
+                                    </span>
+                                </div>
                             </div>
                         </CollapsibleTrigger>
-                        <div className="flex items-center gap-4">
-                            <div className="text-right">
-                                <div className="font-semibold">{formatCurrency(l.balance)}</div>
-                                <div className="text-xs text-muted-foreground">Balance</div>
-                            </div>
+                        <div className="flex items-center gap-2 self-end md:self-center ml-auto pl-8 md:pl-0">
                             <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, l.id)}>
                                 <Receipt className="mr-2 h-4 w-4" /> Pay
                             </Button>

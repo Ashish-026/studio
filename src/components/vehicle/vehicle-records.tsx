@@ -124,13 +124,13 @@ export function VehicleRecords() {
                         onOpenChange={(isOpen) => setOpenOwnerCollapsibles(prev => ({...prev, [owner.id]: isOpen}))}
                         className="border-b last:border-b-0"
                     >
-                        <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
-                          <CollapsibleTrigger className="flex items-center gap-2 flex-grow cursor-pointer">
+                        <CollapsibleTrigger className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-2 flex-grow cursor-pointer">
                               {openOwnerCollapsibles[owner.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                               <Building className="h-5 w-5 text-muted-foreground" />
                               <span className="font-medium">{owner.name}</span>
-                          </CollapsibleTrigger>
-                        </div>
+                          </div>
+                        </CollapsibleTrigger>
                         <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
                             <div className="p-4 space-y-4">
                                 {owner.vehicles.sort((a,b) => a.vehicleNumber.localeCompare(b.vehicleNumber)).map(v => (
@@ -140,8 +140,8 @@ export function VehicleRecords() {
                                         onOpenChange={(isOpen) => setOpenVehicleCollapsibles(prev => ({...prev, [v.id]: isOpen}))}
                                         className="border rounded-lg"
                                     >
-                                        <div className="w-full p-4 flex items-center justify-between bg-card hover:bg-muted/50 transition-colors">
-                                          <CollapsibleTrigger className="flex items-center gap-3 flex-grow cursor-pointer">
+                                        <div className="w-full p-4 flex flex-col md:flex-row items-start md:items-center justify-between bg-card hover:bg-muted/50 transition-colors gap-4">
+                                          <CollapsibleTrigger className="flex items-center gap-3 flex-grow cursor-pointer text-left">
                                               {openVehicleCollapsibles[v.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                               <Car className="h-5 w-5 text-primary" />
                                               <div>
@@ -149,9 +149,9 @@ export function VehicleRecords() {
                                                   <div className="text-sm text-muted-foreground">{v.driverName}</div>
                                               </div>
                                           </CollapsibleTrigger>
-                                          <div className="flex items-center gap-4">
+                                          <div className="flex items-center gap-4 self-end md:self-center ml-auto pl-8 md:pl-0">
                                               <div className="text-right">
-                                                  <div className="font-semibold text-destructive">{formatCurrency(v.balance)}</div>
+                                                  <div className={`font-semibold ${v.balance > 0 ? 'text-destructive' : ''}`}>{formatCurrency(v.balance)}</div>
                                                   <div className="text-xs text-muted-foreground">Balance</div>
                                               </div>
                                               <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, v.id)}>
@@ -177,7 +177,7 @@ export function VehicleRecords() {
                                                     <Table>
                                                         <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Source</TableHead><TableHead>Destination</TableHead><TableHead>Quantity (Qtl)</TableHead><TableHead className="text-right">Charge (₹)</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                                                         <TableBody>
-                                                            {[...v.trips].sort((a: any, b: any) => b.date.getTime() - a.date.getTime()).map((t: any) => (
+                                                            {[...v.trips].sort((a, b) => b.date.getTime() - a.date.getTime()).map((t) => (
                                                                 <TableRow key={t.id}>
                                                                     <TableCell>{format(t.date, 'dd MMM yyyy')}</TableCell>
                                                                     <TableCell>{t.source}</TableCell>
@@ -203,7 +203,7 @@ export function VehicleRecords() {
                                                 <Table>
                                                     <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount Paid (₹)</TableHead></TableRow></TableHeader>
                                                     <TableBody>
-                                                        {[...v.payments].sort((a: any,b: any) => b.date.getTime() - a.date.getTime()).map((p: any) => (
+                                                        {[...v.payments].sort((a,b) => b.date.getTime() - a.date.getTime()).map(p => (
                                                             <TableRow key={p.id}>
                                                                 <TableCell>{format(p.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
                                                                 <TableCell className="text-right">{formatCurrency(p.amount)}</TableCell>
