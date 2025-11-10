@@ -12,8 +12,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Tractor } from 'lucide-react';
 
-const usernameSchema = z.object({
+const formSchema = z.object({
   username: z.string().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 const otpSchema = z.object({
@@ -24,9 +25,9 @@ export function LoginForm() {
   const { login, verifyOtp, user, loading, authStep, currentUsername, resetAuthStep } = useAuth();
   const router = useRouter();
 
-  const usernameForm = useForm<z.infer<typeof usernameSchema>>({
-    resolver: zodResolver(usernameSchema),
-    defaultValues: { username: '' },
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { username: '', password: '' },
   });
 
   const otpForm = useForm<z.infer<typeof otpSchema>>({
@@ -44,7 +45,7 @@ export function LoginForm() {
     return null; // Or a loading spinner
   }
 
-  const handleUsernameSubmit = (values: z.infer<typeof usernameSchema>) => {
+  const handleLoginSubmit = (values: z.infer<typeof formSchema>) => {
     login(values);
   };
 
@@ -54,7 +55,7 @@ export function LoginForm() {
 
   const handleBack = () => {
     resetAuthStep();
-    usernameForm.reset();
+    form.reset();
     otpForm.reset();
   }
 
@@ -71,16 +72,29 @@ export function LoginForm() {
       </CardHeader>
       <CardContent>
         {authStep === 'credentials' && (
-            <Form {...usernameForm}>
-            <form onSubmit={usernameForm.handleSubmit(handleUsernameSubmit)} className="space-y-6">
+            <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleLoginSubmit)} className="space-y-6">
                 <FormField
-                control={usernameForm.control}
+                control={form.control}
                 name="username"
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Username</FormLabel>
                     <FormControl>
                         <Input placeholder="admin or user" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                 <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                        <Input type="password" placeholder="password" {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>

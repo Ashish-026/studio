@@ -7,9 +7,14 @@ import { useToast } from '@/hooks/use-toast';
 
 type AuthStep = 'credentials' | 'otp';
 
+interface LoginCredentials {
+  username: string;
+  password?: string;
+}
+
 interface AuthContextType {
   user: User | null;
-  login: (data: { username: string }) => void;
+  login: (data: LoginCredentials) => void;
   verifyOtp: (otp: string) => void;
   logout: () => void;
   loading: boolean;
@@ -20,9 +25,9 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-const hardcodedUsers: Record<string, User> = {
-  admin: { id: '1', name: 'Admin User', role: 'admin' },
-  user: { id: '2', name: 'Regular User', role: 'user' },
+const hardcodedUsers: Record<string, { user: User; password?: string }> = {
+  admin: { user: { id: '1', name: 'Admin User', role: 'admin' }, password: 'admin' },
+  user: { user: { id: '2', name: 'Regular User', role: 'user' }, password: 'user' },
 };
 
 const MOCKED_OTP = '123456';
@@ -49,11 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback((data: { username: string }) => {
-    const { username } = data;
-    const foundUser = hardcodedUsers[username];
+  const login = useCallback((data: LoginCredentials) => {
+    const { username, password } = data;
+    const userData = hardcodedUsers[username];
 
-    if (foundUser) {
+    if (userData && (!userData.password || userData.password === password)) {
       setCurrentUsername(username);
       setAuthStep('otp');
       toast({
@@ -63,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       toast({
         title: 'Login Failed',
-        description: 'Invalid username.',
+        description: 'Invalid username or password.',
         variant: 'destructive',
       });
     }
@@ -71,14 +76,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const verifyOtp = useCallback((otp: string) => {
     if (otp === MOCKED_OTP && currentUsername) {
-      const foundUser = hardcodedUsers[currentUsername];
-      if (foundUser) {
-        setUser(foundUser);
-        localStorage.setItem('mandi-monitor-user', JSON.stringify(foundUser));
+      const userData = hardcodedUsers[currentUsername];
+      if (userData) {
+        setUser(userData.user);
+        localStorage.setItem('mandi-monitor-user', JSON.stringify(userData.user));
         router.push('/select-mill'); // Changed from '/dashboard'
         toast({
           title: 'Login Successful',
-          description: `Welcome, ${foundUser.name}!`,
+          description: `Welcome, ${userData.user.name}!`,
         });
         resetAuthStep();
       }
