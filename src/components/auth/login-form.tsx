@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Tractor } from 'lucide-react';
+import { Separator } from '../ui/separator';
 
 const formSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -22,7 +23,7 @@ const otpSchema = z.object({
 });
 
 export function LoginForm() {
-  const { login, verifyOtp, user, loading, authStep, currentUsername, resetAuthStep } = useAuth();
+  const { login, verifyOtp, user, loading, authStep, currentUsername, resetAuthStep, signInWithGoogle } = useAuth();
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -37,7 +38,7 @@ export function LoginForm() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace('/dashboard');
+      router.replace('/select-mill');
     }
   }, [user, loading, router]);
   
@@ -46,7 +47,7 @@ export function LoginForm() {
   }
 
   const handleLoginSubmit = (values: z.infer<typeof formSchema>) => {
-    login(values);
+    login(values.username, values.password);
   };
 
   const handleOtpSubmit = (values: z.infer<typeof otpSchema>) => {
@@ -72,6 +73,11 @@ export function LoginForm() {
       </CardHeader>
       <CardContent>
         {authStep === 'credentials' && (
+          <>
+            <Button variant="outline" className="w-full" onClick={signInWithGoogle}>
+              Sign in with Google
+            </Button>
+            <Separator className="my-4" />
             <Form {...form}>
             <form onSubmit={form.handleSubmit(handleLoginSubmit)} className="space-y-6">
                 <FormField
@@ -105,6 +111,7 @@ export function LoginForm() {
                 </Button>
             </form>
             </Form>
+          </>
         )}
 
         {authStep === 'otp' && (
