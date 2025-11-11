@@ -18,7 +18,7 @@ export default function LoginPage() {
         />
       )}
       <div className="absolute inset-0 bg-black/50 -z-10" />
-      <LoginForm mode="google" />
+      <LoginForm />
     </main>
   );
 }

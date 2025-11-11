@@ -18,7 +18,7 @@ export default function CredentialsLoginPage() {
         />
       )}
       <div className="absolute inset-0 bg-black/50 -z-10" />
-      <LoginForm mode="credentials" />
+      <LoginForm />
     </main>
   );
 }

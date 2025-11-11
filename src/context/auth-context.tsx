@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut, User as FirebaseUser } from 'firebase/auth';
 import { initializeFirebase } from '@/firebase';
 
-type AuthStep = 'credentials' | 'otp';
+type AuthStep = 'google' | 'credentials' | 'otp';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -20,6 +20,7 @@ interface AuthContextType {
   authStep: AuthStep;
   currentUsername: string | null;
   resetAuthStep: () => void;
+  isGoogleAuthd: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -40,53 +41,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authStep, setAuthStep] = useState<AuthStep>('credentials');
+  const [authStep, setAuthStep] = useState<AuthStep>('google');
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
+  const [isGoogleAuthd, setIsGoogleAuthd] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const { auth } = initializeFirebase();
 
-  const handleAuthorization = useCallback(async (fbUser: FirebaseUser) => {
-    const userEmail = fbUser.email;
-    if (userEmail && authorizedUsers[userEmail]) {
-      const appUser: AppUser = {
-        id: fbUser.uid,
-        name: fbUser.displayName || 'Unnamed User',
-        role: authorizedUsers[userEmail].role,
-      };
-      setUser(appUser);
-      setFirebaseUser(fbUser);
-      localStorage.setItem('mandi-monitor-user', JSON.stringify(appUser));
-      router.push('/select-mill');
-    } else {
-      toast({
-        title: 'Authorization Failed',
-        description: 'Your account is not authorized to access this application.',
-        variant: 'destructive',
-      });
-      await signOut(auth);
-    }
-  }, [auth, router, toast]);
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      // This listener now only manages the Google Auth state.
+      // It does not log the user into the app on its own.
       if (fbUser) {
-        handleAuthorization(fbUser);
+        setFirebaseUser(fbUser);
+        const userEmail = fbUser.email;
+        if (userEmail && authorizedUsers[userEmail]) {
+          setIsGoogleAuthd(true);
+          setAuthStep('credentials'); // Move to next step
+        } else {
+          setIsGoogleAuthd(false);
+          toast({
+            title: 'Authorization Failed',
+            description: 'Your Google account is not authorized.',
+            variant: 'destructive',
+          });
+          signOut(auth);
+        }
       } else {
-        setUser(null);
         setFirebaseUser(null);
+        setIsGoogleAuthd(false);
+        setUser(null);
         localStorage.removeItem('mandi-monitor-user');
+        setAuthStep('google');
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [auth, handleAuthorization]);
-
+  }, [auth, toast]);
 
   const login = useCallback((username: string, password?: string) => {
-    const userData = hardcodedUsers[username];
+    if (!isGoogleAuthd) {
+        toast({ title: 'Login Error', description: 'Please sign in with Google first.', variant: 'destructive'});
+        return;
+    }
 
+    const userData = hardcodedUsers[username];
     if (userData && (!userData.password || userData.password === password)) {
       setCurrentUsername(username);
       setAuthStep('otp');
@@ -101,20 +101,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: 'destructive',
       });
     }
-  }, [toast]);
+  }, [isGoogleAuthd, toast]);
 
   const verifyOtp = useCallback((otp: string) => {
+     if (!isGoogleAuthd || authStep !== 'otp') {
+        toast({ title: 'Login Error', description: 'Authentication sequence is incorrect.', variant: 'destructive'});
+        return;
+    }
+
     if (otp === MOCKED_OTP && currentUsername) {
       const userData = hardcodedUsers[currentUsername];
       if (userData) {
-        setUser(userData.user);
-        localStorage.setItem('mandi-monitor-user', JSON.stringify(userData.user));
+        // Final login step success
+        const finalUser = {
+            ...userData.user,
+            id: firebaseUser?.uid || userData.user.id, // Use Firebase UID if available
+            name: firebaseUser?.displayName || userData.user.name,
+        };
+        setUser(finalUser);
+        localStorage.setItem('mandi-monitor-user', JSON.stringify(finalUser));
         router.push('/select-mill');
         toast({
           title: 'Login Successful',
-          description: `Welcome, ${userData.user.name}!`,
+          description: `Welcome, ${finalUser.name}!`,
         });
-        resetAuthStep();
       }
     } else {
       toast({
@@ -123,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: 'destructive',
       });
     }
-  }, [currentUsername, router, toast]);
+  }, [currentUsername, router, toast, isGoogleAuthd, authStep, firebaseUser]);
 
   const signInWithGoogle = useCallback(async () => {
     const provider = new GoogleAuthProvider();
@@ -140,22 +150,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [auth, toast]);
 
   const logout = useCallback(async () => {
-    await signOut(auth);
-    setUser(null);
-    setFirebaseUser(null);
+    await signOut(auth); // This will trigger the onAuthStateChanged listener
+    // The listener will then reset all states (firebaseUser, user, isGoogleAuthd, authStep)
     localStorage.removeItem('mandi-monitor-user');
     localStorage.removeItem('mandi-monitor-mill');
-    resetAuthStep();
     router.push('/');
   }, [auth, router]);
 
   const resetAuthStep = () => {
-    setAuthStep('credentials');
-    setCurrentUsername(null);
+    // This function is less relevant now as the flow is more rigid,
+    // but can be used to go back from OTP to credentials.
+    if(authStep === 'otp'){
+        setAuthStep('credentials');
+        setCurrentUsername(null);
+    }
   }
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, login, verifyOtp, signInWithGoogle, logout, loading, authStep, currentUsername, resetAuthStep }}>
+    <AuthContext.Provider value={{ user, firebaseUser, login, verifyOtp, signInWithGoogle, logout, loading, authStep, currentUsername, resetAuthStep, isGoogleAuthd }}>
       {children}
     </AuthContext.Provider>
   );
