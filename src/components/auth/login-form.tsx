@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Tractor } from 'lucide-react';
 import { Separator } from '../ui/separator';
+import Link from 'next/link';
 
 const formSchema = z.object({
   username: z.string().min(1, 'Username is required'),
@@ -22,7 +23,11 @@ const otpSchema = z.object({
     otp: z.string().min(6, 'OTP must be 6 digits').max(6, 'OTP must be 6 digits'),
 });
 
-export function LoginForm() {
+interface LoginFormProps {
+  mode: 'google' | 'credentials';
+}
+
+export function LoginForm({ mode }: LoginFormProps) {
   const { login, verifyOtp, user, loading, authStep, currentUsername, resetAuthStep, signInWithGoogle } = useAuth();
   const router = useRouter();
 
@@ -60,6 +65,16 @@ export function LoginForm() {
     otpForm.reset();
   }
 
+  const getCardDescription = () => {
+    if (authStep === 'otp') {
+      return `Enter the OTP sent for ${currentUsername}`;
+    }
+    if (mode === 'credentials') {
+      return 'Enter your credentials to access your dashboard';
+    }
+    return 'Sign in to access your dashboard';
+  }
+
   return (
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
@@ -68,80 +83,94 @@ export function LoginForm() {
         </div>
         <CardTitle className="text-2xl font-headline">Mandi Monitor</CardTitle>
         <CardDescription>
-            {authStep === 'otp' ? `Enter the OTP sent for ${currentUsername}` : 'Enter your credentials to access your dashboard'}
+            {getCardDescription()}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {authStep === 'credentials' && (
-          <>
-            <Button variant="outline" className="w-full" onClick={signInWithGoogle}>
-              Sign in with Google
-            </Button>
-            <Separator className="my-4" />
-            <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleLoginSubmit)} className="space-y-6">
-                <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                        <Input placeholder="admin or user" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                 <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                        <Input type="password" placeholder="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
-                Request OTP
-                </Button>
-            </form>
-            </Form>
-          </>
+        {mode === 'google' && authStep === 'credentials' && (
+           <div className="flex flex-col items-center space-y-4">
+             <Button variant="outline" className="w-full" onClick={signInWithGoogle}>
+               Sign in with Google
+             </Button>
+             <Separator className="my-4" />
+             <Link href="/login/credentials" className="text-sm text-muted-foreground hover:text-primary">
+                Or sign in with username and password
+             </Link>
+           </div>
         )}
 
-        {authStep === 'otp' && (
-            <Form {...otpForm}>
-                <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)} className="space-y-6">
-                    <FormField
-                        control={otpForm.control}
-                        name="otp"
+        {(mode === 'credentials' || authStep === 'otp') && (
+            <>
+                {authStep === 'credentials' && (
+                    <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleLoginSubmit)} className="space-y-6">
+                        <FormField
+                        control={form.control}
+                        name="username"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>One-Time Password</FormLabel>
+                            <FormLabel>Username</FormLabel>
                             <FormControl>
-                                <Input type="text" placeholder="123456" {...field} />
+                                <Input placeholder="admin or user" {...field} />
                             </FormControl>
                             <FormMessage />
                             </FormItem>
                         )}
-                    />
-                    <div className="flex flex-col space-y-2">
+                        />
+                        <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                                <Input type="password" placeholder="password" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
                         <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
-                            Log In
+                        Request OTP
                         </Button>
-                        <Button type="button" variant="outline" className="w-full" onClick={handleBack}>
-                            Back
-                        </Button>
-                    </div>
-                </form>
-            </Form>
-        )}
+                         <div className="text-center">
+                            <Link href="/" className="text-sm text-muted-foreground hover:text-primary">
+                                Back to main login
+                            </Link>
+                        </div>
+                    </form>
+                    </Form>
+                )}
 
+                {authStep === 'otp' && (
+                    <Form {...otpForm}>
+                        <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)} className="space-y-6">
+                            <FormField
+                                control={otpForm.control}
+                                name="otp"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>One-Time Password</FormLabel>
+                                    <FormControl>
+                                        <Input type="text" placeholder="123456" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div className="flex flex-col space-y-2">
+                                <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
+                                    Log In
+                                </Button>
+                                <Button type="button" variant="outline" className="w-full" onClick={handleBack}>
+                                    Back
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
+                )}
+            </>
+        )}
       </CardContent>
     </Card>
   );

@@ -2,7 +2,7 @@ import Image from 'next/image';
 import { LoginForm } from '@/components/auth/login-form';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-export default function LoginPage() {
+export default function CredentialsLoginPage() {
   const loginBg = PlaceHolderImages.find((img) => img.id === 'login-background');
 
   return (
@@ -18,7 +18,7 @@ export default function LoginPage() {
         />
       )}
       <div className="absolute inset-0 bg-black/50 -z-10" />
-      <LoginForm mode="google" />
+      <LoginForm mode="credentials" />
     </main>
   );
 }
