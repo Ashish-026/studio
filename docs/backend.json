@@ -1,0 +1,238 @@
+{
+  "entities": {
+    "MandiUser": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MandiUser",
+      "type": "object",
+      "description": "Represents a user of the Mandi Monitor application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MandiUser entity."
+        },
+        "username": {
+          "type": "string",
+          "description": "Username of the user. This is separate from the authentication system's user ID."
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the user (e.g., admin, register user).",
+          "format": "string"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "googleId": {
+          "type": "string",
+          "description": "Google ID associated with the user (for Gmail login).",
+          "format": "string"
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "role"
+      ]
+    },
+    "OscscRegisterEntry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "OscscRegisterEntry",
+      "type": "object",
+      "description": "Represents an entry in the OSCSC register.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the OscscRegisterEntry entity."
+        },
+        "targetAlloted": {
+          "type": "number",
+          "description": "Target alloted for this entry."
+        },
+        "physicalPaddyLifted": {
+          "type": "number",
+          "description": "Physical paddy lifted for this entry."
+        },
+        "balanceToBeLifted": {
+          "type": "number",
+          "description": "Balance to be lifted for this entry."
+        },
+        "nonPhysicallyLifted": {
+          "type": "number",
+          "description": "Amount of paddy not physically lifted."
+        },
+        "mandiName": {
+          "type": "string",
+          "description": "Name of the mandi for this entry."
+        },
+        "targetAllotedDate": {
+          "type": "string",
+          "description": "Date when the target was alloted.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "targetAlloted",
+        "physicalPaddyLifted",
+        "balanceToBeLifted",
+        "nonPhysicallyLifted"
+      ]
+    },
+    "PrivateRegisterEntry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PrivateRegisterEntry",
+      "type": "object",
+      "description": "Represents an entry in the private register.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PrivateRegisterEntry entity."
+        },
+        "mandiName": {
+          "type": "string",
+          "description": "Name of the mandi."
+        },
+        "farmerName": {
+          "type": "string",
+          "description": "Name of the farmer."
+        },
+        "totalPaddyReceived": {
+          "type": "number",
+          "description": "Total amount of paddy received."
+        },
+        "mandiWeight": {
+          "type": "number",
+          "description": "Weight of the paddy at the mandi."
+        }
+      },
+      "required": [
+        "id",
+        "mandiName",
+        "farmerName",
+        "totalPaddyReceived",
+        "mandiWeight"
+      ]
+    },
+    "LabourRegisterEntry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LabourRegisterEntry",
+      "type": "object",
+      "description": "Represents an entry in the labour register.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the LabourRegisterEntry entity."
+        },
+        "labourName": {
+          "type": "string",
+          "description": "Name of the labour."
+        },
+        "workDetails": {
+          "type": "string",
+          "description": "Details of the work done by the labour."
+        },
+        "paymentAmount": {
+          "type": "number",
+          "description": "Amount paid to the labour."
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "Date when the payment was made.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "labourName",
+        "workDetails",
+        "paymentAmount",
+        "paymentDate"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "MandiUser",
+          "schema": {
+            "$ref": "#/backend/entities/MandiUser"
+          },
+          "description": "Stores user profiles. This collection is path-based, allowing simple user ownership security rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/oscsc_register_entries/{entryId}",
+        "definition": {
+          "entityName": "OscscRegisterEntry",
+          "schema": {
+            "$ref": "#/backend/entities/OscscRegisterEntry"
+          },
+          "description": "Stores OSCSC register entries. Only admins can modify these entries.",
+          "params": [
+            {
+              "name": "entryId",
+              "description": "The unique ID of the OSCSC register entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/private_register_entries/{entryId}",
+        "definition": {
+          "entityName": "PrivateRegisterEntry",
+          "schema": {
+            "$ref": "#/backend/entities/PrivateRegisterEntry"
+          },
+          "description": "Stores private register entries specific to each user. Includes denormalized 'role' from `/users/{userId}` for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user."
+            },
+            {
+              "name": "entryId",
+              "description": "The unique ID of the private register entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/labour_register_entries/{entryId}",
+        "definition": {
+          "entityName": "LabourRegisterEntry",
+          "schema": {
+            "$ref": "#/backend/entities/LabourRegisterEntry"
+          },
+          "description": "Stores labour register entries specific to each user. Includes denormalized 'role' from `/users/{userId}` for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user."
+            },
+            {
+              "name": "entryId",
+              "description": "The unique ID of the labour register entry."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to facilitate role-based access control and efficient data retrieval for the Mandi Monitor application. It leverages structural segregation and denormalization to ensure authorization independence, making security rules simpler and more robust. User roles are stored directly in the `MandiUser` document, and data access is controlled based on these roles. The structure uses path-based ownership for user-specific data and membership maps (where applicable) to manage access to shared resources. The OSCSC register entries will be stored without user ownership; admins will be able to manage them. The private and labour register entries will belong to a user. For authorization independence, we denormalize user roles into the private and labour registers entries."
+  }
+}

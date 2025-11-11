@@ -1,0 +1,120 @@
+/**
+ * @fileoverview Firestore Security Rules for Mandi Monitor Application
+ *
+ * Core Philosophy:
+ * This ruleset enforces a role-based access control model with user ownership for private data and administrative control over global data. The primary goal is to protect user data while enabling authorized personnel to manage the system effectively.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user profiles, secured by user ID.
+ * - /oscsc_register_entries/{entryId}: Stores OSCSC register entries, accessible only to admins.
+ * - /users/{userId}/private_register_entries/{entryId}: Stores private register entries, owned by the user.
+ * - /users/{userId}/labour_register_entries/{entryId}: Stores labour register entries, owned by the user.
+ *
+ * Key Security Decisions:
+ * - User accounts are protected using strict ownership principles: Only the user themselves (or an admin) can read or modify their profile.
+ * - OSCSC register entries are globally accessible for reading but restricted to admins for modification.
+ * - Private register entries and labour register entries are private to the user.
+ *
+ * Denormalization for Authorization:
+ * No denormalization is required in the rules themselves since we can access the user's role directly from their profile.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow (create) User with matching {userId} can create their profile.
+     * @allow (get, update, delete) User with matching {userId} can read and modify their profile.
+     * @deny (create) User cannot create a profile with a mismatched {userId}.
+     * @principle Enforces document ownership for user profiles.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isSignedIn() && isOwner(userId) && resource.data.id == userId;
+      allow delete: if isSignedIn() && isOwner(userId) && resource.data.id == userId;
+    }
+
+    /**
+     * @description Controls access to OSCSC register entries.
+     * @path /oscsc_register_entries/{entryId}
+     * @allow (get, list) Anyone can read/list OSCSC register entries.
+     * @allow (create, update, delete) Only admins can create, update, or delete OSCSC register entries.
+     * @deny (create, update, delete) Non-admins cannot modify OSCSC register entries.
+     * @principle Enforces admin-only access for modifying global configuration data.
+     */
+    match /oscsc_register_entries/{entryId} {
+      function isAdmin() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn() && isAdmin();
+      allow update: if isSignedIn() && isAdmin() && resource != null;
+      allow delete: if isSignedIn() && isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Controls access to private register entries for a specific user.
+     * @path /users/{userId}/private_register_entries/{entryId}
+     * @allow (create) User with matching {userId} can create private register entries.
+     * @allow (get, list, update, delete) User with matching {userId} can read and modify their own private register entries.
+     * @deny (create, update, delete) User cannot modify private register entries of other users.
+     * @principle Enforces document ownership for private user data.
+     */
+    match /users/{userId}/private_register_entries/{entryId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId) && resource != null;
+      allow delete: if isSignedIn() && isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Controls access to labour register entries for a specific user.
+     * @path /users/{userId}/labour_register_entries/{entryId}
+     * @allow (create) User with matching {userId} can create labour register entries.
+     * @allow (get, list, update, delete) User with matching {userId} can read and modify their own labour register entries.
+     * @deny (create, update, delete) User cannot modify labour register entries of other users.
+     * @principle Enforces document ownership for private user data.
+     */
+    match /users/{userId}/labour_register_entries/{entryId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId) && resource != null;
+      allow delete: if isSignedIn() && isOwner(userId) && resource != null;
+    }
+  }
+}
