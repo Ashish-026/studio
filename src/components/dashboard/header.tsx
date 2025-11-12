@@ -17,14 +17,11 @@ import { useMill } from '@/hooks/use-mill';
 import { useRouter } from 'next/navigation';
 
 export function AppHeader() {
-  const { user, firebaseUser, logout } = useAuth();
+  const { user, logout } = useAuth();
   const { selectedMill, mills, selectMill } = useMill();
   const router = useRouter();
 
-  const appUser = user;
-  const fbUser = firebaseUser;
-
-  if (!appUser || !selectedMill) return null;
+  if (!user || !selectedMill) return null;
 
   const getInitials = (name: string) => {
     return name
@@ -76,16 +73,16 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={fbUser?.photoURL || `https://avatar.vercel.sh/${appUser.name}.png`} alt={appUser.name} />
-                  <AvatarFallback>{getInitials(appUser.name)}</AvatarFallback>
+                  <AvatarImage src={`https://avatar.vercel.sh/${user.name}.png`} alt={user.name} />
+                  <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{appUser.name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{appUser.role}</p>
+                  <p className="text-sm font-medium leading-none">{user.name}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{user.role}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

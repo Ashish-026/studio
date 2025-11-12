@@ -14,28 +14,19 @@ import { Tractor } from 'lucide-react';
 import { Separator } from '../ui/separator';
 
 const formSchema = z.object({
-  username: z.string().min(1, 'Username is required'),
+  email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
 });
 
-const otpSchema = z.object({
-    otp: z.string().min(6, 'OTP must be 6 digits').max(6, 'OTP must be 6 digits'),
-});
-
 export function LoginForm() {
-  const { login, verifyOtp, user, loading, authStep, currentUsername, resetAuthStep, signInWithGoogle, isGoogleAuthd } = useAuth();
+  const { login, user, loading } = useAuth();
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { username: '', password: '' },
+    defaultValues: { email: '', password: '' },
   });
-
-  const otpForm = useForm<z.infer<typeof otpSchema>>({
-    resolver: zodResolver(otpSchema),
-    defaultValues: { otp: '' },
-  });
-
+  
   useEffect(() => {
     if (!loading && user) {
       router.replace('/select-mill');
@@ -47,31 +38,8 @@ export function LoginForm() {
   }
 
   const handleLoginSubmit = (values: z.infer<typeof formSchema>) => {
-    login(values.username, values.password);
+    login(values.email, values.password);
   };
-
-  const handleOtpSubmit = (values: z.infer<typeof otpSchema>) => {
-    verifyOtp(values.otp);
-  };
-
-  const handleBack = () => {
-    resetAuthStep();
-    form.reset();
-    otpForm.reset();
-  }
-
-  const getCardDescription = () => {
-    if (authStep === 'google') {
-      return 'Step 1: Sign in with your authorized Google account.';
-    }
-    if (authStep === 'credentials') {
-        return 'Step 2: Enter your credentials to continue.';
-    }
-    if (authStep === 'otp') {
-      return `Step 3: Enter the OTP sent for ${currentUsername}`;
-    }
-    return 'Sign in to access your dashboard';
-  }
 
   return (
     <Card className="w-full max-w-sm">
@@ -81,81 +49,43 @@ export function LoginForm() {
         </div>
         <CardTitle className="text-2xl font-headline">Mandi Monitor</CardTitle>
         <CardDescription>
-            {getCardDescription()}
+            Sign in to access your dashboard
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {authStep === 'google' && !isGoogleAuthd && (
-           <div className="flex flex-col items-center space-y-4">
-             <Button variant="outline" className="w-full" onClick={signInWithGoogle}>
-               Sign in with Google
-             </Button>
-           </div>
-        )}
-
-        {authStep === 'credentials' && isGoogleAuthd && (
-            <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleLoginSubmit)} className="space-y-6">
-                <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                        <Input placeholder="admin or user" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                        <Input type="password" placeholder="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
-                    Request OTP
-                </Button>
-            </form>
-            </Form>
-        )}
-
-        {authStep === 'otp' && isGoogleAuthd && (
-            <Form {...otpForm}>
-                <form onSubmit={otpForm.handleSubmit(handleOtpSubmit)} className="space-y-6">
-                    <FormField
-                        control={otpForm.control}
-                        name="otp"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>One-Time Password</FormLabel>
-                            <FormControl>
-                                <Input type="text" placeholder="123456" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <div className="flex flex-col space-y-2">
-                        <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
-                            Log In
-                        </Button>
-                        <Button type="button" variant="outline" className="w-full" onClick={handleBack}>
-                            Back
-                        </Button>
-                    </div>
-                </form>
-            </Form>
-        )}
+        <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleLoginSubmit)} className="space-y-6">
+            <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                    <Input placeholder="admin@example.com" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                    <Input type="password" placeholder="password" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
+                Log In
+            </Button>
+        </form>
+        </Form>
       </CardContent>
     </Card>
   );
