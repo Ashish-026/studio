@@ -290,7 +290,7 @@ export function PaddyLifted() {
               <CardTitle>Paddy Lifting Records</CardTitle>
               <CardDescription>View and manage paddy lifting entries from various mandis.</CardDescription>
             </div>
-             <Button variant="outline" size="sm" onClick={() => downloadPdf(document.getElementById('paddy-lifted-table')!, 'paddy-lifted-summary')}>
+             <Button variant="outline" size="sm" onClick={() => downloadPdf('paddy-lifted-table', 'paddy-lifted-summary')}>
                 <Download className="mr-2 h-4 w-4" />
                 Download PDF
             </Button>
@@ -502,7 +502,7 @@ export function PaddyLifted() {
               </Card>
           )}
 
-          <div className="space-y-6" id="paddy-lifted-table">
+          <div id="paddy-lifted-table">
               <div>
                   <h3 className="text-lg font-semibold mb-2">Physical Lifting History</h3>
                   <div className="border rounded-lg">
