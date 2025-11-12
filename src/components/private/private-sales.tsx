@@ -491,10 +491,10 @@ export function PrivateSales() {
                             </div>
                         </div>
                         <CollapsibleContent>
-                            <div className="hidden">
-                                <CustomerSaleTable ref={el => customerRefs.current[customer.id] = el} customer={customer} />
-                            </div>
                             <div className="px-4 pb-4">
+                                <div className="absolute -left-[9999px] top-auto">
+                                    <CustomerSaleTable ref={el => customerRefs.current[customer.id] = el} customer={customer} />
+                                </div>
                                 <h4 className="font-semibold text-md my-2">Sale Details</h4>
                                 <div className="overflow-x-auto">
                                 <Table>
