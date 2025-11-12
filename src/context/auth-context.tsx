@@ -24,8 +24,8 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 const hardcodedUsers: Record<string, { user: AppUser; password?: string }> = {
-  'admin@example.com': { user: { id: '1', name: 'Admin User', role: 'admin' }, password: 'admin' },
-  'user@example.com': { user: { id: '2', name: 'Regular User', role: 'user' }, password: 'user' },
+  'admin@example.com': { user: { id: 'admin-uid', name: 'Admin User', role: 'admin' }, password: 'admin' },
+  'user@example.com': { user: { id: 'user-uid', name: 'Regular User', role: 'user' }, password: 'user' },
 };
 
 
