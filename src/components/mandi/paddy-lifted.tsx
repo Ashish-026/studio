@@ -280,6 +280,15 @@ export function PaddyLifted() {
     setEditDialogOpen(true);
   };
 
+  const getVehicleDetails = (item: PaddyLiftedType) => {
+    if (!item.vehicleType || item.vehicleType === 'farmer') return "Farmer's Vehicle";
+    if (item.vehicleType === 'own') return 'Own Vehicle';
+    if (item.vehicleType === 'hired') {
+      return `${item.ownerName} (${item.vehicleNumber})`;
+    }
+    return 'N/A';
+  };
+
 
   return (
     <>
@@ -512,7 +521,7 @@ export function PaddyLifted() {
                           <TableHead>Mandi Name</TableHead>
                           <TableHead>Farmer Name</TableHead>
                           <TableHead>Paddy Received (Qtl)</TableHead>
-                           <TableHead>Vehicle</TableHead>
+                           <TableHead>Vehicle Details</TableHead>
                           <TableHead className="text-right">Mandi Weight (Qtl)</TableHead>
                           {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                           </TableRow>
@@ -526,7 +535,7 @@ export function PaddyLifted() {
                               <TableCell className="font-medium">{item.mandiName}</TableCell>
                               <TableCell>{item.farmerName}</TableCell>
                               <TableCell>{item.totalPaddyReceived.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
-                               <TableCell className="capitalize">{item.vehicleType?.replace('_', ' ')}</TableCell>
+                               <TableCell className="break-words">{getVehicleDetails(item)}</TableCell>
                               <TableCell className="text-right">{item.mandiWeight.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
                               {isAdmin && (
                                 <TableCell className="text-right">

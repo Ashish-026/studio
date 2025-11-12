@@ -71,6 +71,15 @@ const CustomerSaleTable = forwardRef<HTMLDivElement, { customer: { id: string; n
         }).format(amount);
     }
     
+    const getVehicleDetails = (sale: PrivateSale) => {
+        if (!sale.vehicleType || sale.vehicleType === 'customer') return "Customer's Vehicle";
+        if (sale.vehicleType === 'own') return 'Own Vehicle';
+        if (sale.vehicleType === 'hired') {
+          return `${sale.ownerName} (${sale.vehicleNumber})`;
+        }
+        return 'N/A';
+    };
+
     return (
         <div ref={ref} className="p-4 bg-white">
             <h4 className="font-semibold text-md my-2">Sale Details for {customer.name}</h4>
@@ -79,13 +88,13 @@ const CustomerSaleTable = forwardRef<HTMLDivElement, { customer: { id: string; n
                     <TableRow>
                         <TableHead style={{width: '10%'}}>Date</TableHead>
                         <TableHead style={{width: '8%'}}>Type</TableHead>
-                        <TableHead style={{width: '12%'}}>Vehicle Type</TableHead>
-                        <TableHead style={{width: '10%'}}>Rent(₹)</TableHead>
+                        <TableHead style={{width: '20%'}}>Vehicle Details</TableHead>
+                        <TableHead style={{width: '10%'}} className="text-right">Rent(₹)</TableHead>
                         <TableHead style={{width: '10%'}} className="text-right">Qty (Qtl)</TableHead>
                         <TableHead style={{width: '10%'}} className="text-right">Rate (₹)</TableHead>
-                        <TableHead style={{width: '12%'}} className="text-right">Total (₹)</TableHead>
-                        <TableHead style={{width: '12%'}} className="text-right">Received (₹)</TableHead>
-                        <TableHead style={{width: '16%'}} className="text-right">Balance (₹)</TableHead>
+                        <TableHead style={{width: '10%'}} className="text-right">Total (₹)</TableHead>
+                        <TableHead style={{width: '10%'}} className="text-right">Received (₹)</TableHead>
+                        <TableHead style={{width: '12%'}} className="text-right">Balance (₹)</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -94,8 +103,8 @@ const CustomerSaleTable = forwardRef<HTMLDivElement, { customer: { id: string; n
                             <TableRow>
                                 <TableCell>{format(s.date, 'dd MMM yyyy')}</TableCell>
                                 <TableCell className="capitalize">{s.itemType}</TableCell>
-                                <TableCell className="capitalize break-words">{s.vehicleType?.replace('_', ' ') || 'N/A'}</TableCell>
-                                <TableCell>{s.tripCharge ? formatCurrency(s.tripCharge) : '-'}</TableCell>
+                                <TableCell className="break-words">{getVehicleDetails(s)}</TableCell>
+                                <TableCell className="text-right">{s.tripCharge ? formatCurrency(s.tripCharge) : '-'}</TableCell>
                                 <TableCell className="text-right">{s.quantity.toLocaleString('en-IN')}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(s.rate)}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(s.totalAmount)}</TableCell>
@@ -297,10 +306,7 @@ export function PrivateSales() {
   }
 
   const handleDownload = (customerId: string, customerName: string) => {
-    const elementToPrint = customerRefs.current[customerId];
-    if (elementToPrint) {
-        downloadPdf(elementToPrint, `sale-summary-${customerName.toLowerCase().replace(/\s+/g, '-')}`);
-    }
+    downloadPdf(`printable-sales-${customerId}`, `sale-summary-${customerName.toLowerCase().replace(/\s+/g, '-')}`);
   }
 
 
@@ -490,11 +496,13 @@ export function PrivateSales() {
                                 </Button>
                             </div>
                         </div>
-                        <CollapsibleContent>
-                            <div className="px-4 pb-4">
-                                <div className="absolute -left-[9999px] top-auto">
+                        <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
+                            <div className="absolute -left-[9999px] top-auto">
+                                <div id={`printable-sales-${customer.id}`}>
                                     <CustomerSaleTable ref={el => customerRefs.current[customer.id] = el} customer={customer} />
                                 </div>
+                            </div>
+                            <div className="p-4">
                                 <h4 className="font-semibold text-md my-2">Sale Details</h4>
                                 <div className="overflow-x-auto">
                                 <Table>
@@ -502,12 +510,7 @@ export function PrivateSales() {
                                         <TableRow>
                                             <TableHead>Date</TableHead>
                                             <TableHead>Type</TableHead>
-                                            <TableHead>Vehicle Type</TableHead>
-                                            <TableHead>Rent (₹)</TableHead>
-                                            <TableHead className="text-right">Qty (Qtl)</TableHead>
-                                            <TableHead className="text-right">Rate (₹)</TableHead>
                                             <TableHead className="text-right">Total (₹)</TableHead>
-                                            <TableHead className="text-right">Received (₹)</TableHead>
                                             <TableHead className="text-right">Balance (₹)</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
@@ -518,12 +521,7 @@ export function PrivateSales() {
                                                 <TableRow>
                                                     <TableCell>{format(s.date, 'dd MMM yyyy')}</TableCell>
                                                     <TableCell className="capitalize">{s.itemType}</TableCell>
-                                                    <TableCell className="capitalize">{s.vehicleType?.replace('_', ' ') || 'N/A'}</TableCell>
-                                                    <TableCell>{s.tripCharge ? formatCurrency(s.tripCharge) : '-'}</TableCell>
-                                                    <TableCell className="text-right">{s.quantity.toLocaleString('en-IN')}</TableCell>
-                                                    <TableCell className="text-right">{formatCurrency(s.rate)}</TableCell>
                                                     <TableCell className="text-right">{formatCurrency(s.totalAmount)}</TableCell>
-                                                    <TableCell className="text-right">{formatCurrency(s.amountReceived)}</TableCell>
                                                     <TableCell className={`text-right font-semibold ${s.balance < 0 ? 'text-green-600' : s.balance > 0 ? 'text-destructive' : ''}`}>
                                                         {s.balance < 0 ? `${formatCurrency(Math.abs(s.balance))} (Credit)` : formatCurrency(s.balance)}
                                                     </TableCell>
@@ -533,30 +531,6 @@ export function PrivateSales() {
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
-                                                 {s.payments.length > 0 && (
-                                                    <TableRow>
-                                                        <TableCell colSpan={10} className="p-0">
-                                                        <Collapsible>
-                                                            <CollapsibleContent>
-                                                                <div className="p-4 bg-muted/20">
-                                                                <h4 className="font-semibold mb-2">Payment History for Sale on {format(s.date, 'dd MMM yyyy')}</h4>
-                                                                <Table>
-                                                                    <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
-                                                                    <TableBody>
-                                                                    {[...s.payments].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((payment: any) => (
-                                                                        <TableRow key={payment.id}>
-                                                                        <TableCell>{format(payment.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
-                                                                        <TableCell className="text-right">{formatCurrency(payment.amount)}</TableCell>
-                                                                        </TableRow>
-                                                                    ))}
-                                                                    </TableBody>
-                                                                </Table>
-                                                                </div>
-                                                            </CollapsibleContent>
-                                                        </Collapsible>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
                                             </React.Fragment>
                                         ))}
                                     </TableBody>

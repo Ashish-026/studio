@@ -71,6 +71,15 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
         }).format(amount);
     }
     
+    const getVehicleDetails = (purchase: PrivatePurchase) => {
+        if (!purchase.vehicleType || purchase.vehicleType === 'farmer') return "Farmer's Vehicle";
+        if (purchase.vehicleType === 'own') return 'Own Vehicle';
+        if (purchase.vehicleType === 'hired') {
+          return `${purchase.ownerName} (${purchase.vehicleNumber})`;
+        }
+        return 'N/A';
+    };
+
     return (
         <div ref={ref} className="p-4 bg-white">
             <h4 className="font-semibold text-md my-2">Purchase Details for {farmer.name}</h4>
@@ -79,13 +88,13 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
                     <TableRow>
                         <TableHead style={{width: '10%'}}>Date</TableHead>
                         <TableHead style={{width: '8%'}}>Type</TableHead>
-                        <TableHead style={{width: '12%'}}>Vehicle Type</TableHead>
-                        <TableHead style={{width: '10%'}}>Rent(₹)</TableHead>
+                        <TableHead style={{width: '20%'}}>Vehicle Details</TableHead>
+                        <TableHead style={{width: '10%'}} className="text-right">Rent(₹)</TableHead>
                         <TableHead style={{width: '10%'}} className="text-right">Qty (Qtl)</TableHead>
                         <TableHead style={{width: '10%'}} className="text-right">Rate (₹)</TableHead>
-                        <TableHead style={{width: '12%'}} className="text-right">Total (₹)</TableHead>
-                        <TableHead style={{width: '12%'}} className="text-right">Paid (₹)</TableHead>
-                        <TableHead style={{width: '16%'}} className="text-right">Balance (₹)</TableHead>
+                        <TableHead style={{width: '10%'}} className="text-right">Total (₹)</TableHead>
+                        <TableHead style={{width: '10%'}} className="text-right">Paid (₹)</TableHead>
+                        <TableHead style={{width: '12%'}} className="text-right">Balance (₹)</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -94,8 +103,8 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
                             <TableRow>
                                 <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
                                 <TableCell className="capitalize">{p.itemType}</TableCell>
-                                <TableCell className="capitalize break-words">{p.vehicleType?.replace('_', ' ') || 'N/A'}</TableCell>
-                                <TableCell>{p.tripCharge ? formatCurrency(p.tripCharge) : '-'}</TableCell>
+                                <TableCell className="break-words">{getVehicleDetails(p)}</TableCell>
+                                <TableCell className="text-right">{p.tripCharge ? formatCurrency(p.tripCharge) : '-'}</TableCell>
                                 <TableCell className="text-right">{p.quantity.toLocaleString('en-IN')}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(p.rate)}</TableCell>
                                 <TableCell className="text-right">{formatCurrency(p.totalAmount)}</TableCell>
@@ -472,9 +481,43 @@ export function PrivatePurchases() {
                                 </Button>
                             </div>
                         </div>
-                        <CollapsibleContent>
-                            <div id={`printable-purchases-${farmer.id}`}>
-                                <FarmerPurchaseTable farmer={farmer} />
+                        <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
+                            <div className="absolute -left-[9999px] top-auto">
+                                <div id={`printable-purchases-${farmer.id}`}>
+                                    <FarmerPurchaseTable farmer={farmer} />
+                                </div>
+                            </div>
+                            <div className="p-4 space-y-4">
+                               {farmer.purchases.length > 0 ? (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Item</TableHead>
+                                                <TableHead className="text-right">Total (₹)</TableHead>
+                                                <TableHead className="text-right">Balance (₹)</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {farmer.purchases.map((p: PrivatePurchase) => (
+                                                <TableRow key={p.id}>
+                                                    <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
+                                                    <TableCell className="capitalize">{p.itemType}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency(p.totalAmount)}</TableCell>
+                                                    <TableCell className={`text-right font-semibold ${p.balance < 0 ? 'text-green-600' : p.balance > 0 ? 'text-destructive' : ''}`}>
+                                                        {p.balance < 0 ? `${formatCurrency(Math.abs(p.balance))} (Adv)` : formatCurrency(p.balance)}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, p.id)}>Pay</Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                               ) : (
+                                <p className="text-sm text-center text-muted-foreground">No purchases from this farmer.</p>
+                               )}
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
