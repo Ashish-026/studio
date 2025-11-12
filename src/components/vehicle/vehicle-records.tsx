@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, forwardRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useVehicleData } from '@/context/vehicle-context';
-import { ChevronDown, ChevronRight, Receipt, Car, MapPin, Building, Edit } from 'lucide-react';
+import { ChevronDown, ChevronRight, Receipt, Car, MapPin, Building, Edit, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,8 @@ import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import type { Vehicle, VehicleTrip } from '@/lib/types';
+import { downloadPdf } from '@/lib/pdf-utils';
+import { Separator } from '../ui/separator';
 
 const paymentFormSchema = z.object({
     amount: z.coerce.number().positive('Payment amount must be positive'),
@@ -24,6 +26,71 @@ const paymentFormSchema = z.object({
 const tripFormSchema = z.object({
     tripCharge: z.coerce.number().positive('Trip charge must be a positive number'),
 });
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(amount);
+};
+
+const OwnerVehicleDetails = forwardRef<HTMLDivElement, { owner: { id: string, name: string, vehicles: Vehicle[] } }>(({ owner }, ref) => {
+  const ownerTotalBalance = owner.vehicles.reduce((acc, v) => acc + v.balance, 0);
+
+  return (
+    <div ref={ref} className="p-4 bg-white">
+      <h3 className="text-xl font-bold mb-2">Statement for {owner.name}</h3>
+      <p className="text-lg mb-4">Total Outstanding Balance: <span className="font-bold">{formatCurrency(ownerTotalBalance)}</span></p>
+      <Separator className="my-4" />
+      {owner.vehicles.map((v) => (
+        <div key={v.id} className="mb-8">
+            <h4 className="text-lg font-semibold mb-2">Vehicle: {v.vehicleNumber} ({v.driverName})</h4>
+            <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
+                <div className="border p-2 rounded-md"><span className="font-semibold">Total Rent:</span> {formatCurrency(v.totalRent)}</div>
+                <div className="border p-2 rounded-md"><span className="font-semibold">Total Paid:</span> {formatCurrency(v.totalPaid)}</div>
+                <div className="border p-2 rounded-md"><span className="font-semibold">Balance:</span> {formatCurrency(v.balance)}</div>
+            </div>
+
+            {v.rentType === 'per_trip' && v.trips.length > 0 && (
+                <div>
+                    <h5 className="font-semibold text-md mt-4 mb-2">Trip History</h5>
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Source</TableHead><TableHead>Destination</TableHead><TableHead>Qty (Qtl)</TableHead><TableHead className="text-right">Charge (₹)</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {[...v.trips].sort((a, b) => b.date.getTime() - a.date.getTime()).map(t => (
+                                <TableRow key={t.id}>
+                                    <TableCell>{format(t.date, 'dd MMM yyyy')}</TableCell>
+                                    <TableCell>{t.source}</TableCell>
+                                    <TableCell>{t.destination}</TableCell>
+                                    <TableCell>{t.quantity.toLocaleString('en-IN')}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(t.tripCharge)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
+
+            {v.payments.length > 0 && (
+                 <div>
+                    <h5 className="font-semibold text-md mt-4 mb-2">Rent Payment History</h5>
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {[...v.payments].sort((a, b) => b.date.getTime() - a.date.getTime()).map(p => (
+                                <TableRow key={p.id}>
+                                    <TableCell>{format(p.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
+                                    <TableCell className="text-right">{formatCurrency(p.amount)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            )}
+            <Separator className="mt-6"/>
+        </div>
+      ))}
+    </div>
+  );
+});
+OwnerVehicleDetails.displayName = 'OwnerVehicleDetails';
 
 export function VehicleRecords() {
   const { vehicles, addRentPayment, updateTrip } = useVehicleData();
@@ -96,9 +163,11 @@ export function VehicleRecords() {
     setTripDialogOpen(true);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(amount);
+  const handleDownload = (e: React.MouseEvent, ownerId: string, ownerName: string) => {
+    e.stopPropagation();
+    downloadPdf(`printable-owner-record-${ownerId}`, `vehicle-summary-${ownerName.toLowerCase().replace(/\s+/g, '-')}`);
   };
+
 
   return (
     <>
@@ -124,14 +193,24 @@ export function VehicleRecords() {
                         onOpenChange={(isOpen) => setOpenOwnerCollapsibles(prev => ({...prev, [owner.id]: isOpen}))}
                         className="border-b last:border-b-0"
                     >
-                        <CollapsibleTrigger className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
-                          <div className="flex items-center gap-2 flex-grow cursor-pointer">
+                        <div className="flex flex-col md:flex-row w-full p-4 items-start md:items-center justify-between hover:bg-muted/50 transition-colors gap-4">
+                          <CollapsibleTrigger className="flex items-center gap-3 flex-grow cursor-pointer text-left">
                               {openOwnerCollapsibles[owner.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                               <Building className="h-5 w-5 text-muted-foreground" />
                               <span className="font-medium">{owner.name}</span>
-                          </div>
-                        </CollapsibleTrigger>
+                          </CollapsibleTrigger>
+                          <div className="flex items-center gap-2 self-end md:self-center ml-auto pl-8 md:pl-0">
+                            <Button size="sm" variant="outline" onClick={(e) => handleDownload(e, owner.id, owner.name)}>
+                                <Download className="mr-2 h-4 w-4" /> PDF
+                            </Button>
+                        </div>
+                        </div>
                         <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
+                            <div className="absolute -left-[9999px] top-auto">
+                                <div id={`printable-owner-record-${owner.id}`}>
+                                    <OwnerVehicleDetails owner={owner} />
+                                </div>
+                            </div>
                             <div className="p-4 space-y-4">
                                 {owner.vehicles.sort((a,b) => a.vehicleNumber.localeCompare(b.vehicleNumber)).map(v => (
                                     <Collapsible 
