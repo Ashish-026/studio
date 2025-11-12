@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, forwardRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useLabourData } from '@/context/labour-context';
-import { PlusCircle, ChevronDown, ChevronRight, Receipt, Briefcase, User as UserIcon } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, Receipt, Briefcase, User as UserIcon, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,8 @@ import { format } from 'date-fns';
 import { Textarea } from '../ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { downloadPdf } from '@/lib/pdf-utils';
+import type { Labourer } from '@/lib/types';
 
 const labourerSchema = z.object({
   labourerName: z.string().min(1, "Labourer's name is required"),
@@ -38,6 +40,58 @@ const itemRateWorkSchema = z.object({
 const paymentFormSchema = z.object({
     amount: z.coerce.number().positive('Payment amount must be positive'),
 });
+
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(amount);
+};
+
+const LabourerDetailsTable = forwardRef<HTMLDivElement, { labourer: Labourer }>(({ labourer }, ref) => {
+    return (
+        <div ref={ref} className="p-4 bg-white">
+            <h3 className="text-xl font-bold mb-4">Account Statement for {labourer.name}</h3>
+            <div className="grid grid-cols-3 gap-4 mb-6 text-sm">
+                <div className="border p-2 rounded-md"><span className="font-semibold">Total Wages:</span> {formatCurrency(labourer.totalWages)}</div>
+                <div className="border p-2 rounded-md"><span className="font-semibold">Total Paid:</span> {formatCurrency(labourer.totalPaid)}</div>
+                <div className="border p-2 rounded-md"><span className="font-semibold">Balance:</span> {formatCurrency(labourer.balance)}</div>
+            </div>
+
+            <h4 className="font-semibold text-md mt-6 mb-2">Work History</h4>
+            <Table>
+                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead>Details</TableHead><TableHead className="text-right">Wage (₹)</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {[...labourer.workEntries].sort((a, b) => b.date.getTime() - a.date.getTime()).map(w => (
+                        <TableRow key={w.id}>
+                            <TableCell>{format(w.date, 'dd MMM yyyy')}</TableCell>
+                            <TableCell>{w.description}</TableCell>
+                            <TableCell>
+                                {w.entryType === 'daily'
+                                    ? `${w.activity} @ ${formatCurrency(w.dailyRate!)}/day`
+                                    : `${w.quantity} x ${w.itemName} @ ${formatCurrency(w.ratePerItem!)}/item`
+                                }
+                            </TableCell>
+                            <TableCell className="text-right">{formatCurrency(w.wage)}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+
+            <h4 className="font-semibold text-md mt-6 mb-2">Payment History</h4>
+            <Table>
+                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
+                <TableBody>
+                    {[...labourer.payments].sort((a, b) => b.date.getTime() - a.date.getTime()).map(p => (
+                        <TableRow key={p.id}>
+                            <TableCell>{format(p.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(p.amount)}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    );
+});
+LabourerDetailsTable.displayName = 'LabourerDetailsTable';
+
 
 export function LabourRecords() {
   const { labourers, addWorkEntry, addPayment, addLabourer } = useLabourData();
@@ -105,10 +159,12 @@ export function LabourRecords() {
     setSelectedLabourer(labourerId);
     setPaymentDialogOpen(true);
   };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(amount);
+  
+  const handleDownload = (e: React.MouseEvent, labourerId: string, labourerName: string) => {
+    e.stopPropagation();
+    downloadPdf(`printable-labour-record-${labourerId}`, `labour-summary-${labourerName.toLowerCase().replace(/\s+/g, '-')}`);
   };
+
 
   return (
     <>
@@ -168,12 +224,20 @@ export function LabourRecords() {
                             </div>
                         </CollapsibleTrigger>
                         <div className="flex items-center gap-2 self-end md:self-center ml-auto pl-8 md:pl-0">
+                            <Button size="sm" variant="outline" onClick={(e) => handleDownload(e, l.id, l.name)}>
+                                <Download className="mr-2 h-4 w-4" /> PDF
+                            </Button>
                             <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, l.id)}>
                                 <Receipt className="mr-2 h-4 w-4" /> Pay
                             </Button>
                         </div>
                       </div>
                       <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
+                            <div className="absolute -left-[9999px] top-auto">
+                                <div id={`printable-labour-record-${l.id}`}>
+                                    <LabourerDetailsTable labourer={l} />
+                                </div>
+                            </div>
                             <div className="p-4 space-y-6">
                                 <Card>
                                     <CardHeader><CardTitle className="text-lg">Add New Work Entry</CardTitle></CardHeader>
