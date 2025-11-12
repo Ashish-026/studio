@@ -187,117 +187,117 @@ export function VehicleRecords() {
                 {ownerAggregates.length === 0 ? (
                     <div className="p-4 text-center text-muted-foreground">Vehicle data from other registers will appear here.</div>
                 ) : ownerAggregates.map(owner => (
-                    <Collapsible 
-                        key={owner.id}
-                        open={openOwnerCollapsibles[owner.id] || false}
-                        onOpenChange={(isOpen) => setOpenOwnerCollapsibles(prev => ({...prev, [owner.id]: isOpen}))}
-                        className="border-b last:border-b-0"
-                    >
-                        <div className="flex flex-col md:flex-row w-full p-4 items-start md:items-center justify-between hover:bg-muted/50 transition-colors gap-4">
-                          <CollapsibleTrigger className="flex items-center gap-3 flex-grow cursor-pointer text-left">
-                              {openOwnerCollapsibles[owner.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                              <Building className="h-5 w-5 text-muted-foreground" />
-                              <span className="font-medium">{owner.name}</span>
-                          </CollapsibleTrigger>
-                          <div className="flex items-center gap-2 self-end md:self-center ml-auto pl-8 md:pl-0">
-                            <Button size="sm" variant="outline" onClick={(e) => handleDownload(e, owner.id, owner.name)}>
-                                <Download className="mr-2 h-4 w-4" /> PDF
-                            </Button>
-                        </div>
-                        </div>
-                        <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
-                            <div className="absolute -left-[9999px] top-auto">
-                                <div id={`printable-owner-record-${owner.id}`}>
-                                    <OwnerVehicleDetails owner={owner} />
-                                </div>
+                    <div key={owner.id} className="border-b last:border-b-0">
+                        <div className="absolute -left-[9999px] top-auto" aria-hidden="true">
+                            <div id={`printable-owner-record-${owner.id}`}>
+                                <OwnerVehicleDetails owner={owner} />
                             </div>
-                            <div className="p-4 space-y-4">
-                                {owner.vehicles.sort((a,b) => a.vehicleNumber.localeCompare(b.vehicleNumber)).map(v => (
-                                    <Collapsible 
-                                        key={v.id}
-                                        open={openVehicleCollapsibles[v.id] || false}
-                                        onOpenChange={(isOpen) => setOpenVehicleCollapsibles(prev => ({...prev, [v.id]: isOpen}))}
-                                        className="border rounded-lg"
-                                    >
-                                        <div className="w-full p-4 flex flex-col md:flex-row items-start md:items-center justify-between bg-card hover:bg-muted/50 transition-colors gap-4">
-                                          <CollapsibleTrigger className="flex items-center gap-3 flex-grow cursor-pointer text-left">
-                                              {openVehicleCollapsibles[v.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                              <Car className="h-5 w-5 text-primary" />
-                                              <div>
-                                                  <div className="font-medium">{v.vehicleNumber}</div>
-                                                  <div className="text-sm text-muted-foreground">{v.driverName}</div>
-                                              </div>
-                                          </CollapsibleTrigger>
-                                          <div className="flex items-center gap-4 self-end md:self-center ml-auto pl-8 md:pl-0">
-                                              <div className="text-right">
-                                                  <div className={`font-semibold ${v.balance > 0 ? 'text-destructive' : ''}`}>{formatCurrency(v.balance)}</div>
-                                                  <div className="text-xs text-muted-foreground">Balance</div>
-                                              </div>
-                                              <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, v.id)}>
-                                                  <Receipt className="mr-2 h-4 w-4" /> Pay
-                                              </Button>
-                                          </div>
-                                        </div>
-                                        <CollapsibleContent className="p-4 space-y-6">
-                                            <div>
-                                                <h4 className="font-semibold mb-2 flex items-center gap-2"><Car className="h-4 w-4" /> Vehicle Details</h4>
-                                                <div className="text-sm space-y-1">
-                                                    <p><span className="font-medium">Rent Type:</span> <span className='capitalize'>{v.rentType.replace('_', ' ')}</span></p>
-                                                    {v.rentType !== 'per_trip' && <p><span className="font-medium">Rent Amount:</span> {formatCurrency(v.rentAmount)}</p>}
-                                                    <p><span className="font-medium">Total Rent Due:</span> {formatCurrency(v.totalRent)}</p>
-                                                    <p><span className="font-medium">Total Paid:</span> {formatCurrency(v.totalPaid)}</p>
-                                                </div>
-                                            </div>
-
-                                            {v.rentType === 'per_trip' && (
+                        </div>
+                        <Collapsible 
+                            open={openOwnerCollapsibles[owner.id] || false}
+                            onOpenChange={(isOpen) => setOpenOwnerCollapsibles(prev => ({...prev, [owner.id]: isOpen}))}
+                        >
+                            <div className="flex flex-col md:flex-row w-full p-4 items-start md:items-center justify-between hover:bg-muted/50 transition-colors gap-4">
+                            <CollapsibleTrigger className="flex items-center gap-3 flex-grow cursor-pointer text-left">
+                                {openOwnerCollapsibles[owner.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                <Building className="h-5 w-5 text-muted-foreground" />
+                                <span className="font-medium">{owner.name}</span>
+                            </CollapsibleTrigger>
+                            <div className="flex items-center gap-2 self-end md:self-center ml-auto pl-8 md:pl-0">
+                                <Button size="sm" variant="outline" onClick={(e) => handleDownload(e, owner.id, owner.name)}>
+                                    <Download className="mr-2 h-4 w-4" /> PDF
+                                </Button>
+                            </div>
+                            </div>
+                            <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
+                                <div className="p-4 space-y-4">
+                                    {owner.vehicles.sort((a,b) => a.vehicleNumber.localeCompare(b.vehicleNumber)).map(v => (
+                                        <Collapsible 
+                                            key={v.id}
+                                            open={openVehicleCollapsibles[v.id] || false}
+                                            onOpenChange={(isOpen) => setOpenVehicleCollapsibles(prev => ({...prev, [v.id]: isOpen}))}
+                                            className="border rounded-lg"
+                                        >
+                                            <div className="w-full p-4 flex flex-col md:flex-row items-start md:items-center justify-between bg-card hover:bg-muted/50 transition-colors gap-4">
+                                            <CollapsibleTrigger className="flex items-center gap-3 flex-grow cursor-pointer text-left">
+                                                {openVehicleCollapsibles[v.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                                <Car className="h-5 w-5 text-primary" />
                                                 <div>
-                                                    <h4 className="font-semibold mb-2 flex items-center gap-2"><MapPin className="h-4 w-4" /> Trip History</h4>
-                                                    {v.trips.length > 0 ? (
+                                                    <div className="font-medium">{v.vehicleNumber}</div>
+                                                    <div className="text-sm text-muted-foreground">{v.driverName}</div>
+                                                </div>
+                                            </CollapsibleTrigger>
+                                            <div className="flex items-center gap-4 self-end md:self-center ml-auto pl-8 md:pl-0">
+                                                <div className="text-right">
+                                                    <div className={`font-semibold ${v.balance > 0 ? 'text-destructive' : ''}`}>{formatCurrency(v.balance)}</div>
+                                                    <div className="text-xs text-muted-foreground">Balance</div>
+                                                </div>
+                                                <Button size="sm" variant="secondary" onClick={(e) => handlePaymentClick(e, v.id)}>
+                                                    <Receipt className="mr-2 h-4 w-4" /> Pay
+                                                </Button>
+                                            </div>
+                                            </div>
+                                            <CollapsibleContent className="p-4 space-y-6">
+                                                <div>
+                                                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Car className="h-4 w-4" /> Vehicle Details</h4>
+                                                    <div className="text-sm space-y-1">
+                                                        <p><span className="font-medium">Rent Type:</span> <span className='capitalize'>{v.rentType.replace('_', ' ')}</span></p>
+                                                        {v.rentType !== 'per_trip' && <p><span className="font-medium">Rent Amount:</span> {formatCurrency(v.rentAmount)}</p>}
+                                                        <p><span className="font-medium">Total Rent Due:</span> {formatCurrency(v.totalRent)}</p>
+                                                        <p><span className="font-medium">Total Paid:</span> {formatCurrency(v.totalPaid)}</p>
+                                                    </div>
+                                                </div>
+
+                                                {v.rentType === 'per_trip' && (
+                                                    <div>
+                                                        <h4 className="font-semibold mb-2 flex items-center gap-2"><MapPin className="h-4 w-4" /> Trip History</h4>
+                                                        {v.trips.length > 0 ? (
+                                                        <Table>
+                                                            <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Source</TableHead><TableHead>Destination</TableHead><TableHead>Quantity (Qtl)</TableHead><TableHead className="text-right">Charge (₹)</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                                                            <TableBody>
+                                                                {[...v.trips].sort((a, b) => b.date.getTime() - a.date.getTime()).map((t) => (
+                                                                    <TableRow key={t.id}>
+                                                                        <TableCell>{format(t.date, 'dd MMM yyyy')}</TableCell>
+                                                                        <TableCell>{t.source}</TableCell>
+                                                                        <TableCell>{t.destination}</TableCell>
+                                                                        <TableCell>{t.quantity.toLocaleString('en-IN')}</TableCell>
+                                                                        <TableCell className="text-right">{formatCurrency(t.tripCharge)}</TableCell>
+                                                                        <TableCell className="text-right">
+                                                                            <Button variant="ghost" size="icon" onClick={(e) => handleTripEditClick(e, v.id, t)}>
+                                                                                <Edit className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                ))}
+                                                            </TableBody>
+                                                        </Table>
+                                                        ) : <p className="text-sm text-muted-foreground">No trips recorded.</p>}
+                                                    </div>
+                                                )}
+
+                                                <div>
+                                                    <h4 className="font-semibold mb-2 flex items-center gap-2"><Receipt className="h-4 w-4" /> Rent Payment History</h4>
+                                                    {v.payments.length > 0 ? (
                                                     <Table>
-                                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Source</TableHead><TableHead>Destination</TableHead><TableHead>Quantity (Qtl)</TableHead><TableHead className="text-right">Charge (₹)</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                                                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount Paid (₹)</TableHead></TableRow></TableHeader>
                                                         <TableBody>
-                                                            {[...v.trips].sort((a, b) => b.date.getTime() - a.date.getTime()).map((t) => (
-                                                                <TableRow key={t.id}>
-                                                                    <TableCell>{format(t.date, 'dd MMM yyyy')}</TableCell>
-                                                                    <TableCell>{t.source}</TableCell>
-                                                                    <TableCell>{t.destination}</TableCell>
-                                                                    <TableCell>{t.quantity.toLocaleString('en-IN')}</TableCell>
-                                                                    <TableCell className="text-right">{formatCurrency(t.tripCharge)}</TableCell>
-                                                                    <TableCell className="text-right">
-                                                                        <Button variant="ghost" size="icon" onClick={(e) => handleTripEditClick(e, v.id, t)}>
-                                                                            <Edit className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </TableCell>
+                                                            {[...v.payments].sort((a,b) => b.date.getTime() - a.date.getTime()).map(p => (
+                                                                <TableRow key={p.id}>
+                                                                    <TableCell>{format(p.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
+                                                                    <TableCell className="text-right">{formatCurrency(p.amount)}</TableCell>
                                                                 </TableRow>
                                                             ))}
                                                         </TableBody>
                                                     </Table>
-                                                    ) : <p className="text-sm text-muted-foreground">No trips recorded.</p>}
+                                                    ) : <p className="text-sm text-muted-foreground">No rent payments recorded.</p>}
                                                 </div>
-                                            )}
-
-                                            <div>
-                                                <h4 className="font-semibold mb-2 flex items-center gap-2"><Receipt className="h-4 w-4" /> Rent Payment History</h4>
-                                                {v.payments.length > 0 ? (
-                                                <Table>
-                                                    <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount Paid (₹)</TableHead></TableRow></TableHeader>
-                                                    <TableBody>
-                                                        {[...v.payments].sort((a,b) => b.date.getTime() - a.date.getTime()).map(p => (
-                                                            <TableRow key={p.id}>
-                                                                <TableCell>{format(p.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
-                                                                <TableCell className="text-right">{formatCurrency(p.amount)}</TableCell>
-                                                            </TableRow>
-                                                        ))}
-                                                    </TableBody>
-                                                </Table>
-                                                ) : <p className="text-sm text-muted-foreground">No rent payments recorded.</p>}
-                                            </div>
-                                        </CollapsibleContent>
-                                    </Collapsible>
-                                ))}
-                            </div>
-                        </CollapsibleContent>
-                    </Collapsible>
+                                            </CollapsibleContent>
+                                        </Collapsible>
+                                    ))}
+                                </div>
+                            </CollapsibleContent>
+                        </Collapsible>
+                    </div>
                 ))}
             </div>
           </div>

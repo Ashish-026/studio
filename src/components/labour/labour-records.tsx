@@ -202,11 +202,15 @@ export function LabourRecords() {
             <h3 className="text-lg font-semibold mb-2">Labourer Accounts</h3>
             <div className="border rounded-lg">
                 {sortedLabourers.map(l => (
+                  <div key={l.id} className="border-b last:border-b-0">
+                    <div className="absolute -left-[9999px] top-auto" aria-hidden="true">
+                      <div id={`printable-labour-record-${l.id}`}>
+                          <LabourerDetailsTable labourer={l} />
+                      </div>
+                    </div>
                     <Collapsible 
-                        key={l.id}
                         open={openLabourerCollapsibles[l.id] || false}
                         onOpenChange={(isOpen) => setOpenLabourerCollapsibles(prev => ({...prev, [l.id]: isOpen}))}
-                        className="border-b last:border-b-0"
                     >
                       <div className="flex flex-col md:flex-row w-full p-4 items-start md:items-center justify-between hover:bg-muted/50 transition-colors gap-4">
                         <CollapsibleTrigger className="flex items-center gap-3 flex-grow cursor-pointer text-left">
@@ -233,11 +237,6 @@ export function LabourRecords() {
                         </div>
                       </div>
                       <CollapsibleContent className="bg-slate-50 dark:bg-slate-900/50">
-                            <div className="absolute -left-[9999px] top-auto">
-                                <div id={`printable-labour-record-${l.id}`}>
-                                    <LabourerDetailsTable labourer={l} />
-                                </div>
-                            </div>
                             <div className="p-4 space-y-6">
                                 <Card>
                                     <CardHeader><CardTitle className="text-lg">Add New Work Entry</CardTitle></CardHeader>
@@ -328,6 +327,7 @@ export function LabourRecords() {
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
+                  </div>
                 ))}
                 {sortedLabourers.length === 0 && (
                     <div className="p-4 text-center text-muted-foreground">No labourer records found. Add one to get started.</div>
