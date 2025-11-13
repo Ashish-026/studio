@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,13 +14,15 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
-import { PlusCircle, Calendar as CalendarIcon, Car, Users } from 'lucide-react';
+import { PlusCircle, Calendar as CalendarIcon, Car, Users, Edit } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import type { MandiStockRelease } from '@/lib/types';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
@@ -52,11 +54,13 @@ const supplySchema = z.object({
 });
 
 export function MandiSupply() {
-  const { availableRiceForSupply, stockReleases, addStockRelease } = useMandiData();
+  const { availableRiceForSupply, stockReleases, addStockRelease, updateStockRelease } = useMandiData();
   const { addVehicle, addTrip } = useVehicleData();
   const { labourers, addGroupWorkEntry } = useLabourData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<MandiStockRelease | null>(null);
+  const [isEditDialogOpen, setEditDialogOpen] = useState(false);
 
   const supplyForm = useForm<z.infer<typeof supplySchema>>({
     resolver: zodResolver(supplySchema),
@@ -86,6 +90,27 @@ export function MandiSupply() {
   const numberOfLabours = supplyForm.watch('numberOfLabours');
   const selectedLabourerIds = supplyForm.watch('labourerIds').map(l => l.value);
 
+  useEffect(() => {
+    if (editingEntry) {
+        supplyForm.reset({
+            date: editingEntry.date,
+            lotNumber: editingEntry.lotNumber,
+            godownDetails: editingEntry.godownDetails,
+            quantity: editingEntry.quantity,
+            vehicleType: editingEntry.vehicleType,
+            vehicleNumber: editingEntry.vehicleNumber,
+            driverName: editingEntry.driverName,
+            ownerName: editingEntry.ownerName,
+            tripCharge: editingEntry.tripCharge,
+            source: editingEntry.source,
+            destination: editingEntry.destination,
+            numberOfLabours: editingEntry.labourerIds?.length || 0,
+            labourerIds: editingEntry.labourerIds?.map(id => ({ value: id })) || [],
+            labourCharge: editingEntry.labourCharge || 0,
+        });
+    }
+  }, [editingEntry, supplyForm]);
+
   useMemo(() => {
     const currentCount = fields.length;
     if (numberOfLabours > currentCount) {
@@ -112,7 +137,10 @@ export function MandiSupply() {
   const formatNumber = (num: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num);
 
   function onSupplySubmit(values: z.infer<typeof supplySchema>) {
-    if(values.quantity > availableRiceForSupply) {
+    const originalQuantity = editingEntry ? editingEntry.quantity : 0;
+    const stockAvailableForOperation = availableRiceForSupply + originalQuantity;
+
+    if(values.quantity > stockAvailableForOperation) {
         supplyForm.setError('quantity', { message: `Exceeds available rice stock of ${formatNumber(availableRiceForSupply)} Qtl` });
         return;
     }
@@ -120,39 +148,52 @@ export function MandiSupply() {
     const labourerIds = values.labourerIds.map(l => l.value).filter(Boolean);
     const submissionValues = { ...values, labourerIds };
 
-    addStockRelease(submissionValues);
-    toast({ title: 'Success!', description: 'Rice supply has been recorded.' });
+    if (editingEntry) {
+        updateStockRelease(editingEntry.id, submissionValues);
+        toast({ title: 'Success!', description: 'Rice supply record has been updated.' });
+    } else {
+        addStockRelease(submissionValues);
+        toast({ title: 'Success!', description: 'Rice supply has been recorded.' });
 
-    if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
-        const vehicleId = addVehicle({
-            vehicleNumber: submissionValues.vehicleNumber,
-            driverName: submissionValues.driverName || '',
-            ownerName: submissionValues.ownerName || '',
-            rentType: 'per_trip',
-            rentAmount: 0,
-        });
-
-        if (vehicleId) {
-            addTrip(vehicleId, {
-                source: submissionValues.source || 'Mill', 
-                destination: submissionValues.destination || submissionValues.godownDetails,
-                quantity: submissionValues.quantity,
-                tripCharge: submissionValues.tripCharge,
+        if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
+            const vehicleId = addVehicle({
+                vehicleNumber: submissionValues.vehicleNumber,
+                driverName: submissionValues.driverName || '',
+                ownerName: submissionValues.ownerName || '',
+                rentType: 'per_trip',
+                rentAmount: 0,
             });
-            toast({ title: 'Vehicle Updated', description: `Trip for ${submissionValues.vehicleNumber} has been added to Vehicle Register.` });
+
+            if (vehicleId) {
+                addTrip(vehicleId, {
+                    source: submissionValues.source || 'Mill', 
+                    destination: submissionValues.destination || submissionValues.godownDetails,
+                    quantity: submissionValues.quantity,
+                    tripCharge: submissionValues.tripCharge,
+                });
+                toast({ title: 'Vehicle Updated', description: `Trip for ${submissionValues.vehicleNumber} has been added to Vehicle Register.` });
+            }
         }
-    }
-    
-    if (labourerIds.length > 0 && values.labourCharge > 0) {
-        addGroupWorkEntry(labourerIds, values.labourCharge, `Rice supply to ${values.godownDetails}`, values.quantity);
-        toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
+        
+        if (labourerIds.length > 0 && values.labourCharge > 0) {
+            addGroupWorkEntry(labourerIds, values.labourCharge, `Rice supply to ${values.godownDetails}`, values.quantity);
+            toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
+        }
     }
 
     supplyForm.reset();
     setShowForm(false);
+    setEditDialogOpen(false);
+    setEditingEntry(null);
   }
 
+  const handleEditClick = (entry: MandiStockRelease) => {
+    setEditingEntry(entry);
+    setEditDialogOpen(true);
+  };
+
   return (
+    <>
     <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
@@ -307,11 +348,12 @@ export function MandiSupply() {
                             <TableHead>Godown Details</TableHead>
                             <TableHead>Vehicle</TableHead>
                             <TableHead className="text-right">Quantity (Qtl)</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {stockReleases.length === 0 ? (
-                            <TableRow><TableCell colSpan={5} className="text-center h-24">No supply history.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={6} className="text-center h-24">No supply history.</TableCell></TableRow>
                         ) : (
                             [...stockReleases].sort((a, b) => b.date.getTime() - a.date.getTime()).map(s => (
                                 <TableRow key={s.id}>
@@ -329,6 +371,11 @@ export function MandiSupply() {
                                         )}
                                     </TableCell>
                                     <TableCell className="text-right font-medium">{formatNumber(s.quantity)}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="sm" onClick={() => handleEditClick(s)}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))
                         )}
@@ -338,5 +385,22 @@ export function MandiSupply() {
         </div>
       </CardContent>
     </Card>
+
+    <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Edit Supply Entry</DialogTitle>
+            </DialogHeader>
+            <Form {...supplyForm}>
+                <form onSubmit={supplyForm.handleSubmit(onSupplySubmit)} className="space-y-4">
+                    <FormField control={supplyForm.control} name="quantity" render={({ field }) => (
+                        <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Save Changes</Button>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }

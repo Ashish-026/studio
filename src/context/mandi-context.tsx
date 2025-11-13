@@ -17,6 +17,7 @@ interface MandiContextType {
   updatePaddyLifted: (id: string, updatedPaddyLifted: Omit<PaddyLifted, 'id'>) => void;
   addMandiProcessing: (item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
   addStockRelease: (item: Omit<MandiStockRelease, 'id'>) => void;
+  updateStockRelease: (id: string, updatedStockRelease: Omit<MandiStockRelease, 'id' | 'date'>) => void;
 }
 
 const MandiContext = createContext<MandiContextType | null>(null);
@@ -119,9 +120,13 @@ export function MandiProvider({ children }: { children: ReactNode }) {
       setStockReleases(prev => [...prev, newStockRelease]);
   }, []);
 
+  const updateStockRelease = useCallback((id: string, updatedStockRelease: Omit<MandiStockRelease, 'id' | 'date'>) => {
+    setStockReleases(prev => prev.map(sr => sr.id === id ? { ...sr, ...updatedStockRelease } : sr));
+  }, []);
+
 
   return (
-    <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, processingHistory: mandiProcessingHistory, stockReleases, addTarget, updateTarget, addPaddyLifted, updatePaddyLifted, addMandiProcessing, addStockRelease, availableRiceForSupply, totalRiceFromProcessing }}>
+    <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, processingHistory: mandiProcessingHistory, stockReleases, addTarget, updateTarget, addPaddyLifted, updatePaddyLifted, addMandiProcessing, addStockRelease, availableRiceForSupply, totalRiceFromProcessing, updateStockRelease }}>
       {children}
     </MandiContext.Provider>
   );
