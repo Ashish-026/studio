@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -43,7 +43,10 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
         defaultValues: { bags: [{ weight: 0 }], deduction: 0 },
     });
 
-    const { fields: nonUniformFields, append, remove } = nonUniformForm.control.register ? nonUniformForm : { fields: [], append: () => {}, remove: () => {} };
+    const { fields: nonUniformFields, append, remove } = useFieldArray({
+        control: nonUniformForm.control,
+        name: "bags"
+    });
 
     const watchedUniformValues = uniformForm.watch();
     const watchedNonUniformValues = nonUniformForm.watch();
@@ -60,7 +63,7 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
             deductionKg = parseFloat(String(deduction || 0));
         } else {
             const { bags, deduction } = watchedNonUniformValues;
-            grossWeightKg = (bags || []).reduce((acc, bag) => acc + (bag.weight || 0), 0);
+            grossWeightKg = (bags || []).reduce((acc, bag) => acc + (parseFloat(String(bag.weight)) || 0), 0);
             deductionKg = parseFloat(String(deduction || 0));
         }
 
@@ -134,20 +137,20 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
                         <form className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-4">
                                 <div className="max-h-60 overflow-y-auto space-y-2 pr-2">
-                                {nonUniformForm.getValues().bags.map((field, index) => (
-                                    <FormField key={index} control={nonUniformForm.control} name={`bags.${index}.weight`} render={({ field }) => (
+                                {nonUniformFields.map((field, index) => (
+                                    <FormField key={field.id} control={nonUniformForm.control} name={`bags.${index}.weight`} render={({ field }) => (
                                         <FormItem>
                                             <div className="flex items-center gap-2">
                                                 <FormLabel className="w-20">Bag {index + 1}</FormLabel>
                                                 <FormControl><Input type="number" step="0.1" placeholder="Weight in kg" {...field} /></FormControl>
-                                                <Button type="button" variant="ghost" size="icon" onClick={() => nonUniformForm.setValue('bags', nonUniformForm.getValues().bags.filter((_, i) => i !== index))}><Trash className="h-4 w-4 text-destructive" /></Button>
+                                                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash className="h-4 w-4 text-destructive" /></Button>
                                             </div>
                                             <FormMessage />
                                         </FormItem>
                                     )} />
                                 ))}
                                 </div>
-                                <Button type="button" variant="outline" onClick={() => nonUniformForm.setValue('bags', [...nonUniformForm.getValues().bags, { weight: 0 }])}>Add Bag</Button>
+                                <Button type="button" variant="outline" onClick={() => append({ weight: 0 })}>Add Bag</Button>
                                 <FormField control={nonUniformForm.control} name="deduction" render={({ field }) => (
                                     <FormItem><FormLabel>Total Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="e.g., 5.5" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
@@ -174,4 +177,3 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
         </DialogContent>
     );
 }
-
