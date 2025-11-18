@@ -372,7 +372,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
         privateStock, 
         totalStock, 
         processingHistory: filteredProcessingHistory, 
-        mandiProcessingHistory: allMandiProcessingHistory, // Note: mandi context filters this itself
+        mandiProcessingHistory: mandiProcessingHistory, // Note: mandi context filters this itself
         transferredInStock, 
         addProcessingResult, 
         addMandiProcessing, 
