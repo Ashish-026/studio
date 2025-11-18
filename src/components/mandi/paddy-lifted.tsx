@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { useMandiData } from '@/context/mandi-context';
 import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
-import { PlusCircle, DollarSign, Download, Edit, Car, Users } from 'lucide-react';
+import { PlusCircle, DollarSign, Download, Edit, Car, Users, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import type { PaddyLifted as PaddyLiftedType } from '@/lib/types';
 import { Label } from '../ui/label';
 import { format } from 'date-fns';
+import { BagWeightCalculator } from './bag-weight-calculator';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
@@ -72,6 +73,7 @@ export function PaddyLifted() {
   const [showMonetaryForm, setShowMonetaryForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<PaddyLiftedType | null>(null);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  const [isCalculatorOpen, setCalculatorOpen] = useState(false);
   const [selectedMandi, setSelectedMandi] = useState('All');
 
   const uniqueMandis = useMemo(() => {
@@ -291,10 +293,15 @@ export function PaddyLifted() {
   const getVehicleDetails = (item: PaddyLiftedType) => {
     if (!item.vehicleType || item.vehicleType === 'farmer') return "Farmer's Vehicle";
     if (item.vehicleType === 'own') return 'Own Vehicle';
-    if (item.vehicleType === 'hired') {
+    if (item.vehicleType === 'hired' && item.vehicleNumber && item.ownerName) {
       return `${item.ownerName} (${item.vehicleNumber})`;
     }
     return 'N/A';
+  };
+  
+  const handleCalculatorConfirm = (netQuintals: number) => {
+    physicalForm.setValue('totalPaddyReceived', netQuintals);
+    setCalculatorOpen(false);
   };
 
 
@@ -378,8 +385,19 @@ export function PaddyLifted() {
                       <FormField control={physicalForm.control} name="farmerName" render={({ field }) => (
                         <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Patel" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
-                      <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (
-                        <FormItem><FormLabel>Paddy Received (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="120" {...field} /></FormControl><FormMessage /></FormItem>
+                       <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Paddy Received (Qtl)</FormLabel>
+                            <div className="flex items-center gap-2">
+                              <FormControl>
+                                <Input type="number" step="0.01" placeholder="120" {...field} />
+                              </FormControl>
+                              <Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)}>
+                                <Calculator className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          <FormMessage />
+                        </FormItem>
                       )} />
                       <FormField control={physicalForm.control} name="mandiWeight" render={({ field }) => (
                         <FormItem><FormLabel>Mandi Weight (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="118.5" {...field} /></FormControl><FormMessage /></FormItem>
@@ -529,8 +547,8 @@ export function PaddyLifted() {
                           <TableHead>Date</TableHead>
                           <TableHead>Mandi Name</TableHead>
                           <TableHead>Farmer Name</TableHead>
+                          <TableHead>Vehicle Details</TableHead>
                           <TableHead>Paddy Received (Qtl)</TableHead>
-                           <TableHead>Vehicle Details</TableHead>
                           <TableHead className="text-right">Mandi Weight (Qtl)</TableHead>
                           {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                           </TableRow>
@@ -544,8 +562,8 @@ export function PaddyLifted() {
                               <TableCell>{format(item.date, 'dd MMM yyyy')}</TableCell>
                               <TableCell className="font-medium">{item.mandiName}</TableCell>
                               <TableCell>{item.farmerName}</TableCell>
+                              <TableCell className="break-words">{getVehicleDetails(item)}</TableCell>
                               <TableCell>{item.totalPaddyReceived.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
-                               <TableCell className="break-words">{getVehicleDetails(item)}</TableCell>
                               <TableCell className="text-right">{item.mandiWeight.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
                               {isAdmin && (
                                 <TableCell className="text-right">
@@ -603,6 +621,9 @@ export function PaddyLifted() {
           </div>
         </CardContent>
       </Card>
+      <Dialog open={isCalculatorOpen} onOpenChange={setCalculatorOpen}>
+        <BagWeightCalculator onConfirm={handleCalculatorConfirm} onCancel={() => setCalculatorOpen(false)} />
+      </Dialog>
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
             <DialogHeader>
