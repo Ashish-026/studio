@@ -301,8 +301,9 @@ export function PrivatePurchases() {
     downloadPdf(`printable-purchases-${farmerId}`, `purchase-summary-${farmerId}`);
   }
   
-  const handleCalculatorConfirm = (netQuintals: number) => {
+  const handleCalculatorConfirm = (netQuintals: number, ratePerQuintal: number) => {
     purchaseForm.setValue('quantity', netQuintals);
+    purchaseForm.setValue('rate', ratePerQuintal);
     setCalculatorOpen(false);
   };
 
@@ -347,17 +348,17 @@ export function PrivatePurchases() {
                           <FormMessage />
                         </FormItem>
                       )} />
+                      <div className="flex items-center gap-2 pt-8">
+                        <Button type="button" variant="outline" onClick={() => setCalculatorOpen(true)}>
+                          <Calculator className="mr-2 h-4 w-4" /> Calculator
+                        </Button>
+                      </div>
                       <FormField control={purchaseForm.control} name="quantity" render={({ field }) => (
                         <FormItem>
                           <FormLabel>Quantity (Qtl)</FormLabel>
-                          <div className="flex items-center gap-2">
                             <FormControl>
                               <Input type="number" step="0.01" placeholder="150" {...field} />
                             </FormControl>
-                            <Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)}>
-                              <Calculator className="h-4 w-4" />
-                            </Button>
-                          </div>
                           <FormMessage />
                         </FormItem>
                       )} />
