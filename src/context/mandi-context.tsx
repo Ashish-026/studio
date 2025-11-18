@@ -65,24 +65,32 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   const [targetAllocations, setTargetAllocations] = useState<TargetAllocation[]>([]);
   const [paddyLiftedItems, setPaddyLiftedItems] = useState<PaddyLifted[]>([]);
   const [stockReleases, setStockReleases] = useState<MandiStockRelease[]>([]);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     setTargetAllocations(parseStoredData('targetAllocations', initialTargets));
     setPaddyLiftedItems(parseStoredData('paddyLiftedItems', initialPaddyLifted));
     setStockReleases(parseStoredData('stockReleases', []));
+    setIsInitialLoad(false);
   }, []);
 
   useEffect(() => {
-    if (targetAllocations.length > 0) localStorage.setItem('targetAllocations', JSON.stringify(targetAllocations));
-  }, [targetAllocations]);
+    if (!isInitialLoad) {
+        localStorage.setItem('targetAllocations', JSON.stringify(targetAllocations));
+    }
+  }, [targetAllocations, isInitialLoad]);
 
   useEffect(() => {
-    if (paddyLiftedItems.length > 0) localStorage.setItem('paddyLiftedItems', JSON.stringify(paddyLiftedItems));
-  }, [paddyLiftedItems]);
+    if (!isInitialLoad) {
+        localStorage.setItem('paddyLiftedItems', JSON.stringify(paddyLiftedItems));
+    }
+  }, [paddyLiftedItems, isInitialLoad]);
   
   useEffect(() => {
-    if (stockReleases.length > 0) localStorage.setItem('stockReleases', JSON.stringify(stockReleases));
-  }, [stockReleases]);
+    if (!isInitialLoad) {
+        localStorage.setItem('stockReleases', JSON.stringify(stockReleases));
+    }
+  }, [stockReleases, isInitialLoad]);
 
   const filteredTargetAllocations = useMemo(() => targetAllocations.filter(t => getKmsYearForDate(t.date) === selectedKmsYear), [targetAllocations, selectedKmsYear, getKmsYearForDate]);
   const filteredPaddyLiftedItems = useMemo(() => paddyLiftedItems.filter(p => p.date && getKmsYearForDate(p.date) === selectedKmsYear), [paddyLiftedItems, selectedKmsYear, getKmsYearForDate]);
@@ -111,7 +119,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addPaddyLifted = useCallback((item: Omit<PaddyLifted, 'id'>) => {
-    const newEntry = { ...item, id: new Date().toISOString(), date: item.date || new Date() };
+    const newEntry = { ...item, id: new Date().toISOString(), date: item.date || new Date(), entryType: item.entryType || 'physical' } as PaddyLifted;
     setPaddyLiftedItems((prev) => [...prev, newEntry]);
     return newEntry;
   }, []);
