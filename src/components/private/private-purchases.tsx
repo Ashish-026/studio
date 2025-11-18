@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { useStockData } from '@/context/stock-context';
 import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
-import { PlusCircle, ChevronDown, ChevronRight, Download, Car, Users, User as UserIcon } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, Download, Car, Users, User as UserIcon, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import { format } from 'date-fns';
 import { downloadPdf } from '@/lib/pdf-utils';
 import { Separator } from '../ui/separator';
 import type { PrivatePurchase, Payment } from '@/lib/types';
+import { BagWeightCalculator } from '../mandi/bag-weight-calculator';
 
 
 const labourDetailsSchema = z.object({
@@ -152,6 +153,7 @@ export function PrivatePurchases() {
   const [openFarmerCollapsibles, setOpenFarmerCollapsibles] = useState<Record<string, boolean>>({});
   const [isPaymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<string | null>(null);
+  const [isCalculatorOpen, setCalculatorOpen] = useState(false);
 
   const purchaseForm = useForm<z.infer<typeof purchaseFormSchema>>({
     resolver: zodResolver(purchaseFormSchema),
@@ -298,6 +300,11 @@ export function PrivatePurchases() {
   const handleDownload = (farmerId: string) => {
     downloadPdf(`printable-purchases-${farmerId}`, `purchase-summary-${farmerId}`);
   }
+  
+  const handleCalculatorConfirm = (netQuintals: number) => {
+    purchaseForm.setValue('quantity', netQuintals);
+    setCalculatorOpen(false);
+  };
 
   return (
     <>
@@ -341,7 +348,18 @@ export function PrivatePurchases() {
                         </FormItem>
                       )} />
                       <FormField control={purchaseForm.control} name="quantity" render={({ field }) => (
-                        <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="150" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem>
+                          <FormLabel>Quantity (Qtl)</FormLabel>
+                          <div className="flex items-center gap-2">
+                            <FormControl>
+                              <Input type="number" step="0.01" placeholder="150" {...field} />
+                            </FormControl>
+                            <Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)}>
+                              <Calculator className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
                       )} />
                       <FormField control={purchaseForm.control} name="rate" render={({ field }) => (
                         <FormItem><FormLabel>Rate (₹ per Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="2000" {...field} /></FormControl><FormMessage /></FormItem>
@@ -544,6 +562,9 @@ export function PrivatePurchases() {
                   </form>
               </Form>
           </DialogContent>
+      </Dialog>
+      <Dialog open={isCalculatorOpen} onOpenChange={setCalculatorOpen}>
+        <BagWeightCalculator onConfirm={handleCalculatorConfirm} onCancel={() => setCalculatorOpen(false)} />
       </Dialog>
     </>
   );
