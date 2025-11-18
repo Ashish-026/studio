@@ -41,7 +41,7 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
 
     const summary = useMemo(() => {
         const totalBags = watchedBags.length;
-        const grossWeightKg = watchedBags.reduce((acc, bag) => acc + (bag.weight || 0), 0);
+        const grossWeightKg = watchedBags.reduce((acc, bag) => acc + (parseFloat(bag.weight as any) || 0), 0);
         const deductionKg = watchedDeduction || 0;
         const netWeightKg = grossWeightKg - deductionKg;
         const netQuintals = netWeightKg / 100;
