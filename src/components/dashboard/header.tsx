@@ -10,18 +10,20 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, Tractor, User as UserIcon, ChevronsUpDown, Factory } from 'lucide-react';
+import { LogOut, Tractor, User as UserIcon, ChevronsUpDown, Factory, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { useMill } from '@/hooks/use-mill';
+import { useKmsYear } from '@/hooks/use-kms-year';
 import { useRouter } from 'next/navigation';
 
 export function AppHeader() {
   const { user, logout } = useAuth();
   const { selectedMill, mills, selectMill } = useMill();
+  const { selectedKmsYear, selectKmsYear, availableKmsYears } = useKmsYear();
   const router = useRouter();
 
-  if (!user || !selectedMill) return null;
+  if (!user || !selectedMill || !selectedKmsYear) return null;
 
   const getInitials = (name: string) => {
     return name
@@ -33,10 +35,14 @@ export function AppHeader() {
 
   const handleMillChange = (millId: string) => {
     selectMill(millId);
-    // Optionally refresh or navigate to ensure context is updated everywhere
     router.refresh();
   };
   
+  const handleKmsYearChange = (year: string) => {
+    selectKmsYear(year);
+    router.refresh();
+  }
+
   const handleLogout = () => {
     logout();
   }
@@ -48,25 +54,47 @@ export function AppHeader() {
           <Tractor className="h-6 w-6 text-primary" />
           <span className="font-bold font-headline text-lg">Mandi Monitor</span>
         </Link>
+        
+        <div className="flex items-center gap-4">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Factory className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">{selectedMill.name}</span>
+                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuLabel>Change Mill</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {mills.map((mill) => (
+                    <DropdownMenuItem key={mill.id} onSelect={() => handleMillChange(mill.id)}>
+                      {mill.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Factory className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{selectedMill.name}</span>
-                <ChevronsUpDown className="h-4 w-4 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>Change Mill</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {mills.map((mill) => (
-                <DropdownMenuItem key={mill.id} onSelect={() => handleMillChange(mill.id)}>
-                  {mill.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">KMS: {selectedKmsYear}</span>
+                    <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuLabel>Change KMS Year</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {availableKmsYears.map((year) => (
+                    <DropdownMenuItem key={year} onSelect={() => handleKmsYearChange(year)}>
+                      {year}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </div>
+
 
         <div className="ml-auto flex items-center space-x-4">
           <DropdownMenu>

@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext, useEffect } from 'react';
+import { createContext, useState, useCallback, ReactNode, useContext, useEffect, useMemo } from 'react';
 import type { Labourer, LabourWorkEntry, Payment } from '@/lib/types';
+import { useKmsYear } from '@/hooks/use-kms-year';
 
 interface LabourContextType {
   labourers: Labourer[];
@@ -72,6 +73,7 @@ const parseStoredData = (key: string, initialData: any[]) => {
 
 export function LabourProvider({ children }: { children: ReactNode }) {
   const [labourers, setLabourers] = useState<Labourer[]>([]);
+  const { selectedKmsYear, getKmsYearForDate } = useKmsYear()!;
 
   useEffect(() => {
     setLabourers(parseStoredData('labourers', initialLabourers));
@@ -82,6 +84,23 @@ export function LabourProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('labourers', JSON.stringify(labourers));
     }
   }, [labourers]);
+  
+  const filteredLabourers = useMemo(() => {
+    if (!selectedKmsYear) return [];
+    return labourers.map(labourer => {
+        const filteredWorkEntries = labourer.workEntries.filter(w => getKmsYearForDate(w.date) === selectedKmsYear);
+        const filteredPayments = labourer.payments.filter(p => getKmsYearForDate(p.date) === selectedKmsYear);
+        const { totalWages, totalPaid, balance } = calculateTotals(filteredWorkEntries, filteredPayments);
+        return {
+            ...labourer,
+            workEntries: filteredWorkEntries,
+            payments: filteredPayments,
+            totalWages,
+            totalPaid,
+            balance,
+        };
+    });
+  }, [labourers, selectedKmsYear, getKmsYearForDate]);
 
   const addLabourer = useCallback((labourerName: string) => {
     setLabourers(prev => {
@@ -121,8 +140,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
         return prev.map(l => {
             if (l.id === labourerId) {
                 const updatedWorkEntries = [...l.workEntries, newWorkEntry];
-                const totals = calculateTotals(updatedWorkEntries, l.payments);
-                return { ...l, workEntries: updatedWorkEntries, ...totals };
+                return { ...l, workEntries: updatedWorkEntries };
             }
             return l;
         });
@@ -149,8 +167,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
             wage: wagePerLabourer
           };
           const updatedWorkEntries = [...l.workEntries, newWorkEntry];
-          const totals = calculateTotals(updatedWorkEntries, l.payments);
-          return { ...l, workEntries: updatedWorkEntries, ...totals };
+          return { ...l, workEntries: updatedWorkEntries };
         }
         return l;
       });
@@ -167,8 +184,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
                 date: new Date(),
             };
             const updatedPayments = [...l.payments, newPayment];
-            const totals = calculateTotals(l.workEntries, updatedPayments);
-            return { ...l, payments: updatedPayments, ...totals };
+            return { ...l, payments: updatedPayments };
         }
         return l;
     }));
@@ -176,7 +192,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <LabourContext.Provider value={{ labourers, addLabourer, addWorkEntry, addGroupWorkEntry, addPayment }}>
+    <LabourContext.Provider value={{ labourers: filteredLabourers, addLabourer, addWorkEntry, addGroupWorkEntry, addPayment }}>
       {children}
     </LabourContext.Provider>
   );

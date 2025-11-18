@@ -10,11 +10,14 @@ import { StockProvider } from '@/context/stock-context';
 import { VehicleProvider } from '@/context/vehicle-context';
 import { LabourProvider } from '@/context/labour-context';
 import { MillProvider } from '@/context/mill-context';
+import { KmsYearProvider } from '@/context/kms-year-context';
 import { useMill } from '@/hooks/use-mill';
+import { useKmsYear } from '@/hooks/use-kms-year';
 
 function ProtectedDashboard({ children }: { children: React.ReactNode }) {
   const { user, loading: userLoading } = useAuth();
   const { selectedMill, loading: millLoading } = useMill();
+  const { selectedKmsYear, loading: kmsYearLoading } = useKmsYear();
   const router = useRouter();
 
   useEffect(() => {
@@ -22,10 +25,12 @@ function ProtectedDashboard({ children }: { children: React.ReactNode }) {
       router.replace('/');
     } else if (!millLoading && !selectedMill) {
       router.replace('/select-mill');
+    } else if (!kmsYearLoading && !selectedKmsYear) {
+        router.replace('/select-kms-year');
     }
-  }, [user, userLoading, selectedMill, millLoading, router]);
+  }, [user, userLoading, selectedMill, millLoading, selectedKmsYear, kmsYearLoading, router]);
 
-  if (userLoading || millLoading || !user || !selectedMill) {
+  if (userLoading || millLoading || kmsYearLoading || !user || !selectedMill || !selectedKmsYear) {
     return (
       <div className="flex flex-col min-h-screen">
         <header className="sticky top-0 z-50 w-full border-b bg-card">
@@ -38,7 +43,7 @@ function ProtectedDashboard({ children }: { children: React.ReactNode }) {
         </header>
         <main className="flex-1 container py-8">
             <div className="flex justify-center items-center h-64">
-                <p>Loading user and mill data...</p>
+                <p>Loading user, mill and KMS year data...</p>
             </div>
         </main>
       </div>
@@ -69,9 +74,11 @@ export default function DashboardLayout({
 }) {
   return (
     <MillProvider>
-        <ProtectedDashboard>
-            {children}
-        </ProtectedDashboard>
+        <KmsYearProvider>
+            <ProtectedDashboard>
+                {children}
+            </ProtectedDashboard>
+        </KmsYearProvider>
     </MillProvider>
   );
 }

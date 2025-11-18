@@ -3,26 +3,25 @@
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useMill } from '@/hooks/use-mill';
-import { Factory } from 'lucide-react';
-import type { Mill } from '@/lib/types';
+import { Calendar } from 'lucide-react';
+import { useKmsYear } from '@/hooks/use-kms-year';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export default function SelectMillPage() {
-  const { mills, selectMill, loading } = useMill();
+export default function SelectKmsYearPage() {
+  const { availableKmsYears, selectKmsYear, loading } = useKmsYear();
   const router = useRouter();
 
-  const handleSelectMill = (millId: string) => {
-    selectMill(millId);
-    router.push('/select-kms-year');
+  const handleSelectYear = (year: string) => {
+    selectKmsYear(year);
+    router.push('/dashboard');
   };
 
   if (loading) {
       return <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-background">
           <Card className="w-full max-w-md">
               <CardHeader>
-                  <CardTitle>Select a Mill</CardTitle>
-                  <CardDescription>Choose your operational location.</CardDescription>
+                  <CardTitle>Select KMS Year</CardTitle>
+                  <CardDescription>Choose the marketing season.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                   <Skeleton className="h-10 w-full" />
@@ -38,22 +37,22 @@ export default function SelectMillPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center items-center mb-4">
-            <Factory className="h-10 w-10 text-primary" />
+            <Calendar className="h-10 w-10 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-headline">Select a Mill</CardTitle>
-          <CardDescription>Choose your current operational location to continue.</CardDescription>
+          <CardTitle className="text-2xl font-headline">Select KMS Year</CardTitle>
+          <CardDescription>Choose the Kharif Marketing Season to work with.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col space-y-4">
-            {mills.map((mill: Mill) => (
+            {availableKmsYears.map((year: string) => (
               <Button
-                key={mill.id}
+                key={year}
                 variant="outline"
                 size="lg"
-                className="w-full justify-start text-base"
-                onClick={() => handleSelectMill(mill.id)}
+                className="w-full justify-center text-base"
+                onClick={() => handleSelectYear(year)}
               >
-                {mill.name} - <span className="text-muted-foreground ml-2">{mill.location}</span>
+                {year}
               </Button>
             ))}
           </div>

@@ -21,6 +21,7 @@ import { downloadPdf } from '@/lib/pdf-utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import type { PaddyLifted as PaddyLiftedType } from '@/lib/types';
 import { Label } from '../ui/label';
+import { format } from 'date-fns';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
@@ -34,6 +35,7 @@ const physicalFormSchema = z.object({
   farmerName: z.string().min(1, 'Farmer name is required'),
   totalPaddyReceived: z.coerce.number().positive('Must be a positive number'),
   mandiWeight: z.coerce.number().positive('Must be a positive number'),
+  date: z.date({ required_error: 'A date is required.' }),
   vehicleType: z.enum(['farmer', 'own', 'hired'], { required_error: 'Vehicle type is required' }),
   vehicleNumber: z.string().optional(),
   driverName: z.string().optional(),
@@ -55,6 +57,7 @@ const monetaryFormSchema = z.object({
   mandiName: z.string().min(1, 'Mandi name is required'),
   moneyReceived: z.coerce.number().positive('Must be a positive number'),
   ratePerQuintal: z.coerce.number().positive('Must be a positive number'),
+  date: z.date({ required_error: 'A date is required.' }),
 });
 
 
@@ -84,11 +87,11 @@ export function PaddyLifted() {
   }, [paddyLiftedItems, selectedMandi]);
   
   const physicalEntries = useMemo(() => 
-    filteredItems.filter(item => item.entryType === 'physical' || !item.entryType), 
+    filteredItems.filter(item => item.entryType === 'physical' || !item.entryType).sort((a,b) => b.date.getTime() - a.date.getTime()), 
   [filteredItems]);
 
   const monetaryEntries = useMemo(() => 
-    filteredItems.filter(item => item.entryType === 'monetary'), 
+    filteredItems.filter(item => item.entryType === 'monetary').sort((a,b) => b.date.getTime() - a.date.getTime()), 
   [filteredItems]);
 
   const physicalForm = useForm<z.infer<typeof physicalFormSchema>>({
@@ -100,6 +103,7 @@ export function PaddyLifted() {
         destination: 'Mill',
         totalPaddyReceived: 0,
         mandiWeight: 0,
+        date: new Date(),
         vehicleNumber: '',
         driverName: '',
         ownerName: '',
@@ -136,7 +140,7 @@ export function PaddyLifted() {
 
   const monetaryForm = useForm<z.infer<typeof monetaryFormSchema>>({
     resolver: zodResolver(monetaryFormSchema),
-    defaultValues: { mandiName: '', moneyReceived: 0, ratePerQuintal: 0 },
+    defaultValues: { mandiName: '', moneyReceived: 0, ratePerQuintal: 0, date: new Date() },
   });
   
   const vehicleType = physicalForm.watch('vehicleType');
@@ -155,7 +159,8 @@ export function PaddyLifted() {
         monetaryForm.reset({
           mandiName: editingEntry.mandiName,
           moneyReceived: editingEntry.moneyReceived,
-          ratePerQuintal: editingEntry.ratePerQuintal
+          ratePerQuintal: editingEntry.ratePerQuintal,
+          date: editingEntry.date,
         });
       } else {
         physicalForm.reset({
@@ -163,6 +168,7 @@ export function PaddyLifted() {
           farmerName: editingEntry.farmerName,
           totalPaddyReceived: editingEntry.totalPaddyReceived,
           mandiWeight: editingEntry.mandiWeight,
+          date: editingEntry.date,
           vehicleType: editingEntry.vehicleType || 'farmer',
           vehicleNumber: editingEntry.vehicleNumber || '',
           driverName: editingEntry.driverName || '',
@@ -183,6 +189,7 @@ export function PaddyLifted() {
           destination: 'Mill',
           totalPaddyReceived: 0,
           mandiWeight: 0,
+          date: new Date(),
           vehicleNumber: '',
           driverName: '',
           ownerName: '',
@@ -193,7 +200,7 @@ export function PaddyLifted() {
           labourCharge: 0,
           labourWageType: 'total_amount',
       });
-      monetaryForm.reset({ mandiName: '', moneyReceived: 0, ratePerQuintal: 0 });
+      monetaryForm.reset({ mandiName: '', moneyReceived: 0, ratePerQuintal: 0, date: new Date() });
     }
   }, [editingEntry, physicalForm, monetaryForm])
 
@@ -248,6 +255,7 @@ export function PaddyLifted() {
       ratePerQuintal: values.ratePerQuintal,
       totalPaddyReceived: equivalentQuintal,
       mandiWeight: 0, 
+      date: values.date,
       entryType: 'monetary' as const,
     };
     
@@ -518,6 +526,7 @@ export function PaddyLifted() {
                       <Table>
                       <TableHeader>
                           <TableRow>
+                          <TableHead>Date</TableHead>
                           <TableHead>Mandi Name</TableHead>
                           <TableHead>Farmer Name</TableHead>
                           <TableHead>Paddy Received (Qtl)</TableHead>
@@ -528,10 +537,11 @@ export function PaddyLifted() {
                       </TableHeader>
                       <TableBody>
                           {physicalEntries.length === 0 && (
-                              <TableRow><TableCell colSpan={isAdmin ? 6 : 5} className="text-center">No physical paddy lifted yet.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={isAdmin ? 7 : 6} className="text-center">No physical paddy lifted yet.</TableCell></TableRow>
                           )}
                           {physicalEntries.map((item) => (
                           <TableRow key={item.id}>
+                              <TableCell>{format(item.date, 'dd MMM yyyy')}</TableCell>
                               <TableCell className="font-medium">{item.mandiName}</TableCell>
                               <TableCell>{item.farmerName}</TableCell>
                               <TableCell>{item.totalPaddyReceived.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
@@ -559,6 +569,7 @@ export function PaddyLifted() {
                       <Table>
                       <TableHeader>
                           <TableRow>
+                          <TableHead>Date</TableHead>
                           <TableHead>Mandi Name</TableHead>
                           <TableHead>Money Received (₹)</TableHead>
                           <TableHead>Rate per Quintal (₹)</TableHead>
@@ -568,10 +579,11 @@ export function PaddyLifted() {
                       </TableHeader>
                       <TableBody>
                           {monetaryEntries.length === 0 && (
-                              <TableRow><TableCell colSpan={5} className="text-center">No monetary entries recorded yet.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={6} className="text-center">No monetary entries recorded yet.</TableCell></TableRow>
                           )}
                           {monetaryEntries.map((item) => (
                           <TableRow key={item.id}>
+                              <TableCell>{format(item.date, 'dd MMM yyyy')}</TableCell>
                               <TableCell className="font-medium">{item.mandiName}</TableCell>
                               <TableCell>₹{item.moneyReceived?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
                               <TableCell>₹{item.ratePerQuintal?.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>

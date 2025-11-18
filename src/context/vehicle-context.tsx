@@ -1,7 +1,8 @@
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext, useEffect } from 'react';
+import { createContext, useState, useCallback, ReactNode, useContext, useEffect, useMemo } from 'react';
 import type { Vehicle, Payment, VehicleTrip } from '@/lib/types';
+import { useKmsYear } from '@/hooks/use-kms-year';
 
 interface VehicleContextType {
   vehicles: Vehicle[];
@@ -52,7 +53,7 @@ const calculateTotals = (rentType: Vehicle['rentType'], rentAmount: number, paym
     if (rentType === 'per_trip') {
         totalRent = trips.reduce((acc, trip) => acc + trip.tripCharge, 0);
     } else {
-        totalRent = rentAmount; // Simplified for now
+        totalRent = rentAmount; // This is a simplification. A real app would calculate monthly rent based on time.
     }
     const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
     const balance = totalRent - totalPaid;
@@ -82,6 +83,7 @@ const parseStoredData = (key: string, initialData: any[]) => {
 
 export function VehicleProvider({ children }: { children: ReactNode }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const { selectedKmsYear, getKmsYearForDate } = useKmsYear()!;
 
   useEffect(() => {
     setVehicles(parseStoredData('vehicles', initialVehicles));
@@ -93,6 +95,23 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
     }
   }, [vehicles]);
 
+  const filteredVehicles = useMemo(() => {
+      if (!selectedKmsYear) return [];
+      return vehicles.map(vehicle => {
+          const filteredTrips = vehicle.trips.filter(trip => getKmsYearForDate(trip.date) === selectedKmsYear);
+          const filteredPayments = vehicle.payments.filter(payment => getKmsYearForDate(payment.date) === selectedKmsYear);
+          const { totalRent, totalPaid, balance } = calculateTotals(vehicle.rentType, vehicle.rentAmount, filteredPayments, filteredTrips);
+
+          return {
+              ...vehicle,
+              trips: filteredTrips,
+              payments: filteredPayments,
+              totalRent,
+              totalPaid,
+              balance
+          };
+      }).filter(v => getKmsYearForDate(v.dateAdded) === selectedKmsYear || v.trips.length > 0 || v.payments.length > 0);
+  }, [vehicles, selectedKmsYear, getKmsYearForDate]);
 
   const addVehicle = useCallback((item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'trips' | 'totalRent' | 'totalPaid' | 'balance'>) => {
     let vehicleId = '';
@@ -133,8 +152,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
                 date: new Date(),
             };
             const updatedPayments = [...v.payments, newPayment];
-            const totals = calculateTotals(v.rentType, v.rentAmount, updatedPayments, v.trips);
-            return { ...v, payments: updatedPayments, ...totals };
+            return { ...v, payments: updatedPayments };
         }
         return v;
     }));
@@ -151,9 +169,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
                     date: new Date(),
                 };
                 const updatedTrips = [...v.trips, newTrip];
-                const totalRent = updatedTrips.reduce((acc, t) => acc + t.tripCharge, 0);
-                const balance = totalRent - v.totalPaid;
-                return { ...v, trips: updatedTrips, totalRent, balance };
+                return { ...v, trips: updatedTrips };
             }
             return v;
         });
@@ -164,8 +180,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
     setVehicles(prev => prev.map(v => {
         if (v.id === vehicleId) {
             const updatedTrips = v.trips.map(t => t.id === tripId ? { ...t, ...updatedTripData } : t);
-            const totals = calculateTotals(v.rentType, v.rentAmount, v.payments, updatedTrips);
-            return { ...v, trips: updatedTrips, ...totals };
+            return { ...v, trips: updatedTrips };
         }
         return v;
     }));
@@ -173,7 +188,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <VehicleContext.Provider value={{ vehicles, addVehicle, addRentPayment, addTrip, updateTrip }}>
+    <VehicleContext.Provider value={{ vehicles: filteredVehicles, addVehicle, addRentPayment, addTrip, updateTrip }}>
       {children}
     </VehicleContext.Provider>
   );

@@ -73,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     localStorage.removeItem('mandi-monitor-user');
     localStorage.removeItem('mandi-monitor-mill');
+    localStorage.removeItem('mandi-monitor-kms-year');
     router.push('/');
   }, [router]);
 

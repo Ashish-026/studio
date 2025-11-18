@@ -2,13 +2,14 @@
 
 import { createContext, useContext, ReactNode, useMemo, useState, useCallback, useEffect } from 'react';
 import type { StockItem, ProcessingResult, PrivatePurchase, Payment, PrivateSale, MandiProcessingResult } from '@/lib/types';
+import { useKmsYear } from '@/hooks/use-kms-year';
 
 interface StockContextType {
   privateStock: StockItem;
   totalStock: StockItem;
   processingHistory: ProcessingResult[];
   mandiProcessingHistory: MandiProcessingResult[];
-  transferredInStock: number;
+  transferredInStock: { date: Date, quantity: number }[];
   addProcessingResult: (result: Omit<ProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
   addMandiProcessing: (item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
   purchases: PrivatePurchase[];
@@ -161,7 +162,10 @@ const parseStoredValue = (key: string, initialValue: any) => {
     try {
         const stored = localStorage.getItem(key);
         if (!stored) return initialValue;
-        return JSON.parse(stored);
+        return JSON.parse(stored, (key, value) => {
+            if (key === 'date') return new Date(value);
+            return value;
+        });
     } catch (e) {
         console.error(`Failed to parse ${key} from localStorage`, e);
         return initialValue;
@@ -170,60 +174,53 @@ const parseStoredValue = (key: string, initialValue: any) => {
 
 
 export function StockProvider({ children }: { children: ReactNode }) {
+  const { selectedKmsYear, getKmsYearForDate } = useKmsYear()!;
+  
   const [purchases, setPurchases] = useState<PrivatePurchase[]>([]);
   const [sales, setSales] = useState<PrivateSale[]>([]);
   const [processingHistory, setProcessingHistory] = useState<ProcessingResult[]>([]);
   const [mandiProcessingHistory, setMandiProcessingHistory] = useState<MandiProcessingResult[]>([]);
-  const [transferredOutStock, setTransferredOutStock] = useState(0);
+  const [transferredInStock, setTransferredInStock] = useState<{ date: Date; quantity: number }[]>([]);
 
   useEffect(() => {
     setPurchases(parseStoredData('purchases', initialPurchases));
     setSales(parseStoredData('sales', initialSales));
     setProcessingHistory(parseStoredData('processingHistory', initialProcessingHistory));
     setMandiProcessingHistory(parseStoredData('mandiProcessingHistory', initialMandiProcessingHistory));
-    setTransferredOutStock(parseStoredValue('transferredOutStock', 0));
+    setTransferredInStock(parseStoredValue('transferredInStock', []));
   }, []);
 
-  useEffect(() => {
-    if (purchases.length > 0) localStorage.setItem('purchases', JSON.stringify(purchases));
-  }, [purchases]);
+  useEffect(() => { if (purchases.length > 0) localStorage.setItem('purchases', JSON.stringify(purchases)); }, [purchases]);
+  useEffect(() => { if (sales.length > 0) localStorage.setItem('sales', JSON.stringify(sales)); }, [sales]);
+  useEffect(() => { if (processingHistory.length > 0) localStorage.setItem('processingHistory', JSON.stringify(processingHistory)); }, [processingHistory]);
+  useEffect(() => { if (mandiProcessingHistory.length > 0) localStorage.setItem('mandiProcessingHistory', JSON.stringify(mandiProcessingHistory)); }, [mandiProcessingHistory]);
+  useEffect(() => { if (transferredInStock.length > 0) localStorage.setItem('transferredInStock', JSON.stringify(transferredInStock)); }, [transferredInStock]);
 
-  useEffect(() => {
-    if (sales.length > 0) localStorage.setItem('sales', JSON.stringify(sales));
-  }, [sales]);
-
-  useEffect(() => {
-    if (processingHistory.length > 0) localStorage.setItem('processingHistory', JSON.stringify(processingHistory));
-  }, [processingHistory]);
-
-  useEffect(() => {
-    if (mandiProcessingHistory.length > 0) localStorage.setItem('mandiProcessingHistory', JSON.stringify(mandiProcessingHistory));
-  }, [mandiProcessingHistory]);
-
-  useEffect(() => {
-    localStorage.setItem('transferredOutStock', JSON.stringify(transferredOutStock));
-  }, [transferredOutStock]);
+  const filteredPurchases = useMemo(() => purchases.filter(p => getKmsYearForDate(p.date) === selectedKmsYear), [purchases, selectedKmsYear, getKmsYearForDate]);
+  const filteredSales = useMemo(() => sales.filter(s => getKmsYearForDate(s.date) === selectedKmsYear), [sales, selectedKmsYear, getKmsYearForDate]);
+  const filteredProcessingHistory = useMemo(() => processingHistory.filter(p => getKmsYearForDate(p.date) === selectedKmsYear), [processingHistory, selectedKmsYear, getKmsYearForDate]);
+  const filteredMandiProcessingHistory = useMemo(() => mandiProcessingHistory.filter(mp => getKmsYearForDate(mp.date) === selectedKmsYear), [mandiProcessingHistory, selectedKmsYear, getKmsYearForDate]);
 
   const processedPaddyBySource = useMemo(() => {
-    return processingHistory.reduce((acc, item) => {
+    return filteredProcessingHistory.reduce((acc, item) => {
         if(item.type === 'paddy') {
             acc[item.source] = (acc[item.source] || 0) + item.paddyUsed;
         }
         return acc;
     }, { private: 0 });
-  }, [processingHistory]);
+  }, [filteredProcessingHistory]);
 
   const processedRiceBySource = useMemo(() => {
-    return processingHistory.reduce((acc, item) => {
+    return filteredProcessingHistory.reduce((acc, item) => {
         if(item.type === 'rice') {
             acc[item.source] = (acc[item.source] || 0) + (item.riceUsed || 0);
         }
         return acc;
     }, { private: 0 });
-  }, [processingHistory]);
+  }, [filteredProcessingHistory]);
 
   const processedYieldsBySource = useMemo(() => {
-    return processingHistory.reduce((acc, item) => {
+    return filteredProcessingHistory.reduce((acc, item) => {
         const source = item.source;
         if (!acc[source]) {
             acc[source] = { rice: 0, bran: 0, brokenRice: 0 };
@@ -235,14 +232,20 @@ export function StockProvider({ children }: { children: ReactNode }) {
     }, { 
         private: { rice: 0, bran: 0, brokenRice: 0 } 
     });
-  }, [processingHistory]);
+  }, [filteredProcessingHistory]);
+
+  const transferredOutStockForYear = useMemo(() => {
+      return transferredInStock
+        .filter(t => getKmsYearForDate(t.date) === selectedKmsYear)
+        .reduce((sum, t) => sum + t.quantity, 0);
+  }, [transferredInStock, selectedKmsYear, getKmsYearForDate])
 
   const privateStock = useMemo<StockItem>(() => {
-    const purchasedPaddy = purchases.filter(p => p.itemType === 'paddy').reduce((acc, p) => acc + p.quantity, 0);
-    const purchasedRice = purchases.filter(p => p.itemType === 'rice').reduce((acc, p) => acc + p.quantity, 0);
+    const purchasedPaddy = filteredPurchases.filter(p => p.itemType === 'paddy').reduce((acc, p) => acc + p.quantity, 0);
+    const purchasedRice = filteredPurchases.filter(p => p.itemType === 'rice').reduce((acc, p) => acc + p.quantity, 0);
 
-    const soldPaddy = sales.filter(s => s.source === 'private' && s.itemType === 'paddy').reduce((acc, s) => acc + s.quantity, 0);
-    const soldRice = sales.filter(s => s.source === 'private' && s.itemType === 'rice').reduce((acc, s) => acc + s.quantity, 0);
+    const soldPaddy = filteredSales.filter(s => s.source === 'private' && s.itemType === 'paddy').reduce((acc, s) => acc + s.quantity, 0);
+    const soldRice = filteredSales.filter(s => s.source === 'private' && s.itemType === 'rice').reduce((acc, s) => acc + s.quantity, 0);
 
     const paddyUsedForProcessing = processedPaddyBySource.private;
     const riceUsedForProcessing = processedRiceBySource.private;
@@ -250,15 +253,15 @@ export function StockProvider({ children }: { children: ReactNode }) {
 
     return {
       paddy: purchasedPaddy - paddyUsedForProcessing - soldPaddy,
-      rice: (purchasedRice + yields.rice) - riceUsedForProcessing - soldRice - transferredOutStock,
+      rice: (purchasedRice + yields.rice) - riceUsedForProcessing - soldRice - transferredOutStockForYear,
       bran: yields.bran,
       brokenRice: yields.brokenRice,
     };
-  }, [purchases, sales, processedPaddyBySource, processedRiceBySource, processedYieldsBySource, transferredOutStock]);
+  }, [filteredPurchases, filteredSales, processedPaddyBySource, processedRiceBySource, processedYieldsBySource, transferredOutStockForYear]);
   
   const totalStock = useMemo<StockItem>(() => {
-    const mandiBran = mandiProcessingHistory.reduce((acc, item) => acc + item.branYield, 0) || 0;
-    const mandiBrokenRice = mandiProcessingHistory.reduce((acc, item) => acc + item.brokenRiceYield, 0) || 0;
+    const mandiBran = filteredMandiProcessingHistory.reduce((acc, item) => acc + item.branYield, 0) || 0;
+    const mandiBrokenRice = filteredMandiProcessingHistory.reduce((acc, item) => acc + item.brokenRiceYield, 0) || 0;
     
     return {
       paddy: privateStock.paddy,
@@ -266,7 +269,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
       bran: privateStock.bran + mandiBran,
       brokenRice: privateStock.brokenRice + mandiBrokenRice,
     };
-  }, [privateStock, mandiProcessingHistory]);
+  }, [privateStock, filteredMandiProcessingHistory]);
 
   const addProcessingResult = useCallback((result: Omit<ProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => {
     const yieldPercentage = result.type === 'paddy' ? (result.riceYield / result.paddyUsed) * 100 : 0;
@@ -360,12 +363,27 @@ export function StockProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const transferRiceToMandi = useCallback((quantity: number) => {
-      setTransferredOutStock(prev => prev + quantity);
+      setTransferredInStock(prev => [...prev, { date: new Date(), quantity }]);
   }, []);
 
 
   return (
-    <StockContext.Provider value={{ privateStock, totalStock, processingHistory, mandiProcessingHistory, transferredInStock: transferredOutStock, addProcessingResult, addMandiProcessing, purchases, addPurchase, addPayment, sales, addSale, addSalePayment, transferRiceToMandi }}>
+    <StockContext.Provider value={{ 
+        privateStock, 
+        totalStock, 
+        processingHistory: filteredProcessingHistory, 
+        mandiProcessingHistory: allMandiProcessingHistory, // Note: mandi context filters this itself
+        transferredInStock, 
+        addProcessingResult, 
+        addMandiProcessing, 
+        purchases: filteredPurchases, 
+        addPurchase, 
+        addPayment, 
+        sales: filteredSales, 
+        addSale, 
+        addSalePayment, 
+        transferRiceToMandi 
+    }}>
       {children}
     </StockContext.Provider>
   );

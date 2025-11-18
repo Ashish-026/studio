@@ -3,6 +3,7 @@
 import { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
 import type { MandiProcessingResult, MandiStockRelease, TargetAllocation, PaddyLifted } from '@/lib/types';
 import { useStockData } from './stock-context';
+import { useKmsYear } from '@/hooks/use-kms-year';
 
 interface MandiContextType {
   targetAllocations: TargetAllocation[];
@@ -29,9 +30,9 @@ const initialTargets: TargetAllocation[] = [
 ];
 
 const initialPaddyLifted: PaddyLifted[] = [
-    { id: '1', mandiName: 'Bargarh Main', farmerName: 'Ramesh Patel', totalPaddyReceived: 120, mandiWeight: 118.5, entryType: 'physical', vehicleType: 'farmer' },
-    { id: '2', mandiName: 'Sambalpur Town', farmerName: 'Suresh Meher', totalPaddyReceived: 80, mandiWeight: 79.2, entryType: 'physical', vehicleType: 'own' },
-    { id: '3', mandiName: 'Bargarh Main', farmerName: 'Monetary Entry', moneyReceived: 220000, ratePerQuintal: 2200, totalPaddyReceived: 100, mandiWeight: 0, entryType: 'monetary' },
+    { id: '1', mandiName: 'Bargarh Main', farmerName: 'Ramesh Patel', totalPaddyReceived: 120, mandiWeight: 118.5, date: new Date(), entryType: 'physical', vehicleType: 'farmer' },
+    { id: '2', mandiName: 'Sambalpur Town', farmerName: 'Suresh Meher', totalPaddyReceived: 80, mandiWeight: 79.2, date: new Date(), entryType: 'physical', vehicleType: 'own' },
+    { id: '3', mandiName: 'Bargarh Main', farmerName: 'Monetary Entry', moneyReceived: 220000, ratePerQuintal: 2200, totalPaddyReceived: 100, mandiWeight: 0, date: new Date(), entryType: 'monetary' },
 ];
 
 const parseStoredData = (key: string, initialData: any[]) => {
@@ -57,7 +58,9 @@ const parseStoredData = (key: string, initialData: any[]) => {
 
 
 export function MandiProvider({ children }: { children: ReactNode }) {
-  const { addMandiProcessing, mandiProcessingHistory, transferredInStock } = useStockData();
+  const { addMandiProcessing: addMandiProcessingToStock, mandiProcessingHistory: allMandiProcessingHistory, transferredInStock } = useStockData();
+  const { selectedKmsYear, getKmsYearForDate } = useKmsYear()!;
+
 
   const [targetAllocations, setTargetAllocations] = useState<TargetAllocation[]>([]);
   const [paddyLiftedItems, setPaddyLiftedItems] = useState<PaddyLifted[]>([]);
@@ -81,18 +84,23 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     if (stockReleases.length > 0) localStorage.setItem('stockReleases', JSON.stringify(stockReleases));
   }, [stockReleases]);
 
+  const filteredTargetAllocations = useMemo(() => targetAllocations.filter(t => getKmsYearForDate(t.date) === selectedKmsYear), [targetAllocations, selectedKmsYear, getKmsYearForDate]);
+  const filteredPaddyLiftedItems = useMemo(() => paddyLiftedItems.filter(p => getKmsYearForDate(p.date) === selectedKmsYear), [paddyLiftedItems, selectedKmsYear, getKmsYearForDate]);
+  const filteredStockReleases = useMemo(() => stockReleases.filter(sr => getKmsYearForDate(sr.date) === selectedKmsYear), [stockReleases, selectedKmsYear, getKmsYearForDate]);
+  const filteredMandiProcessingHistory = useMemo(() => allMandiProcessingHistory.filter(mph => getKmsYearForDate(mph.date) === selectedKmsYear), [allMandiProcessingHistory, selectedKmsYear, getKmsYearForDate]);
 
   const totalRiceFromProcessing = useMemo(() => {
-    return mandiProcessingHistory.reduce((acc, item) => acc + item.riceYield, 0);
-  }, [mandiProcessingHistory]);
+    return filteredMandiProcessingHistory.reduce((acc, item) => acc + item.riceYield, 0);
+  }, [filteredMandiProcessingHistory]);
 
   const totalRiceSupplied = useMemo(() => {
-      return stockReleases.reduce((acc, item) => acc + item.quantity, 0);
-  }, [stockReleases]);
+      return filteredStockReleases.reduce((acc, item) => acc + item.quantity, 0);
+  }, [filteredStockReleases]);
 
   const availableRiceForSupply = useMemo(() => {
-    return totalRiceFromProcessing + transferredInStock - totalRiceSupplied;
-  }, [totalRiceFromProcessing, transferredInStock, totalRiceSupplied]);
+    const relevantTransferredStock = transferredInStock.filter(t => getKmsYearForDate(t.date) === selectedKmsYear).reduce((sum, t) => sum + t.quantity, 0);
+    return totalRiceFromProcessing + relevantTransferredStock - totalRiceSupplied;
+  }, [totalRiceFromProcessing, transferredInStock, totalRiceSupplied, selectedKmsYear, getKmsYearForDate]);
 
   const addTarget = useCallback((item: Omit<TargetAllocation, 'id'>) => {
     setTargetAllocations((prev) => [...prev, { ...item, id: new Date().toISOString() }]);
@@ -103,7 +111,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addPaddyLifted = useCallback((item: Omit<PaddyLifted, 'id'>) => {
-    const newEntry = { ...item, id: new Date().toISOString() };
+    const newEntry = { ...item, id: new Date().toISOString(), date: new Date() };
     setPaddyLiftedItems((prev) => [...prev, newEntry]);
     return newEntry;
   }, []);
@@ -126,7 +134,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, processingHistory: mandiProcessingHistory, stockReleases, addTarget, updateTarget, addPaddyLifted, updatePaddyLifted, addMandiProcessing, addStockRelease, availableRiceForSupply, totalRiceFromProcessing, updateStockRelease }}>
+    <MandiContext.Provider value={{ targetAllocations: filteredTargetAllocations, paddyLiftedItems: filteredPaddyLiftedItems, processingHistory: filteredMandiProcessingHistory, stockReleases: filteredStockReleases, addTarget, updateTarget, addPaddyLifted, updatePaddyLifted, addMandiProcessing: addMandiProcessingToStock, addStockRelease, availableRiceForSupply, totalRiceFromProcessing, updateStockRelease }}>
       {children}
     </MandiContext.Provider>
   );

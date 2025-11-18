@@ -19,6 +19,7 @@ export type TargetAllocation = {
 
 export type PaddyLifted = {
   id: string;
+  date: Date;
   mandiName: string;
   farmerName: string;
   totalPaddyReceived: number;
