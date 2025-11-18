@@ -212,13 +212,13 @@ export function PaddyLifted() {
 
   function onPhysicalSubmit(values: z.infer<typeof physicalFormSchema>) {
     const labourerIds = values.labourerIds.map(l => l.value).filter(Boolean);
-    const submissionValues = { ...values, labourerIds };
+    const submissionValues = { ...values, labourerIds, entryType: 'physical' as const };
 
     if (editingEntry) {
       updatePaddyLifted(editingEntry.id, { ...editingEntry, ...submissionValues });
       toast({ title: 'Success!', description: 'Paddy lifting record has been updated.' });
     } else {
-      addPaddyLifted({ ...submissionValues, entryType: 'physical' });
+      addPaddyLifted(submissionValues);
       toast({ title: 'Success!', description: 'Physical paddy lifting record has been added.' });
 
       if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
@@ -303,7 +303,7 @@ export function PaddyLifted() {
     return 'N/A';
   };
   
-  const handleCalculatorConfirm = (netQuintals: number) => {
+  const handleCalculatorConfirm = (netQuintals: number, ratePerQuintal: number) => {
     physicalForm.setValue('totalPaddyReceived', netQuintals);
     setCalculatorOpen(false);
   };
