@@ -85,7 +85,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   }, [stockReleases]);
 
   const filteredTargetAllocations = useMemo(() => targetAllocations.filter(t => getKmsYearForDate(t.date) === selectedKmsYear), [targetAllocations, selectedKmsYear, getKmsYearForDate]);
-  const filteredPaddyLiftedItems = useMemo(() => paddyLiftedItems.filter(p => getKmsYearForDate(p.date) === selectedKmsYear), [paddyLiftedItems, selectedKmsYear, getKmsYearForDate]);
+  const filteredPaddyLiftedItems = useMemo(() => paddyLiftedItems.filter(p => p.date && getKmsYearForDate(p.date) === selectedKmsYear), [paddyLiftedItems, selectedKmsYear, getKmsYearForDate]);
   const filteredStockReleases = useMemo(() => stockReleases.filter(sr => getKmsYearForDate(sr.date) === selectedKmsYear), [stockReleases, selectedKmsYear, getKmsYearForDate]);
   const filteredMandiProcessingHistory = useMemo(() => allMandiProcessingHistory.filter(mph => getKmsYearForDate(mph.date) === selectedKmsYear), [allMandiProcessingHistory, selectedKmsYear, getKmsYearForDate]);
 
@@ -111,7 +111,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addPaddyLifted = useCallback((item: Omit<PaddyLifted, 'id'>) => {
-    const newEntry = { ...item, id: new Date().toISOString(), date: new Date() };
+    const newEntry = { ...item, id: new Date().toISOString(), date: item.date || new Date() };
     setPaddyLiftedItems((prev) => [...prev, newEntry]);
     return newEntry;
   }, []);
