@@ -119,7 +119,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addPaddyLifted = useCallback((item: Omit<PaddyLifted, 'id'>) => {
-    const newEntry = { ...item, id: new Date().toISOString(), date: item.date || new Date(), entryType: item.entryType || 'physical' } as PaddyLifted;
+    const newEntry = { ...item, id: new Date().toISOString(), date: item.date || new Date() } as PaddyLifted;
     setPaddyLiftedItems((prev) => [...prev, newEntry]);
     return newEntry;
   }, []);
