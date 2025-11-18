@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -42,7 +43,7 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
     const summary = useMemo(() => {
         const totalBags = watchedBags.length;
         const grossWeightKg = watchedBags.reduce((acc, bag) => acc + (parseFloat(bag.weight as any) || 0), 0);
-        const deductionKg = watchedDeduction || 0;
+        const deductionKg = parseFloat(watchedDeduction as any) || 0;
         const netWeightKg = grossWeightKg - deductionKg;
         const netQuintals = netWeightKg / 100;
 
