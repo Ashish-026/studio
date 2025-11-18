@@ -8,7 +8,7 @@ import * as z from 'zod';
 import { useMandiData } from '@/context/mandi-context';
 import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
-import { PlusCircle, DollarSign, Download, Edit, Car, Users, Calculator } from 'lucide-react';
+import { PlusCircle, DollarSign, Download, Edit, Car, Users, Calculator, Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +24,9 @@ import type { PaddyLifted as PaddyLiftedType } from '@/lib/types';
 import { Label } from '../ui/label';
 import { format } from 'date-fns';
 import { BagWeightCalculator } from './bag-weight-calculator';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Calendar } from '../ui/calendar';
+import { cn } from '@/lib/utils';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
@@ -385,6 +388,16 @@ export function PaddyLifted() {
                       />
                       <FormField control={physicalForm.control} name="farmerName" render={({ field }) => (
                         <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Patel" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={physicalForm.control} name="date" render={({ field }) => (
+                        <FormItem className="flex flex-col"><FormLabel>Date</FormLabel><Popover><PopoverTrigger asChild><FormControl>
+                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                        </FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        </PopoverContent></Popover><FormMessage /></FormItem>
                       )} />
                        <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (
                         <FormItem>
