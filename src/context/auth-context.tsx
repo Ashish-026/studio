@@ -36,17 +36,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('mandi-monitor-user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (error) {
-      console.error('Failed to parse user from localStorage', error);
-      localStorage.removeItem('mandi-monitor-user');
-    } finally {
-      setLoading(false);
-    }
+    // We no longer check localStorage for a user, ensuring the app always starts logged out.
+    setLoading(false);
   }, []);
 
   const login = useCallback((email: string, password?: string) => {
