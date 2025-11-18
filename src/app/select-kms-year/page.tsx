@@ -1,19 +1,24 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from 'lucide-react';
 import { useKmsYear } from '@/hooks/use-kms-year';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function SelectKmsYearPage() {
   const { availableKmsYears, selectKmsYear, loading } = useKmsYear();
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleSelectYear = (year: string) => {
-    selectKmsYear(year);
-    router.push('/dashboard');
+  const handleSelectYear = () => {
+    if (selectedYear) {
+      selectKmsYear(selectedYear);
+      router.push('/dashboard');
+    }
   };
 
   if (loading) {
@@ -42,20 +47,30 @@ export default function SelectKmsYearPage() {
           <CardTitle className="text-2xl font-headline">Select KMS Year</CardTitle>
           <CardDescription>Choose the Kharif Marketing Season to work with.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col space-y-4">
-            {availableKmsYears.map((year: string) => (
-              <Button
-                key={year}
-                variant="outline"
+        <CardContent className="space-y-6">
+            <Select onValueChange={setSelectedYear} value={selectedYear || ''}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a marketing season..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Available KMS Years</SelectLabel>
+                  {availableKmsYears.map((year: string) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Button
                 size="lg"
-                className="w-full justify-center text-base"
-                onClick={() => handleSelectYear(year)}
-              >
-                {year}
-              </Button>
-            ))}
-          </div>
+                className="w-full"
+                onClick={handleSelectYear}
+                disabled={!selectedYear}
+            >
+                Continue
+            </Button>
         </CardContent>
       </Card>
     </div>
