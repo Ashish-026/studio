@@ -300,9 +300,9 @@ export function PaddyLifted() {
     return 'N/A';
   };
   
-  const handleCalculatorConfirm = (values: { netQuintals: number; netWeightKg: number }) => {
-    physicalForm.setValue('totalPaddyReceived', values.netQuintals);
-    physicalForm.setValue('mandiWeight', values.netQuintals); // Auto-populate mandi weight
+  const handleCalculatorConfirm = (values: { grossQuintals: number; netQuintals: number; netWeightKg: number }) => {
+    physicalForm.setValue('totalPaddyReceived', values.grossQuintals);
+    physicalForm.setValue('mandiWeight', values.netQuintals);
     setCalculatorOpen(false);
   };
 

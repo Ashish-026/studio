@@ -25,7 +25,7 @@ const nonUniformBagSchema = z.object({
 });
 
 interface BagWeightCalculatorProps {
-    onConfirm: (values: { netQuintals: number; netWeightKg: number }) => void;
+    onConfirm: (values: { grossQuintals: number; netQuintals: number; netWeightKg: number }) => void;
     onCancel: () => void;
 }
 
@@ -65,18 +65,20 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
         }
 
         const netWeightKg = grossWeightKg - deductionKg;
+        const grossQuintals = grossWeightKg > 0 ? grossWeightKg / 100 : 0;
         const netQuintals = netWeightKg > 0 ? netWeightKg / 100 : 0;
         
         return {
             grossWeightKg,
             deductionKg,
             netWeightKg,
+            grossQuintals,
             netQuintals,
         };
     }, [activeTab, watchedUniformValues, watchedNonUniformValues]);
     
     function handleConfirm() {
-        onConfirm({ netQuintals: summary.netQuintals, netWeightKg: summary.netWeightKg });
+        onConfirm({ grossQuintals: summary.grossQuintals, netQuintals: summary.netQuintals, netWeightKg: summary.netWeightKg });
     }
 
     return (
