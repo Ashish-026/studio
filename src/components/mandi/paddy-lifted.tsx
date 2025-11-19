@@ -519,32 +519,44 @@ export function PaddyLifted() {
                   </CardHeader>
                   <CardContent>
                   <Form {...monetaryForm}>
-                      <form onSubmit={monetaryForm.handleSubmit(onMonetarySubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                      <FormField
-                          control={monetaryForm.control}
-                          name="mandiName"
-                          render={({ field }) => (
-                          <FormItem>
-                              <FormLabel>Mandi Name</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                  <SelectTrigger><SelectValue placeholder="Select a mandi" /></SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                  {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem> ))}
-                              </SelectContent>
-                              </Select>
-                              <FormMessage />
-                          </FormItem>
-                          )}
-                      />
-                      <FormField control={monetaryForm.control} name="moneyReceived" render={({ field }) => (
-                          <FormItem><FormLabel>Money Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="250000" {...field} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                      <FormField control={monetaryForm.control} name="ratePerQuintal" render={({ field }) => (
-                          <FormItem><FormLabel>Rate per Quintal (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="2200" {...field} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                      <Button type="submit" className="w-full md:w-auto md:col-span-full bg-accent hover:bg-accent/90">Add Monetary Entry</Button>
+                      <form onSubmit={monetaryForm.handleSubmit(onMonetarySubmit)} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            <FormField
+                                control={monetaryForm.control}
+                                name="mandiName"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Mandi Name</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger><SelectValue placeholder="Select a mandi" /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem> ))}
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField control={monetaryForm.control} name="moneyReceived" render={({ field }) => (
+                                <FormItem><FormLabel>Money Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="250000" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={monetaryForm.control} name="ratePerQuintal" render={({ field }) => (
+                                <FormItem><FormLabel>Rate per Quintal (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="2200" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                             <FormField control={monetaryForm.control} name="date" render={({ field }) => (
+                                <FormItem className="flex flex-col"><FormLabel>Date</FormLabel><Popover><PopoverTrigger asChild><FormControl>
+                                    <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                </FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                </PopoverContent></Popover><FormMessage /></FormItem>
+                             )} />
+                        </div>
+                        <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90">Add Monetary Entry</Button>
                       </form>
                   </Form>
                   </CardContent>

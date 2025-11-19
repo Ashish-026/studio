@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
@@ -24,15 +25,15 @@ interface MandiContextType {
 const MandiContext = createContext<MandiContextType | null>(null);
 
 const initialTargets: TargetAllocation[] = [
-    { id: '1', mandiName: 'Bargarh Main', date: new Date('2024-05-10'), target: 5000 },
-    { id: '2', mandiName: 'Sambalpur Town', date: new Date('2024-05-12'), target: 7500 },
-    { id: '3', mandiName: 'Bargarh Main', date: new Date('2024-05-15'), target: 2500 },
+    { id: '1', mandiName: 'Bargarh Main', date: new Date('2023-11-10'), target: 5000 },
+    { id: '2', mandiName: 'Sambalpur Town', date: new Date('2023-11-12'), target: 7500 },
+    { id: '3', mandiName: 'Bargarh Main', date: new Date('2023-11-15'), target: 2500 },
 ];
 
 const initialPaddyLifted: PaddyLifted[] = [
-    { id: '1', mandiName: 'Bargarh Main', farmerName: 'Ramesh Patel', totalPaddyReceived: 120, mandiWeight: 118.5, date: new Date(), entryType: 'physical', vehicleType: 'farmer' },
-    { id: '2', mandiName: 'Sambalpur Town', farmerName: 'Suresh Meher', totalPaddyReceived: 80, mandiWeight: 79.2, date: new Date(), entryType: 'physical', vehicleType: 'own' },
-    { id: '3', mandiName: 'Bargarh Main', farmerName: 'Monetary Entry', moneyReceived: 220000, ratePerQuintal: 2200, totalPaddyReceived: 100, mandiWeight: 0, date: new Date(), entryType: 'monetary' },
+    { id: '1', mandiName: 'Bargarh Main', farmerName: 'Ramesh Patel', totalPaddyReceived: 120, mandiWeight: 118.5, date: new Date('2023-11-20'), entryType: 'physical', vehicleType: 'farmer' },
+    { id: '2', mandiName: 'Sambalpur Town', farmerName: 'Suresh Meher', totalPaddyReceived: 80, mandiWeight: 79.2, date: new Date('2023-11-21'), entryType: 'physical', vehicleType: 'own' },
+    { id: '3', mandiName: 'Bargarh Main', farmerName: 'Monetary Entry', moneyReceived: 220000, ratePerQuintal: 2200, totalPaddyReceived: 100, mandiWeight: 0, date: new Date('2023-11-22'), entryType: 'monetary' },
 ];
 
 const parseStoredData = (key: string, initialData: any[]) => {
@@ -65,32 +66,24 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   const [targetAllocations, setTargetAllocations] = useState<TargetAllocation[]>([]);
   const [paddyLiftedItems, setPaddyLiftedItems] = useState<PaddyLifted[]>([]);
   const [stockReleases, setStockReleases] = useState<MandiStockRelease[]>([]);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     setTargetAllocations(parseStoredData('targetAllocations', initialTargets));
     setPaddyLiftedItems(parseStoredData('paddyLiftedItems', initialPaddyLifted));
     setStockReleases(parseStoredData('stockReleases', []));
-    setIsInitialLoad(false);
   }, []);
 
   useEffect(() => {
-    if (!isInitialLoad) {
-        localStorage.setItem('targetAllocations', JSON.stringify(targetAllocations));
-    }
-  }, [targetAllocations, isInitialLoad]);
+    localStorage.setItem('targetAllocations', JSON.stringify(targetAllocations));
+  }, [targetAllocations]);
 
   useEffect(() => {
-    if (!isInitialLoad) {
-        localStorage.setItem('paddyLiftedItems', JSON.stringify(paddyLiftedItems));
-    }
-  }, [paddyLiftedItems, isInitialLoad]);
+    localStorage.setItem('paddyLiftedItems', JSON.stringify(paddyLiftedItems));
+  }, [paddyLiftedItems]);
   
   useEffect(() => {
-    if (!isInitialLoad) {
-        localStorage.setItem('stockReleases', JSON.stringify(stockReleases));
-    }
-  }, [stockReleases, isInitialLoad]);
+    localStorage.setItem('stockReleases', JSON.stringify(stockReleases));
+  }, [stockReleases]);
 
   const filteredTargetAllocations = useMemo(() => targetAllocations.filter(t => getKmsYearForDate(t.date) === selectedKmsYear), [targetAllocations, selectedKmsYear, getKmsYearForDate]);
   const filteredPaddyLiftedItems = useMemo(() => paddyLiftedItems.filter(p => p.date && getKmsYearForDate(p.date) === selectedKmsYear), [paddyLiftedItems, selectedKmsYear, getKmsYearForDate]);
@@ -119,7 +112,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addPaddyLifted = useCallback((item: Omit<PaddyLifted, 'id'>) => {
-    const newEntry = { ...item, id: new Date().toISOString(), date: item.date || new Date() } as PaddyLifted;
+    const newEntry = { ...item, id: new Date().toISOString() } as PaddyLifted;
     setPaddyLiftedItems((prev) => [...prev, newEntry]);
     return newEntry;
   }, []);
