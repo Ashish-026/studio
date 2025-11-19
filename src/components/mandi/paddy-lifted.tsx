@@ -300,8 +300,9 @@ export function PaddyLifted() {
     return 'N/A';
   };
   
-  const handleCalculatorConfirm = (netQuintals: number) => {
-    physicalForm.setValue('totalPaddyReceived', netQuintals);
+  const handleCalculatorConfirm = (values: { netQuintals: number; netWeightKg: number }) => {
+    physicalForm.setValue('totalPaddyReceived', values.netQuintals);
+    physicalForm.setValue('mandiWeight', values.netQuintals); // Auto-populate mandi weight
     setCalculatorOpen(false);
   };
 
