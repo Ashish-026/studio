@@ -86,10 +86,7 @@ export function PaddyLifted() {
   }, [targetAllocations]);
 
   const filteredItems = useMemo(() => {
-    if (selectedMandi === 'All') {
-      return paddyLiftedItems;
-    }
-    return paddyLiftedItems.filter(item => item.mandiName === selectedMandi);
+    return paddyLiftedItems.filter(item => selectedMandi === 'All' || item.mandiName === selectedMandi);
   }, [paddyLiftedItems, selectedMandi]);
   
   const physicalEntries = useMemo(() => 
@@ -303,7 +300,7 @@ export function PaddyLifted() {
     return 'N/A';
   };
   
-  const handleCalculatorConfirm = (netQuintals: number, ratePerQuintal: number) => {
+  const handleCalculatorConfirm = (netQuintals: number) => {
     physicalForm.setValue('totalPaddyReceived', netQuintals);
     setCalculatorOpen(false);
   };

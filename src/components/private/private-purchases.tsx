@@ -301,9 +301,8 @@ export function PrivatePurchases() {
     downloadPdf(`printable-purchases-${farmerId}`, `purchase-summary-${farmerId}`);
   }
   
-  const handleCalculatorConfirm = (netQuintals: number, ratePerQuintal: number) => {
+  const handleCalculatorConfirm = (netQuintals: number) => {
     purchaseForm.setValue('quantity', netQuintals);
-    purchaseForm.setValue('rate', ratePerQuintal);
     setCalculatorOpen(false);
   };
 
