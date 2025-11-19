@@ -57,7 +57,7 @@ export function TargetAllotment() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { mandiName: '', target: 0 },
+    defaultValues: { mandiName: '', target: 0, date: new Date() },
   });
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export function TargetAllotment() {
         target: editingTarget.target,
       });
     } else {
-      form.reset({ mandiName: '', target: 0, date: undefined });
+      form.reset({ mandiName: '', target: 0, date: new Date() });
     }
   }, [editingTarget, form]);
 

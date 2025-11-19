@@ -532,7 +532,7 @@ export function PaddyLifted() {
                                         <SelectTrigger><SelectValue placeholder="Select a mandi" /></SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem> ))}
+                                        {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem>))}
                                     </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -699,7 +699,7 @@ export function PaddyLifted() {
                                     <SelectTrigger><SelectValue placeholder="Select a mandi" /></SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                    {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem> ))}
+                                    {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem>))}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
