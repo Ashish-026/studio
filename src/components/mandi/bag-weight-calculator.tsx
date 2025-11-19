@@ -61,7 +61,7 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
         } else {
             const { bags, deduction } = watchedNonUniformValues;
             grossWeightKg = (bags || []).reduce((acc, bag) => acc + (parseFloat(String(bag.weight)) || 0), 0);
-            deductionKg = parseFloat(String(dedक्शन || 0));
+            deductionKg = parseFloat(String(deduction || 0));
         }
 
         const netWeightKg = grossWeightKg - deductionKg;
