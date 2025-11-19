@@ -4,7 +4,6 @@
 import { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
 import type { MandiProcessingResult, MandiStockRelease, TargetAllocation, PaddyLifted } from '@/lib/types';
 import { useStockData } from './stock-context';
-import { useKmsYear } from '@/hooks/use-kms-year';
 
 interface MandiContextType {
   targetAllocations: TargetAllocation[];
@@ -59,8 +58,7 @@ const parseStoredData = (key: string, initialData: any[]) => {
 
 
 export function MandiProvider({ children }: { children: ReactNode }) {
-  const { addMandiProcessing: addMandiProcessingToStock, mandiProcessingHistory: allMandiProcessingHistory, transferredInStock } = useStockData();
-  const { selectedKmsYear, getKmsYearForDate } = useKmsYear()!;
+  const { addMandiProcessing: addMandiProcessingToStock, mandiProcessingHistory, transferredInStock } = useStockData();
 
 
   const [targetAllocations, setTargetAllocations] = useState<TargetAllocation[]>([]);
@@ -85,23 +83,21 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('stockReleases', JSON.stringify(stockReleases));
   }, [stockReleases]);
 
-  const filteredTargetAllocations = useMemo(() => targetAllocations.filter(t => getKmsYearForDate(t.date) === selectedKmsYear), [targetAllocations, selectedKmsYear, getKmsYearForDate]);
-  const filteredPaddyLiftedItems = useMemo(() => paddyLiftedItems.filter(p => p.date && getKmsYearForDate(p.date) === selectedKmsYear), [paddyLiftedItems, selectedKmsYear, getKmsYearForDate]);
-  const filteredStockReleases = useMemo(() => stockReleases.filter(sr => getKmsYearForDate(sr.date) === selectedKmsYear), [stockReleases, selectedKmsYear, getKmsYearForDate]);
-  const filteredMandiProcessingHistory = useMemo(() => allMandiProcessingHistory.filter(mph => getKmsYearForDate(mph.date) === selectedKmsYear), [allMandiProcessingHistory, selectedKmsYear, getKmsYearForDate]);
-
   const totalRiceFromProcessing = useMemo(() => {
-    return filteredMandiProcessingHistory.reduce((acc, item) => acc + item.riceYield, 0);
-  }, [filteredMandiProcessingHistory]);
+    return mandiProcessingHistory.reduce((acc, item) => acc + item.riceYield, 0);
+  }, [mandiProcessingHistory]);
 
   const totalRiceSupplied = useMemo(() => {
-      return filteredStockReleases.reduce((acc, item) => acc + item.quantity, 0);
-  }, [filteredStockReleases]);
+      return stockReleases.reduce((acc, item) => acc + item.quantity, 0);
+  }, [stockReleases]);
+  
+  const totalTransferredInStock = useMemo(() => {
+      return transferredInStock.reduce((sum, t) => sum + t.quantity, 0);
+  }, [transferredInStock]);
 
   const availableRiceForSupply = useMemo(() => {
-    const relevantTransferredStock = transferredInStock.filter(t => getKmsYearForDate(t.date) === selectedKmsYear).reduce((sum, t) => sum + t.quantity, 0);
-    return totalRiceFromProcessing + relevantTransferredStock - totalRiceSupplied;
-  }, [totalRiceFromProcessing, transferredInStock, totalRiceSupplied, selectedKmsYear, getKmsYearForDate]);
+    return totalRiceFromProcessing + totalTransferredInStock - totalRiceSupplied;
+  }, [totalRiceFromProcessing, totalTransferredInStock, totalRiceSupplied]);
 
   const addTarget = useCallback((item: Omit<TargetAllocation, 'id'>) => {
     setTargetAllocations((prev) => [...prev, { ...item, id: new Date().toISOString() }]);
@@ -135,7 +131,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <MandiContext.Provider value={{ targetAllocations: filteredTargetAllocations, paddyLiftedItems: filteredPaddyLiftedItems, processingHistory: filteredMandiProcessingHistory, stockReleases: filteredStockReleases, addTarget, updateTarget, addPaddyLifted, updatePaddyLifted, addMandiProcessing: addMandiProcessingToStock, addStockRelease, availableRiceForSupply, totalRiceFromProcessing, updateStockRelease }}>
+    <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, processingHistory: mandiProcessingHistory, stockReleases, addTarget, updateTarget, addPaddyLifted, updatePaddyLifted, addMandiProcessing: addMandiProcessingToStock, addStockRelease, availableRiceForSupply, totalRiceFromProcessing, updateStockRelease }}>
       {children}
     </MandiContext.Provider>
   );

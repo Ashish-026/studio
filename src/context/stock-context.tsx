@@ -1,8 +1,8 @@
+
 'use client';
 
 import { createContext, useContext, ReactNode, useMemo, useState, useCallback, useEffect } from 'react';
 import type { StockItem, ProcessingResult, PrivatePurchase, Payment, PrivateSale, MandiProcessingResult } from '@/lib/types';
-import { useKmsYear } from '@/hooks/use-kms-year';
 
 interface StockContextType {
   privateStock: StockItem;
@@ -174,7 +174,6 @@ const parseStoredValue = (key: string, initialValue: any) => {
 
 
 export function StockProvider({ children }: { children: ReactNode }) {
-  const { selectedKmsYear, getKmsYearForDate } = useKmsYear()!;
   
   const [purchases, setPurchases] = useState<PrivatePurchase[]>([]);
   const [sales, setSales] = useState<PrivateSale[]>([]);
@@ -196,31 +195,26 @@ export function StockProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if (mandiProcessingHistory.length > 0) localStorage.setItem('mandiProcessingHistory', JSON.stringify(mandiProcessingHistory)); }, [mandiProcessingHistory]);
   useEffect(() => { if (transferredInStock.length > 0) localStorage.setItem('transferredInStock', JSON.stringify(transferredInStock)); }, [transferredInStock]);
 
-  const filteredPurchases = useMemo(() => purchases.filter(p => getKmsYearForDate(p.date) === selectedKmsYear), [purchases, selectedKmsYear, getKmsYearForDate]);
-  const filteredSales = useMemo(() => sales.filter(s => getKmsYearForDate(s.date) === selectedKmsYear), [sales, selectedKmsYear, getKmsYearForDate]);
-  const filteredProcessingHistory = useMemo(() => processingHistory.filter(p => getKmsYearForDate(p.date) === selectedKmsYear), [processingHistory, selectedKmsYear, getKmsYearForDate]);
-  const filteredMandiProcessingHistory = useMemo(() => mandiProcessingHistory.filter(mp => getKmsYearForDate(mp.date) === selectedKmsYear), [mandiProcessingHistory, selectedKmsYear, getKmsYearForDate]);
-
   const processedPaddyBySource = useMemo(() => {
-    return filteredProcessingHistory.reduce((acc, item) => {
+    return processingHistory.reduce((acc, item) => {
         if(item.type === 'paddy') {
             acc[item.source] = (acc[item.source] || 0) + item.paddyUsed;
         }
         return acc;
     }, { private: 0 });
-  }, [filteredProcessingHistory]);
+  }, [processingHistory]);
 
   const processedRiceBySource = useMemo(() => {
-    return filteredProcessingHistory.reduce((acc, item) => {
+    return processingHistory.reduce((acc, item) => {
         if(item.type === 'rice') {
             acc[item.source] = (acc[item.source] || 0) + (item.riceUsed || 0);
         }
         return acc;
     }, { private: 0 });
-  }, [filteredProcessingHistory]);
+  }, [processingHistory]);
 
   const processedYieldsBySource = useMemo(() => {
-    return filteredProcessingHistory.reduce((acc, item) => {
+    return processingHistory.reduce((acc, item) => {
         const source = item.source;
         if (!acc[source]) {
             acc[source] = { rice: 0, bran: 0, brokenRice: 0 };
@@ -232,20 +226,18 @@ export function StockProvider({ children }: { children: ReactNode }) {
     }, { 
         private: { rice: 0, bran: 0, brokenRice: 0 } 
     });
-  }, [filteredProcessingHistory]);
+  }, [processingHistory]);
 
-  const transferredOutStockForYear = useMemo(() => {
-      return transferredInStock
-        .filter(t => getKmsYearForDate(t.date) === selectedKmsYear)
-        .reduce((sum, t) => sum + t.quantity, 0);
-  }, [transferredInStock, selectedKmsYear, getKmsYearForDate])
+  const transferredOutStock = useMemo(() => {
+      return transferredInStock.reduce((sum, t) => sum + t.quantity, 0);
+  }, [transferredInStock])
 
   const privateStock = useMemo<StockItem>(() => {
-    const purchasedPaddy = filteredPurchases.filter(p => p.itemType === 'paddy').reduce((acc, p) => acc + p.quantity, 0);
-    const purchasedRice = filteredPurchases.filter(p => p.itemType === 'rice').reduce((acc, p) => acc + p.quantity, 0);
+    const purchasedPaddy = purchases.filter(p => p.itemType === 'paddy').reduce((acc, p) => acc + p.quantity, 0);
+    const purchasedRice = purchases.filter(p => p.itemType === 'rice').reduce((acc, p) => acc + p.quantity, 0);
 
-    const soldPaddy = filteredSales.filter(s => s.source === 'private' && s.itemType === 'paddy').reduce((acc, s) => acc + s.quantity, 0);
-    const soldRice = filteredSales.filter(s => s.source === 'private' && s.itemType === 'rice').reduce((acc, s) => acc + s.quantity, 0);
+    const soldPaddy = sales.filter(s => s.source === 'private' && s.itemType === 'paddy').reduce((acc, s) => acc + s.quantity, 0);
+    const soldRice = sales.filter(s => s.source === 'private' && s.itemType === 'rice').reduce((acc, s) => acc + s.quantity, 0);
 
     const paddyUsedForProcessing = processedPaddyBySource.private;
     const riceUsedForProcessing = processedRiceBySource.private;
@@ -253,15 +245,15 @@ export function StockProvider({ children }: { children: ReactNode }) {
 
     return {
       paddy: purchasedPaddy - paddyUsedForProcessing - soldPaddy,
-      rice: (purchasedRice + yields.rice) - riceUsedForProcessing - soldRice - transferredOutStockForYear,
+      rice: (purchasedRice + yields.rice) - riceUsedForProcessing - soldRice - transferredOutStock,
       bran: yields.bran,
       brokenRice: yields.brokenRice,
     };
-  }, [filteredPurchases, filteredSales, processedPaddyBySource, processedRiceBySource, processedYieldsBySource, transferredOutStockForYear]);
+  }, [purchases, sales, processedPaddyBySource, processedRiceBySource, processedYieldsBySource, transferredOutStock]);
   
   const totalStock = useMemo<StockItem>(() => {
-    const mandiBran = filteredMandiProcessingHistory.reduce((acc, item) => acc + item.branYield, 0) || 0;
-    const mandiBrokenRice = filteredMandiProcessingHistory.reduce((acc, item) => acc + item.brokenRiceYield, 0) || 0;
+    const mandiBran = mandiProcessingHistory.reduce((acc, item) => acc + item.branYield, 0) || 0;
+    const mandiBrokenRice = mandiProcessingHistory.reduce((acc, item) => acc + item.brokenRiceYield, 0) || 0;
     
     return {
       paddy: privateStock.paddy,
@@ -269,7 +261,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
       bran: privateStock.bran + mandiBran,
       brokenRice: privateStock.brokenRice + mandiBrokenRice,
     };
-  }, [privateStock, filteredMandiProcessingHistory]);
+  }, [privateStock, mandiProcessingHistory]);
 
   const addProcessingResult = useCallback((result: Omit<ProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => {
     const yieldPercentage = result.type === 'paddy' ? (result.riceYield / result.paddyUsed) * 100 : 0;
@@ -371,15 +363,15 @@ export function StockProvider({ children }: { children: ReactNode }) {
     <StockContext.Provider value={{ 
         privateStock, 
         totalStock, 
-        processingHistory: filteredProcessingHistory, 
-        mandiProcessingHistory: mandiProcessingHistory, // Note: mandi context filters this itself
+        processingHistory, 
+        mandiProcessingHistory,
         transferredInStock, 
         addProcessingResult, 
         addMandiProcessing, 
-        purchases: filteredPurchases, 
+        purchases, 
         addPurchase, 
         addPayment, 
-        sales: filteredSales, 
+        sales, 
         addSale, 
         addSalePayment, 
         transferRiceToMandi 
