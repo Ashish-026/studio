@@ -76,7 +76,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const storedLabourers = parseStoredData('labourers', initialLabourers);
-    const updatedLabourers = storedLabourers.map((l: Labourer) => {
+    const updatedLabourers = (storedLabourers || []).map((l: Labourer) => {
         const { totalWages, totalPaid, balance } = calculateTotals(l.workEntries, l.payments);
         return { ...l, totalWages, totalPaid, balance };
     });
@@ -84,14 +84,12 @@ export function LabourProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (labourers.length > 0) {
-      localStorage.setItem('labourers', JSON.stringify(labourers));
-    }
+    localStorage.setItem('labourers', JSON.stringify(labourers));
   }, [labourers]);
 
   const addLabourer = useCallback((labourerName: string) => {
     setLabourers(prev => {
-        const existingLabourer = prev.find(l => l.name === labourerName);
+        const existingLabourer = (prev || []).find(l => l.name === labourerName);
         if (existingLabourer) {
             return prev;
         }
@@ -104,7 +102,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
             totalPaid: 0,
             balance: 0,
         };
-        return [...prev, newLabourer];
+        return [...(prev || []), newLabourer];
     });
   }, []);
 
@@ -124,7 +122,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
     };
 
     setLabourers(prev => {
-        return prev.map(l => {
+        return (prev || []).map(l => {
             if (l.id === labourerId) {
                 const updatedWorkEntries = [...l.workEntries, newWorkEntry];
                 const { totalWages, totalPaid, balance } = calculateTotals(updatedWorkEntries, l.payments);
@@ -142,7 +140,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
     const ratePerItem = totalCharge / quantity;
 
     setLabourers(prev => {
-      return prev.map(l => {
+      return (prev || []).map(l => {
         if (labourerIds.includes(l.id)) {
           const newWorkEntry: LabourWorkEntry = {
             id: new Date().toISOString() + `-${l.id}`,
@@ -165,7 +163,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
 
 
   const addPayment = useCallback((labourerId: string, amount: number) => {
-    setLabourers(prev => prev.map(l => {
+    setLabourers(prev => (prev || []).map(l => {
         if(l.id === labourerId) {
             const newPayment: Payment = {
                 id: new Date().toISOString() + '-p',

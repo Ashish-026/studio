@@ -216,17 +216,19 @@ export function PrivatePurchases() {
 
   const farmerAggregates = useMemo(() => {
     const farmers: Record<string, { id: string, name: string, purchases: any[], totalBalance: number }> = {};
-    purchases.forEach(p => {
-      if (!farmers[p.farmerName]) {
-        // Use a consistent ID for the farmer group based on the name
-        farmers[p.farmerName] = { id: p.farmerName.replace(/\s+/g, '-'), name: p.farmerName, purchases: [], totalBalance: 0 };
-      }
-      farmers[p.farmerName].purchases.push(p);
-    });
+    if (purchases) {
+      purchases.forEach(p => {
+        if (!farmers[p.farmerName]) {
+          // Use a consistent ID for the farmer group based on the name
+          farmers[p.farmerName] = { id: p.farmerName.replace(/\s+/g, '-'), name: p.farmerName, purchases: [], totalBalance: 0 };
+        }
+        farmers[p.farmerName].purchases.push(p);
+      });
 
-    Object.values(farmers).forEach(farmer => {
-        farmer.totalBalance = farmer.purchases.reduce((acc, purchase) => acc + purchase.balance, 0);
-    });
+      Object.values(farmers).forEach(farmer => {
+          farmer.totalBalance = farmer.purchases.reduce((acc, purchase) => acc + purchase.balance, 0);
+      });
+    }
 
     return Object.values(farmers);
   }, [purchases]);
@@ -301,8 +303,8 @@ export function PrivatePurchases() {
     downloadPdf(`printable-purchases-${farmerId}`, `purchase-summary-${farmerId}`);
   }
   
-  const handleCalculatorConfirm = (netQuintals: number) => {
-    purchaseForm.setValue('quantity', netQuintals);
+  const handleCalculatorConfirm = (values: { grossQuintals: number; netQuintals: number; netWeightKg: number }) => {
+    purchaseForm.setValue('quantity', values.netQuintals);
     setCalculatorOpen(false);
   };
 

@@ -84,15 +84,15 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   }, [stockReleases]);
 
   const totalRiceFromProcessing = useMemo(() => {
-    return mandiProcessingHistory.reduce((acc, item) => acc + item.riceYield, 0);
+    return (mandiProcessingHistory || []).reduce((acc, item) => acc + item.riceYield, 0);
   }, [mandiProcessingHistory]);
 
   const totalRiceSupplied = useMemo(() => {
-      return stockReleases.reduce((acc, item) => acc + item.quantity, 0);
+      return (stockReleases || []).reduce((acc, item) => acc + item.quantity, 0);
   }, [stockReleases]);
   
   const totalTransferredInStock = useMemo(() => {
-      return transferredInStock.reduce((sum, t) => sum + t.quantity, 0);
+      return (transferredInStock || []).reduce((sum, t) => sum + t.quantity, 0);
   }, [transferredInStock]);
 
   const availableRiceForSupply = useMemo(() => {
@@ -100,21 +100,21 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   }, [totalRiceFromProcessing, totalTransferredInStock, totalRiceSupplied]);
 
   const addTarget = useCallback((item: Omit<TargetAllocation, 'id'>) => {
-    setTargetAllocations((prev) => [...prev, { ...item, id: new Date().toISOString() }]);
+    setTargetAllocations((prev) => [...(prev || []), { ...item, id: new Date().toISOString() }]);
   }, []);
 
   const updateTarget = useCallback((id: string, updatedTarget: Omit<TargetAllocation, 'id'>) => {
-    setTargetAllocations(prev => prev.map(t => t.id === id ? { ...updatedTarget, id } : t));
+    setTargetAllocations(prev => (prev || []).map(t => t.id === id ? { ...updatedTarget, id } : t));
   }, []);
 
   const addPaddyLifted = useCallback((item: Omit<PaddyLifted, 'id'>) => {
     const newEntry = { ...item, id: new Date().toISOString() } as PaddyLifted;
-    setPaddyLiftedItems((prev) => [...prev, newEntry]);
+    setPaddyLiftedItems((prev) => [...(prev || []), newEntry]);
     return newEntry;
   }, []);
 
   const updatePaddyLifted = useCallback((id: string, updatedPaddyLifted: Omit<PaddyLifted, 'id'>) => {
-    setPaddyLiftedItems(prev => prev.map(p => p.id === id ? { ...updatedPaddyLifted, id } : p));
+    setPaddyLiftedItems(prev => (prev || []).map(p => p.id === id ? { ...updatedPaddyLifted, id } : p));
   }, []);
 
   const addStockRelease = useCallback((item: Omit<MandiStockRelease, 'id'>) => {
@@ -122,11 +122,11 @@ export function MandiProvider({ children }: { children: ReactNode }) {
           ...item,
           id: new Date().toISOString(),
       };
-      setStockReleases(prev => [...prev, newStockRelease]);
+      setStockReleases(prev => [...(prev || []), newStockRelease]);
   }, []);
 
   const updateStockRelease = useCallback((id: string, updatedStockRelease: Omit<MandiStockRelease, 'id' | 'date'>) => {
-    setStockReleases(prev => prev.map(sr => sr.id === id ? { ...sr, ...updatedStockRelease } : sr));
+    setStockReleases(prev => (prev || []).map(sr => sr.id === id ? { ...sr, ...updatedStockRelease } : sr));
   }, []);
 
 

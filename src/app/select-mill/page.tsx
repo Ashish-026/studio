@@ -45,7 +45,7 @@ export default function SelectMillPage() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col space-y-4">
-            {mills.map((mill: Mill) => (
+            {mills && mills.map((mill: Mill) => (
               <Button
                 key={mill.id}
                 variant="outline"

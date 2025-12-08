@@ -55,7 +55,7 @@ export default function SelectKmsYearPage() {
               <SelectContent>
                 <SelectGroup>
                   <SelectLabel>Available KMS Years</SelectLabel>
-                  {availableKmsYears.map((year: string) => (
+                  {availableKmsYears && availableKmsYears.map((year: string) => (
                     <SelectItem key={year} value={year}>
                       {year}
                     </SelectItem>

@@ -51,11 +51,11 @@ const initialVehicles: Vehicle[] = [
 const calculateTotals = (rentType: Vehicle['rentType'], rentAmount: number, payments: Payment[], trips: VehicleTrip[]) => {
     let totalRent = 0;
     if (rentType === 'per_trip') {
-        totalRent = trips.reduce((acc, trip) => acc + trip.tripCharge, 0);
+        totalRent = (trips || []).reduce((acc, trip) => acc + trip.tripCharge, 0);
     } else {
         totalRent = rentAmount; // This is a simplification. A real app would calculate monthly rent based on time.
     }
-    const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
+    const totalPaid = (payments || []).reduce((acc, p) => acc + p.amount, 0);
     const balance = totalRent - totalPaid;
     return { totalRent, totalPaid, balance };
 };
@@ -86,7 +86,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const storedVehicles = parseStoredData('vehicles', initialVehicles);
-    const updatedVehicles = storedVehicles.map((v: Vehicle) => {
+    const updatedVehicles = (storedVehicles || []).map((v: Vehicle) => {
         const { totalRent, totalPaid, balance } = calculateTotals(v.rentType, v.rentAmount, v.payments, v.trips);
         return { ...v, totalRent, totalPaid, balance };
     });
@@ -94,15 +94,13 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (vehicles.length > 0) {
-      localStorage.setItem('vehicles', JSON.stringify(vehicles));
-    }
+    localStorage.setItem('vehicles', JSON.stringify(vehicles));
   }, [vehicles]);
 
   const addVehicle = useCallback((item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'trips' | 'totalRent' | 'totalPaid' | 'balance'>) => {
     let vehicleId = '';
     setVehicles(prev => {
-        const existingVehicle = prev.find(v => v.vehicleNumber === item.vehicleNumber);
+        const existingVehicle = (prev || []).find(v => v.vehicleNumber === item.vehicleNumber);
         if (existingVehicle) {
             vehicleId = existingVehicle.id;
             return prev; // Don't add if it already exists
@@ -124,13 +122,13 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
             balance: totalRent,
         };
         vehicleId = newVehicle.id;
-        return [...prev, newVehicle];
+        return [...(prev || []), newVehicle];
     });
     return vehicleId;
   }, []);
 
   const addRentPayment = useCallback((vehicleId: string, amount: number) => {
-    setVehicles(prev => prev.map(v => {
+    setVehicles(prev => (prev || []).map(v => {
         if(v.id === vehicleId) {
             const newPayment: Payment = {
                 id: new Date().toISOString(),
@@ -147,7 +145,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
 
   const addTrip = useCallback((vehicleId: string, trip: Omit<VehicleTrip, 'id' | 'date'>) => {
     setVehicles(prev => {
-        return prev.map(v => {
+        return (prev || []).map(v => {
             const targetVehicle = v.id === vehicleId || v.vehicleNumber === vehicleId;
             if (targetVehicle && v.rentType === 'per_trip') {
                 const newTrip: VehicleTrip = {
@@ -165,7 +163,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
   }, []);
   
   const updateTrip = useCallback((vehicleId: string, tripId: string, updatedTripData: VehicleTrip) => {
-    setVehicles(prev => prev.map(v => {
+    setVehicles(prev => (prev || []).map(v => {
         if (v.id === vehicleId) {
             const updatedTrips = v.trips.map(t => t.id === tripId ? { ...t, ...updatedTripData } : t);
             const { totalRent, totalPaid, balance } = calculateTotals(v.rentType, v.rentAmount, v.payments, updatedTrips);
