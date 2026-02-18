@@ -6,6 +6,7 @@ A professional-grade management system for rice mill operations, designed to han
 
 ### The Context API & State Persistence
 The app is built on a "Multi-Register" architecture. Each register has its own dedicated React Context (e.g., `MandiProvider`, `LabourProvider`).
+- **Memory Management**: We use the React Context API to provide a "global memory" for the app. This allows a change in the Mandi register to be immediately seen by the Stock or Vehicle registers.
 - **Storage**: We use `localStorage` to ensure data survives page refreshes.
 - **Date Revival**: Because JSON doesn't support the `Date` object, we implemented a "reviver" logic during data loading to convert timestamp strings back into functional JavaScript Date objects.
 
