@@ -1,0 +1,60 @@
+MANDI MONITOR - FULL DEVELOPMENT LOG & TECHNICAL SPECIFICATIONS
+
+This document contains the step-by-step logic and architecture of the Mandi Monitor application.
+
+1. ARCHITECTURE
+---------------------------------------------------------
+The application uses React Context API for global state management. 
+Data is persisted in 'localStorage' to ensure it survives browser refreshes.
+A custom "Date Reviver" is used during data hydration to convert string timestamps back into JavaScript Date objects.
+
+2. REGISTER LOGIC
+---------------------------------------------------------
+
+A. MANDI REGISTER
+- Data Entry: Admins set "Target Allotment" in Quintals.
+- Physical Lifting: Records Paddy arrival. Uses the Bag Weight Calculator to distinguish between Gross Weight (Paddy Received) and Net Weight (Mandi Weight).
+- Monetary Lifting: Admins record cash received. The system uses 'Amount / Rate' to calculate the "Equivalent Quintals" for target achievement tracking.
+
+B. LABOUR REGISTER
+- Workers: Individual accounts for each labourer.
+- Wages: Supports 'Daily Rate' (fixed per shift) and 'Item Rate' (Quantity x Rate).
+- Group Work: A unique feature where a total wage (e.g., for unloading a truck) is split evenly across a selected crew.
+- Accounting: System calculates 'Total Wages - Total Payments'. 
+  Positive result = Payable (Mill owes money).
+  Negative result = Advance (Worker owes work).
+
+C. VEHICLE REGISTER
+- Ownership: All vehicles are grouped by Owner/Agency.
+- Rent: Supports Monthly fixed rent and Per-Trip charges.
+- Automated Logging: When a 'Hired' vehicle is used in Mandi or Private Lifting, a trip is automatically added to this register without double-entry.
+
+D. STOCK REGISTER
+- Logic: Aggregates Paddy from all sources (Mandi & Private).
+- Processing: Users enter "Paddy Used" and "Rice Yield". System auto-calculates Yield % and adds Bran/Broken Rice to inventory while subtracting Paddy.
+- Transfers: Exclusive "Private to Mandi" tool for moving stock to meet official state requirements.
+
+3. CALCULATION FORMULAS
+---------------------------------------------------------
+- Gross Weight (Uniform): (Bag Count * Weight Per Bag) / 100
+- Net Weight: (Gross Weight - Deductions) / 100
+- Yield Percentage: (Rice Yield / Paddy Used) * 100
+- Labour Balance: Sum(Work Entries) - Sum(Payments)
+
+4. AUTOMATION TRIGGERS
+---------------------------------------------------------
+When a 'Physical Lifting' record is saved:
+IF (Vehicle == 'Hired') -> CALL VehicleContext.addTrip()
+IF (Labour Charge > 0) -> CALL LabourContext.addGroupWorkEntry()
+
+5. REPORTING
+---------------------------------------------------------
+- PDF Generation: Uses 'jspdf' and 'html2canvas'.
+- Process: The app creates a high-res hidden clone of the data table, takes a "screenshot" of it, and embeds it into a multi-page PDF document for professional sharing.
+
+6. DECOUPLING LOGIC
+---------------------------------------------------------
+The app allows users to switch "KMS Years" (Marketing Seasons) in the header for viewing purposes, but the data entry remains independent of this selection to ensure records are never accidentally hidden or restricted by the current season view.
+
+---------------------------------------------------------
+END OF DOCUMENT
