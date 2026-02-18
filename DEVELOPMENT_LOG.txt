@@ -37,7 +37,7 @@ D. STOCK REGISTER
 3. CALCULATION FORMULAS
 ---------------------------------------------------------
 - Gross Weight (Uniform): (Bag Count * Weight Per Bag) / 100
-- Net Weight: (Gross Weight - Deductions) / 100
+- Net Weight: (Gross Weight - Total Deductions) / 100
 - Yield Percentage: (Rice Yield / Paddy Used) * 100
 - Labour Balance: Sum(Work Entries) - Sum(Payments)
 
