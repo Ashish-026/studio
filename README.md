@@ -2,6 +2,17 @@
 
 A professional-grade management system for rice mill operations, designed to handle the complex intersection of official state records, private commerce, labour management, and logistics.
 
+## 0. Default Login Credentials
+For testing and demonstration, use the following credentials:
+
+**Admin Access:**
+- Email: `admin@example.com`
+- Password: `admin`
+
+**User Access:**
+- Email: `user@example.com`
+- Password: `user`
+
 ## 1. Application Architecture
 
 ### The Context API & State Persistence

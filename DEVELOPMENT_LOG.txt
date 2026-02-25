@@ -2,6 +2,16 @@ MANDI MONITOR - FULL DEVELOPMENT LOG & TECHNICAL SPECIFICATIONS
 
 This document contains the step-by-step logic and architecture of the Mandi Monitor application.
 
+0. DEFAULT LOGIN CREDENTIALS
+---------------------------------------------------------
+Admin Access:
+- Email: admin@example.com
+- Password: admin
+
+User Access:
+- Email: user@example.com
+- Password: user
+
 1. ARCHITECTURE
 ---------------------------------------------------------
 The application uses React Context API for global state management. 
