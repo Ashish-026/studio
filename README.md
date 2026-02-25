@@ -1,10 +1,8 @@
-# Mandi Monitor - Technical Documentation & Development Log
+# Mandi Monitor - Technical Blueprint
 
-A professional-grade management system for rice mill operations, designed to handle the complex intersection of official state records, private commerce, labour management, and logistics.
+A professional-grade management system for rice mill operations, built with Next.js 15, Tailwind CSS, and Shadcn UI.
 
 ## 0. Default Login Credentials
-For testing and demonstration, use the following credentials:
-
 **Admin Access:**
 - Email: `admin@example.com`
 - Password: `admin`
@@ -13,71 +11,36 @@ For testing and demonstration, use the following credentials:
 - Email: `user@example.com`
 - Password: `user`
 
-## 1. Application Architecture
+## 1. Application Logic & Formulas
 
-### The Context API & State Persistence
-The app is built on a "Multi-Register" architecture. Each register has its own dedicated React Context (e.g., `MandiProvider`, `LabourProvider`).
-- **Memory Management**: We use the React Context API to provide a "global memory" for the app. This allows a change in the Mandi register to be immediately seen by the Stock or Vehicle registers.
-- **Storage**: We use `localStorage` to ensure data survives page refreshes.
-- **Date Revival**: Because JSON doesn't support the `Date` object, we implemented a "reviver" logic during data loading to convert timestamp strings back into functional JavaScript Date objects.
+### A. Weight Calculations (The Bag Calculator)
+The core of the system is the **Bag Weight Calculator**, which prevents manual entry errors.
+- **Gross Weight**: `(Bags × Weight per Bag) / 100`
+- **Net Weight**: `(Gross Weight × 100 - Total Deductions) / 100`
+- **Quintal Conversion**: All internal weights are stored in Quintals (100kg = 1 Qtl).
 
-## 2. Register Deep-Dive: Logic & Data Entry
+### B. Register Accounting
+- **Labour Balance**: `Sum(Daily Wages + Item Wages) - Sum(Paid Amount)`
+  - *Payable*: Balance > 0
+  - *Advance*: Balance < 0
+- **Vehicle Balance**: `Sum(Trip Charges OR Monthly Rent) - Sum(Paid Amount)`
+- **Equivalent Paddy**: `Money Received / Market Rate` (Used for Monetary Lifting).
 
-### A. Mandi Register (Official Records)
-Tracks the mill's relationship with the State Civil Supplies Corporation.
-- **Target Allotment**: Admins set targets (in Quintals). Data entry includes Mandi Name, Date, and Target Amount.
-- **Physical Lifting**: The primary entry point for paddy arrival.
-    - **Integration**: Linked to the **Bag Weight Calculator**.
-    - **Calculation**: It captures **Total Paddy Received** (Gross) and **Mandi Weight** (Net).
-- **Monetary Lifting**: A specialized tool for admins to enter cash received. It automatically calculates the "Equivalent Quintals" based on a user-defined rate.
+### C. Processing & Yields
+- **Yield Percentage**: `(Rice Produced / Paddy Used) × 100`
+- **Inventory Tracking**: Processing `100 Qtl` of Paddy will subtract `100` from Paddy stock and add calculated yields to Rice, Bran, and Broken Rice stocks.
 
-### B. Labour Register (Wage Management)
-Tracks individual workers and group crews.
-- **Wage Types**: 
-    - *Daily*: Flat rate per shift.
-    - *Item-Rate*: Calculated as `Quantity × Rate per Item` (e.g., loading 500 bags).
-- **Accounting Logic**: 
-    - `Total Wages - Total Paid = Balance`.
-    - If Balance > 0: Result is flagged as **Payable**.
-    - If Balance < 0: Result is flagged as **Advance**.
+## 2. Automation Workflow
+We implemented "Trigger Logic" to eliminate double-entry:
+1. **Lifting Entry**: User enters data in the Mandi Register.
+2. **Vehicle Trigger**: If the vehicle is "Hired," the system automatically adds a trip to the **Vehicle Register** and calculates the debt to the owner.
+3. **Labour Trigger**: If a "Labour Charge" is recorded, the system automatically creates a work entry in the **Labour Register**, splitting the total charge among the selected workers.
 
-### C. Vehicle Register (Logistics)
-Manages a fleet of owned and hired vehicles.
-- **Data Grouping**: Records are grouped by **Owner Name**, allowing for "Master Statements" for transport agencies.
-- **Rent Types**: Supports **Monthly** flat rates and **Per-Trip** charges.
-- **Trip Log**: Automatically captures trips generated from Mandi and Private registers.
-
-### D. Stock Register (Inventory)
-The "Brain" of the mill that aggregates data from all sources.
-- **Yield Logic**: When "Processing" is recorded, the app subtracts Paddy and adds three byproducts: **Rice**, **Bran**, and **Broken Rice**.
-- **Yield %**: Automatically calculated as `(Rice Yield / Paddy Used) × 100`.
-- **Transfers**: Features a "Private to Mandi" transfer tool to fulfill official supply requirements from private stock.
-
-## 3. Advanced Workflow Automation
-
-We implemented "Trigger Logic" to reduce manual entry. When a user records a **Physical Paddy Lift**:
-1. **The Form Check**: It looks at the `Vehicle Type`.
-2. **Vehicle Trigger**: If set to `Hired`, it immediately calls the `addTrip` function in the `VehicleContext`, logging the journey and increasing the owner's balance.
-3. **Labour Trigger**: If `Labour Charge` is entered, it calls `addGroupWorkEntry` in the `LabourContext`, splitting the wage among the selected loading crew.
-
-## 4. The Bag Weight Calculator Logic
-This component is the core of accurate data entry.
-- **Uniform Mode**: Uses `(Bag Count × Weight per Bag) - Deductions`.
-- **Non-Uniform Mode**: Allows for an infinite list of individual bag weights.
-- **Return Values**: It returns two distinct values to the parent form:
-    1. `grossQuintals`: The raw weight for lifting records.
-    2. `netQuintals`: The final weight after subtracting bag weight (tare) and moisture deductions.
-
-## 5. Security & Roles
-- **Admin**: Has write access to Targets, Monetary Lifting, and sensitive stock transfers.
-- **User**: Restricted to operational data entry (Lifting, Labour, Vehicle Trips).
-- **Auth Flow**: The app is strictly configured to start at the Login page (`/`) to ensure session integrity during multi-user testing.
-
-## 6. Reporting (PDF Statements)
-Using `jspdf` and `html2canvas`, we developed a "Print-to-PDF" system.
-- It creates a hidden, high-resolution clone of the statement tables.
-- It captures these clones as images and embeds them into a multi-page PDF document.
-- **Scope**: Available for Labour accounts, Vehicle Owner statements, and Mandi summaries.
+## 3. Technical Features
+- **localStorage Persistence**: All data is saved locally in the browser with "Date Revival" logic to maintain time-stamps.
+- **Role-Based Access**: Admins handle targets and monetary lifting; Users handle operational data.
+- **PDF Reporting**: High-resolution account statements for Labourers and Vehicle Owners can be downloaded as PDFs.
+- **Decoupled KMS Year**: The marketing season selection acts as a filter for viewing, while data entry remains independent to ensure no records are hidden.
 
 ---
-*Developed with a focus on numeric stability, preventing `NaN` or `undefined` errors by strictly casting all form inputs to numbers before calculation.*
+*Built for numeric stability and operational efficiency.*
