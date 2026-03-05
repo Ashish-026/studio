@@ -5,7 +5,11 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Mandi Monitor',
-  description: 'Manage mandi targets and paddy lifting.',
+  description: 'Professional Rice Mill Management System',
+  icons: {
+    icon: 'https://placehold.co/32x32/0b3d1e/e9c46a?text=M',
+    apple: 'https://placehold.co/180x180/0b3d1e/e9c46a?text=MM',
+  }
 };
 
 export default function RootLayout({
