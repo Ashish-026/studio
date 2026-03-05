@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 @layer base {
@@ -34,27 +36,6 @@ body {
     --chart-5: 27 87% 67%;
     --radius: 0.75rem;
   }
-  .dark {
-    --background: 142 50% 5%;
-    --foreground: 40 20% 98%;
-    --card: 142 50% 8%;
-    --card-foreground: 40 20% 98%;
-    --popover: 142 50% 5%;
-    --popover-foreground: 40 20% 98%;
-    --primary: 43 74% 66%;
-    --primary-foreground: 142 76% 5%;
-    --secondary: 142 30% 15%;
-    --secondary-foreground: 43 74% 66%;
-    --muted: 142 30% 15%;
-    --muted-foreground: 142 20% 70%;
-    --accent: 43 74% 66%;
-    --accent-foreground: 142 76% 5%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 142 30% 20%;
-    --input: 142 30% 20%;
-    --ring: 43 74% 66%;
-  }
 }
 
 @layer base {
@@ -64,4 +45,17 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@layer utilities {
+  .render-optimized {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 500px;
+  }
+}
+
+/* Optimization for history tables */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
 }

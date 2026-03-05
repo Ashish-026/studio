@@ -162,8 +162,42 @@ export function StockProvider({ children }: { children: ReactNode }) {
     setTransferredInStock(prev => [...prev, newTransfer]);
   }, []);
 
+  const contextValue = useMemo(() => ({
+    privateStock,
+    totalStock,
+    processingHistory,
+    mandiProcessingHistory,
+    transferredInStock,
+    addProcessingResult,
+    addMandiProcessing,
+    purchases,
+    addPurchase,
+    addPayment,
+    sales,
+    addSale,
+    addSalePayment,
+    transferRiceToMandi,
+    loading
+  }), [
+    privateStock,
+    totalStock,
+    processingHistory,
+    mandiProcessingHistory,
+    transferredInStock,
+    addProcessingResult,
+    addMandiProcessing,
+    purchases,
+    addPurchase,
+    addPayment,
+    sales,
+    addSale,
+    addSalePayment,
+    transferRiceToMandi,
+    loading
+  ]);
+
   return (
-    <StockContext.Provider value={{ privateStock, totalStock, processingHistory, mandiProcessingHistory, transferredInStock, addProcessingResult, addMandiProcessing, purchases, addPurchase, addPayment, sales, addSale, addSalePayment, transferRiceToMandi, loading }}>
+    <StockContext.Provider value={contextValue}>
       {children}
     </StockContext.Provider>
   );

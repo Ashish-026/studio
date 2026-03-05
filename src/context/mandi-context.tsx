@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
@@ -102,8 +101,40 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     setStockReleases(prev => prev.map(s => s.id === id ? { ...s, ...updatedStockRelease } : s));
   }, []);
 
+  const contextValue = useMemo(() => ({
+    targetAllocations,
+    paddyLiftedItems,
+    processingHistory: mandiProcessingHistory,
+    stockReleases,
+    addTarget,
+    updateTarget,
+    addPaddyLifted,
+    updatePaddyLifted,
+    addMandiProcessing: addMandiProcessingToStock,
+    addStockRelease,
+    availableRiceForSupply,
+    totalRiceFromProcessing,
+    updateStockRelease,
+    loading
+  }), [
+    targetAllocations,
+    paddyLiftedItems,
+    mandiProcessingHistory,
+    stockReleases,
+    addTarget,
+    updateTarget,
+    addPaddyLifted,
+    updatePaddyLifted,
+    addMandiProcessingToStock,
+    addStockRelease,
+    availableRiceForSupply,
+    totalRiceFromProcessing,
+    updateStockRelease,
+    loading
+  ]);
+
   return (
-    <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, processingHistory: mandiProcessingHistory, stockReleases, addTarget, updateTarget, addPaddyLifted, updatePaddyLifted, addMandiProcessing: addMandiProcessingToStock, addStockRelease, availableRiceForSupply, totalRiceFromProcessing, updateStockRelease, loading }}>
+    <MandiContext.Provider value={contextValue}>
       {children}
     </MandiContext.Provider>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useEffect, useCallback, ReactNode, useContext } from 'react';
+import { createContext, useState, useEffect, useCallback, ReactNode, useContext, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import type { User as AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -39,7 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load stored credentials (these stay saved even after logout)
     const storedCreds = localStorage.getItem(CREDENTIALS_KEY);
     if (storedCreds) {
       try {
@@ -49,8 +48,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Check if user is already logged in for this SPECIFIC session
-    // We use sessionStorage so closing the app automatically logs them out
     const sessionUser = sessionStorage.getItem(SESSION_KEY);
     if (sessionUser) {
       setUser(JSON.parse(sessionUser));
@@ -84,7 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     sessionStorage.removeItem(SESSION_KEY);
-    // Note: We don't remove the Mill or KMS year from localStorage so they are remembered for next login
     router.push('/');
   }, [router]);
 
@@ -104,8 +100,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Success', description: `${role.toUpperCase()} credentials updated successfully.` });
   }, [toast]);
 
+  const contextValue = useMemo(() => ({
+    user,
+    login,
+    logout,
+    updateCredentials,
+    loading
+  }), [user, login, logout, updateCredentials, loading]);
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, updateCredentials, loading }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
