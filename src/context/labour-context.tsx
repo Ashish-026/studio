@@ -2,9 +2,6 @@
 
 import { createContext, useState, useCallback, ReactNode, useContext, useEffect } from 'react';
 import type { Labourer, LabourWorkEntry, Payment } from '@/lib/types';
-import { useFirestore } from '@/firebase';
-import { doc, onSnapshot, collection, query } from 'firebase/firestore';
-import { updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface LabourContextType {
   labourers: Labourer[];
@@ -17,6 +14,8 @@ interface LabourContextType {
 
 const LabourContext = createContext<LabourContextType | null>(null);
 
+const STORAGE_KEY = 'mandi-monitor-labour-v2';
+
 const calculateTotals = (workEntries: LabourWorkEntry[], payments: Payment[]) => {
     const totalWages = (workEntries || []).reduce((acc, entry) => acc + (entry.wage || 0), 0);
     const totalPaid = (payments || []).reduce((acc, p) => acc + (p.amount || 0), 0);
@@ -27,118 +26,113 @@ const calculateTotals = (workEntries: LabourWorkEntry[], payments: Payment[]) =>
 export function LabourProvider({ children }: { children: ReactNode }) {
   const [labourers, setLabourers] = useState<Labourer[]>([]);
   const [loading, setLoading] = useState(true);
-  const db = useFirestore();
 
+  // Load from LocalStorage
   useEffect(() => {
-    if (!db) return;
-
-    const q = query(collection(db, 'labourers'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => {
-        const item = doc.data();
-        const workEntries = (item.workEntries || []).map((w: any) => ({
-            ...w, 
-            date: w.date?.toDate ? w.date.toDate() : new Date(w.date)
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const revived = parsed.map((l: any) => ({
+          ...l,
+          workEntries: (l.workEntries || []).map((w: any) => ({ ...w, date: new Date(w.date) })),
+          payments: (l.payments || []).map((p: any) => ({ ...p, date: new Date(p.date) })),
         }));
-        const payments = (item.payments || []).map((p: any) => ({
-            ...p, 
-            date: p.date?.toDate ? p.date.toDate() : new Date(p.date)
-        }));
-        
-        const { totalWages, totalPaid, balance } = calculateTotals(workEntries, payments);
-        
-        return {
-          ...item,
-          id: doc.id,
-          workEntries,
-          payments,
-          totalWages,
-          totalPaid,
-          balance
-        } as Labourer;
-      });
-      setLabourers(data);
-      setLoading(false);
-    }, (error) => {
-        console.error("Firestore Listen Error:", error);
-        setLoading(false);
-    });
+        setLabourers(revived);
+      } catch (e) {
+        console.error("Failed to load labour data", e);
+      }
+    }
+    setLoading(false);
+  }, []);
 
-    return () => unsubscribe();
-  }, [db]);
+  // Save to LocalStorage
+  useEffect(() => {
+    if (!loading) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(labourers));
+    }
+  }, [labourers, loading]);
 
   const addLabourer = useCallback((labourerName: string) => {
-    if (!db) return;
-    const id = Date.now().toString() + '-l';
-    const newLabourer = {
+    const id = Date.now().toString();
+    const newLabourer: Labourer = {
+        id,
         name: labourerName,
         workEntries: [],
         payments: [],
+        totalWages: 0,
+        totalPaid: 0,
+        balance: 0
     };
-    setDocumentNonBlocking(doc(db, 'labourers', id), newLabourer, { merge: true });
-  }, [db]);
+    setLabourers(prev => [...prev, newLabourer]);
+  }, []);
 
   const addWorkEntry = useCallback((labourerId: string, item: Omit<LabourWorkEntry, 'id' | 'date' | 'wage'>) => {
-    if (!db) return;
-    const labourer = labourers.find(l => l.id === labourerId);
-    if (!labourer) return;
+    setLabourers(prev => prev.map(l => {
+      if (l.id === labourerId) {
+        let wage = 0;
+        if (item.entryType === 'daily' && item.dailyRate) {
+            wage = Number(item.dailyRate);
+        } else if (item.entryType === 'item_rate' && item.quantity && item.ratePerItem) {
+            wage = Number(item.quantity) * Number(item.ratePerItem);
+        }
 
-    let wage = 0;
-    if (item.entryType === 'daily' && item.dailyRate) {
-        wage = Number(item.dailyRate);
-    } else if (item.entryType === 'item_rate' && item.quantity && item.ratePerItem) {
-        wage = Number(item.quantity) * Number(item.ratePerItem);
-    }
+        const newWorkEntry: LabourWorkEntry = {
+            ...item,
+            id: Date.now().toString(),
+            date: new Date(),
+            wage,
+        };
 
-    const newWorkEntry: LabourWorkEntry = {
-        ...item,
-        id: Date.now().toString(),
-        date: new Date(),
-        wage,
-    };
-
-    const updatedWorkEntries = [...(labourer.workEntries || []), newWorkEntry];
-    updateDocumentNonBlocking(doc(db, 'labourers', labourerId), { workEntries: updatedWorkEntries });
-  }, [db, labourers]);
+        const updatedEntries = [...(l.workEntries || []), newWorkEntry];
+        const totals = calculateTotals(updatedEntries, l.payments);
+        return { ...l, workEntries: updatedEntries, ...totals };
+      }
+      return l;
+    }));
+  }, []);
 
   const addGroupWorkEntry = useCallback((labourerIds: string[], totalCharge: number, description: string, quantity: number) => {
-    if (!db || !labourerIds || labourerIds.length === 0) return;
+    if (!labourerIds || labourerIds.length === 0) return;
     
     const wagePerLabourer = totalCharge / labourerIds.length;
     const ratePerItem = quantity > 0 ? totalCharge / quantity : 0;
 
-    labourerIds.forEach(id => {
-        const labourer = labourers.find(l => l.id === id);
-        if (labourer) {
-            const newEntry: LabourWorkEntry = {
-                id: Date.now().toString() + `-${id}`,
-                date: new Date(),
-                description: description,
-                entryType: 'item_rate',
-                itemName: 'Group Work',
-                quantity: quantity / labourerIds.length,
-                ratePerItem: ratePerItem,
-                wage: wagePerLabourer
-            };
-            const updatedEntries = [...(labourer.workEntries || []), newEntry];
-            updateDocumentNonBlocking(doc(db, 'labourers', id), { workEntries: updatedEntries });
-        }
-    });
-  }, [db, labourers]);
+    setLabourers(prev => prev.map(l => {
+      if (labourerIds.includes(l.id)) {
+        const newEntry: LabourWorkEntry = {
+            id: Date.now().toString() + `-${l.id}`,
+            date: new Date(),
+            description: description,
+            entryType: 'item_rate',
+            itemName: 'Group Work',
+            quantity: quantity / labourerIds.length,
+            ratePerItem: ratePerItem,
+            wage: wagePerLabourer
+        };
+        const updatedEntries = [...(l.workEntries || []), newEntry];
+        const totals = calculateTotals(updatedEntries, l.payments);
+        return { ...l, workEntries: updatedEntries, ...totals };
+      }
+      return l;
+    }));
+  }, []);
 
   const addPayment = useCallback((labourerId: string, amount: number) => {
-    if (!db) return;
-    const labourer = labourers.find(l => l.id === labourerId);
-    if (!labourer) return;
-
-    const newPayment: Payment = {
-        id: Date.now().toString() + '-p',
-        amount: Number(amount),
-        date: new Date(),
-    };
-    const updatedPayments = [...(labourer.payments || []), newPayment];
-    updateDocumentNonBlocking(doc(db, 'labourers', labourerId), { payments: updatedPayments });
-  }, [db, labourers]);
+    setLabourers(prev => prev.map(l => {
+      if (l.id === labourerId) {
+        const newPayment: Payment = {
+            id: Date.now().toString(),
+            amount: Number(amount),
+            date: new Date(),
+        };
+        const updatedPayments = [...(l.payments || []), newPayment];
+        const totals = calculateTotals(l.workEntries, updatedPayments);
+        return { ...l, payments: updatedPayments, ...totals };
+      }
+      return l;
+    }));
+  }, []);
 
   return (
     <LabourContext.Provider value={{ labourers, addLabourer, addWorkEntry, addGroupWorkEntry, addPayment, loading }}>

@@ -1,11 +1,8 @@
-'use server';
+'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
 import type { MandiProcessingResult, MandiStockRelease, TargetAllocation, PaddyLifted } from '@/lib/types';
 import { useStockData } from './stock-context';
-import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, doc, query, orderBy } from 'firebase/firestore';
-import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface MandiContextType {
   targetAllocations: TargetAllocation[];
@@ -26,9 +23,14 @@ interface MandiContextType {
 
 const MandiContext = createContext<MandiContextType | null>(null);
 
+const KEYS = {
+  TARGETS: 'mandi-monitor-targets',
+  LIFTING: 'mandi-monitor-lifting',
+  RELEASES: 'mandi-monitor-releases'
+};
+
 export function MandiProvider({ children }: { children: ReactNode }) {
   const { addMandiProcessing: addMandiProcessingToStock, mandiProcessingHistory, transferredInStock } = useStockData();
-  const db = useFirestore();
 
   const [targetAllocations, setTargetAllocations] = useState<TargetAllocation[]>([]);
   const [paddyLiftedItems, setPaddyLiftedItems] = useState<PaddyLifted[]>([]);
@@ -36,39 +38,24 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!db) return;
-
-    // Listen to Target Allocations
-    const unsubTargets = onSnapshot(collection(db, 'targetAllocations'), (s) => {
-      setTargetAllocations(s.docs.map(d => {
-          const data = d.data();
-          return { ...data, id: d.id, date: data.date?.toDate ? data.date.toDate() : new Date(data.date) } as TargetAllocation;
-      }));
-    });
-
-    // Listen to Paddy Lifting
-    const unsubLifting = onSnapshot(collection(db, 'paddyLiftedItems'), (s) => {
-      setPaddyLiftedItems(s.docs.map(d => {
-          const data = d.data();
-          return { ...data, id: d.id, date: data.date?.toDate ? data.date.toDate() : new Date(data.date) } as PaddyLifted;
-      }));
-    });
-
-    // Listen to Stock Releases (Supply)
-    const unsubReleases = onSnapshot(collection(db, 'stockReleases'), (s) => {
-      setStockReleases(s.docs.map(d => {
-          const data = d.data();
-          return { ...data, id: d.id, date: data.date?.toDate ? data.date.toDate() : new Date(data.date) } as MandiStockRelease;
-      }));
-      setLoading(false);
-    });
-
-    return () => {
-      unsubTargets();
-      unsubLifting();
-      unsubReleases();
+    const load = (key: string, setFn: any) => {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setFn(parsed.map((item: any) => ({ ...item, date: new Date(item.date) })));
+        } catch (e) { console.error(e); }
+      }
     };
-  }, [db]);
+    load(KEYS.TARGETS, setTargetAllocations);
+    load(KEYS.LIFTING, setPaddyLiftedItems);
+    load(KEYS.RELEASES, setStockReleases);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { if (!loading) localStorage.setItem(KEYS.TARGETS, JSON.stringify(targetAllocations)); }, [targetAllocations, loading]);
+  useEffect(() => { if (!loading) localStorage.setItem(KEYS.LIFTING, JSON.stringify(paddyLiftedItems)); }, [paddyLiftedItems, loading]);
+  useEffect(() => { if (!loading) localStorage.setItem(KEYS.RELEASES, JSON.stringify(stockReleases)); }, [stockReleases, loading]);
 
   const totalRiceFromProcessing = useMemo(() => {
     return (mandiProcessingHistory || []).reduce((acc, item) => acc + (Number(item.riceYield) || 0), 0);
@@ -87,39 +74,32 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   }, [totalRiceFromProcessing, totalTransferredInStock, totalRiceSupplied]);
 
   const addTarget = useCallback((item: Omit<TargetAllocation, 'id'>) => {
-    if (!db) return;
-    const id = Date.now().toString();
-    setDocumentNonBlocking(doc(db, 'targetAllocations', id), { ...item, id }, { merge: true });
-  }, [db]);
+    const newTarget = { ...item, id: Date.now().toString() };
+    setTargetAllocations(prev => [...prev, newTarget]);
+  }, []);
 
   const updateTarget = useCallback((id: string, updatedTarget: Omit<TargetAllocation, 'id'>) => {
-    if (!db) return;
-    updateDocumentNonBlocking(doc(db, 'targetAllocations', id), updatedTarget);
-  }, [db]);
+    setTargetAllocations(prev => prev.map(t => t.id === id ? { ...updatedTarget, id } : t));
+  }, []);
 
   const addPaddyLifted = useCallback((item: Omit<PaddyLifted, 'id'>) => {
-    if (!db) return {} as PaddyLifted;
-    const id = Date.now().toString();
-    const newEntry = { ...item, id } as PaddyLifted;
-    setDocumentNonBlocking(doc(db, 'paddyLiftedItems', id), newEntry, { merge: true });
+    const newEntry = { ...item, id: Date.now().toString() } as PaddyLifted;
+    setPaddyLiftedItems(prev => [...prev, newEntry]);
     return newEntry;
-  }, [db]);
+  }, []);
 
   const updatePaddyLifted = useCallback((id: string, updatedPaddyLifted: Omit<PaddyLifted, 'id'>) => {
-    if (!db) return;
-    updateDocumentNonBlocking(doc(db, 'paddyLiftedItems', id), updatedPaddyLifted);
-  }, [db]);
+    setPaddyLiftedItems(prev => prev.map(p => p.id === id ? { ...updatedPaddyLifted, id } : p));
+  }, []);
 
   const addStockRelease = useCallback((item: Omit<MandiStockRelease, 'id'>) => {
-    if (!db) return;
-    const id = Date.now().toString();
-    setDocumentNonBlocking(doc(db, 'stockReleases', id), { ...item, id }, { merge: true });
-  }, [db]);
+    const newRelease = { ...item, id: Date.now().toString() };
+    setStockReleases(prev => [...prev, newRelease]);
+  }, []);
 
   const updateStockRelease = useCallback((id: string, updatedStockRelease: Omit<MandiStockRelease, 'id' | 'date'>) => {
-    if (!db) return;
-    updateDocumentNonBlocking(doc(db, 'stockReleases', id), updatedStockRelease);
-  }, [db]);
+    setStockReleases(prev => prev.map(s => s.id === id ? { ...s, ...updatedStockRelease } : s));
+  }, []);
 
   return (
     <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, processingHistory: mandiProcessingHistory, stockReleases, addTarget, updateTarget, addPaddyLifted, updatePaddyLifted, addMandiProcessing: addMandiProcessingToStock, addStockRelease, availableRiceForSupply, totalRiceFromProcessing, updateStockRelease, loading }}>

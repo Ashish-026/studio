@@ -1,51 +1,35 @@
 
-MANDI MONITOR - USER GUIDE & DEVELOPMENT LOG
+MANDI MONITOR - ZERO-COST SETUP GUIDE
 
-1. HOW TO USE ON MOBILE (INSTALLATION)
+1. HOW TO USE WITHOUT MONEY (LOCAL MODE)
 ---------------------------------------------------------
-This app is a Web App. You don't need the Play Store.
-Step 1: Deploy/Publish your app to get a web link (URL).
-Step 2: Open that link on your mobile phone browser.
+The app is now configured to use "Local Storage".
+- NO Cloud Billing required.
+- NO Credit Card needed.
+- Data stays on YOUR device (phone or computer).
+
+2. HOW TO USE ON MOBILE (INSTALLATION)
+---------------------------------------------------------
+Step 1: In this editor, click 'Preview' or 'Deploy' to get a link.
+Step 2: Open that link on your phone.
 Step 3: 
    - iPhone: Tap 'Share' -> 'Add to Home Screen'.
    - Android: Tap 'Settings (3 dots)' -> 'Install App'.
-The app will now appear on your home screen with its own icon.
+The app will now appear on your home screen.
 
-2. QUICK START FOR NON-CODERS
+3. LOGIN CREDENTIALS
 ---------------------------------------------------------
-Step 1: Open the App and Login.
-        - Admin: admin@example.com (Password: admin)
-        - User: user@example.com (Password: user)
-Step 2: Select your "Mill" and "KMS Year" (Season).
-Step 3: Start entering data! Your data is saved automatically to the Cloud (Firebase).
+Admin: admin@example.com / Password: admin
+User: user@example.com / Password: user
 
-3. HOW TO ENTER DATA (STEP-BY-STEP)
+4. CORE CALCULATION LOGIC
 ---------------------------------------------------------
-A. SETTING TARGETS (Admin Only)
-   - Go to Mandi Register -> Target Allotment.
-   - Enter the Mandi name and the total Quintals allotted by the Govt.
+A. PADDY LIFTING:
+   - Gross Weight = Paddy Received.
+   - Net Weight = Mandi Weight (official record).
+B. LABOUR:
+   - Split wages automatically among selected crew.
+C. STOCK:
+   - Yield % = (Rice / Paddy Used) * 100.
 
-B. RECORDING PADDY ARRIVAL (Lifting)
-   - Go to Mandi Register -> Paddy Lifted.
-   - Click "Add Physical Entry".
-   - Tip: Click the Calculator icon [🧮] to enter weights bag-by-bag. 
-     - "Gross Weight" goes to "Paddy Received".
-     - "Net Weight" goes to "Mandi Weight".
-
-C. MANAGING LABOUR
-   - Add worker names in the Labour Register first.
-   - When filling any form (Lifting or Processing), select the workers involved.
-   - The system will split the total charge equally among them.
-
-D. VEHICLE LOGISTICS
-   - If you use a "Hired" vehicle, the system automatically creates a record 
-     in the Vehicle Register. You only need to go there to record payments.
-
-4. CORE ARCHITECTURE (CLOUD ENABLED)
----------------------------------------------------------
-- Platform: Next.js 15 + Firebase Firestore.
-- Database: All records are synced to the Google Cloud (Firebase).
-- Reliability: Data stays safe even if you switch phones or clear your browser.
-
----------------------------------------------------------
-END OF MANUAL - SYSTEM IS READY FOR OPERATION.
+END OF GUIDE - SYSTEM IS READY FOR ZERO-COST OPERATION.

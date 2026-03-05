@@ -1,44 +1,21 @@
 
-# Mandi Monitor - Operation Manual
+# Mandi Monitor - Operation Manual (Zero-Cost Version)
 
-A professional-grade management system for rice mill operations, built with Next.js 15 and Firebase Cloud Firestore.
+A professional-grade management system for rice mill operations, optimized for zero-cost browser storage.
 
-## 📱 Mobile Use
-You can install this app on your phone without an app store:
-1. **Open the URL** of your published app in Chrome (Android) or Safari (iOS).
-2. **Add to Home Screen**:
-   - iOS: Share icon -> "Add to Home Screen".
-   - Android: Menu (3 dots) -> "Install App".
+## 💰 No Billing Required
+This app has been modified to store all data locally in your web browser. 
+- **Cost**: 100% Free.
+- **Setup**: No Firebase billing account or credit card needed.
+- **Privacy**: Your data never leaves your device.
 
-## 🔑 Login Credentials
-**Admin Access:**
-- Email: `admin@example.com` / Password: `admin`
+## 🔑 Login
+- **Admin**: `admin@example.com` / `admin`
+- **User**: `user@example.com` / `user`
 
-**User Access:**
-- Email: `user@example.com` / Password: `user`
+## 🚀 Quick Start
+1. **Lifting**: Use the calculator [🧮] to enter weights. Gross goes to "Received", Net goes to "Mandi".
+2. **Labour**: Add names once, then select them in forms to split wages.
+3. **Reports**: Click "PDF" to get official statements for printing.
 
-## 🚀 User Workflow
-
-### 1. Setup
-- Select the **Mill** and **KMS Year** after logging in.
-- Admins set the Government **Targets** in the Mandi Register.
-
-### 2. Daily Operations
-- **Paddy Lifting**: Use the **Bag Weight Calculator** [🧮] for accuracy.
-  - Paddy Received = Gross Weight.
-  - Mandi Weight = Net Weight.
-- **Automation**: Hired vehicles and Labour charges are automatically pushed to their respective registers.
-- **Milling**: Record processing in the Stock Register to update your Rice and Bran inventory.
-
-### 3. Payments & Reports
-- Record payments to Labourers/Vehicles to maintain a clear "Balance."
-- Use the **"PDF"** button to download official statements for workers or transport owners.
-
-## ☁️ Cloud Logic
-This app is powered by **Firebase Firestore**. 
-- Data is stored in the cloud, not on your device.
-- It works across multiple phones/computers simultaneously.
-- Real-time updates: Change data on one phone, and it updates on all others instantly.
-
----
-*Built for operational efficiency and zero-cost scaling.*
+*Note: Since data is stored locally, it will not sync between different phones automatically.*
