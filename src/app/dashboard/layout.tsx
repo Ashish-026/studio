@@ -13,6 +13,7 @@ import { MillProvider } from '@/context/mill-context';
 import { KmsYearProvider } from '@/context/kms-year-context';
 import { useMill } from '@/hooks/use-mill';
 import { useKmsYear } from '@/hooks/use-kms-year';
+import { MasterReport } from '@/components/reports/master-report';
 
 function ProtectedDashboard({ children }: { children: React.ReactNode }) {
   const { user, loading: userLoading } = useAuth();
@@ -57,7 +58,15 @@ function ProtectedDashboard({ children }: { children: React.ReactNode }) {
         <LabourProvider>
           <VehicleProvider>
             <StockProvider>
-              <MandiProvider>{children}</MandiProvider>
+              <MandiProvider>
+                {/* Hidden Master Report for PDF capture */}
+                <div className="absolute -left-[9999px] top-auto pointer-events-none" aria-hidden="true">
+                  <div id="master-report-pdf">
+                    <MasterReport />
+                  </div>
+                </div>
+                {children}
+              </MandiProvider>
             </StockProvider>
           </VehicleProvider>
         </LabourProvider>

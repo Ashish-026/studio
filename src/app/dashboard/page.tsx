@@ -1,7 +1,12 @@
+'use client';
+
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Building, Tractor, Users, Car, Warehouse } from 'lucide-react';
+import { ArrowRight, Tractor, Users, Car, Warehouse, FileText, Download } from 'lucide-react';
+import { downloadPdf } from '@/lib/pdf-utils';
+import { useMill } from '@/hooks/use-mill';
+import { useKmsYear } from '@/hooks/use-kms-year';
 
 const registers = [
   {
@@ -35,13 +40,36 @@ const registers = [
 ];
 
 export default function DashboardPage() {
+  const { selectedMill } = useMill();
+  const { selectedKmsYear } = useKmsYear();
+
+  const handleDownloadMasterReport = () => {
+    const fileName = `Master_Report_${selectedMill?.name || 'Mill'}_KMS_${selectedKmsYear || 'Year'}`;
+    downloadPdf('master-report-pdf', fileName);
+  };
+
   return (
     <div className="container py-8 px-4 md:px-6">
-      <h1 className="text-3xl font-bold tracking-tight font-headline mb-2">Dashboard</h1>
-      <p className="text-muted-foreground mb-8">Select a register to view or manage data.</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight font-headline mb-2">Dashboard</h1>
+          <p className="text-muted-foreground">Select a register to view or manage data.</p>
+        </div>
+        <Button 
+          variant="outline" 
+          size="lg" 
+          className="bg-primary/5 hover:bg-primary/10 border-primary/20 text-primary font-semibold"
+          onClick={handleDownloadMasterReport}
+        >
+          <FileText className="mr-2 h-5 w-5" />
+          Download Master Report (PDF)
+          <Download className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {registers.map((register) => (
-          <Card key={register.title} className={`flex flex-col ${!register.enabled ? 'bg-muted/50' : 'hover:border-primary/50 transition-colors'}`}>
+          <Card key={register.title} className={`flex flex-col ${!register.enabled ? 'bg-muted/50' : 'hover:border-primary/50 transition-colors shadow-sm'}`}>
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
               <div className="space-y-2">
                 <CardTitle className="text-xl font-semibold">{register.title}</CardTitle>
