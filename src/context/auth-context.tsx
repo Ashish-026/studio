@@ -5,70 +5,79 @@ import { useRouter } from 'next/navigation';
 import type { User as AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
-/**
- * ---------------------------------------------------------
- * CUSTOMIZE YOUR LOGIN DETAILS HERE
- * ---------------------------------------------------------
- * You can change the 'email' and 'password' below to 
- * whatever you like. 
- */
-const INITIAL_CREDENTIALS: Record<string, { user: AppUser; password?: string }> = {
-  // ADMIN ACCOUNT (Full access to Targets and Stock Transfers)
-  'admin@mill.com': { 
-    user: { id: 'admin-uid', name: 'Mill Owner', role: 'admin' }, 
-    password: 'password123' 
+const DEFAULT_CREDENTIALS = {
+  admin: {
+    email: 'admin@mill.com',
+    password: 'password123',
+    user: { id: 'admin-uid', name: 'Mill Owner', role: 'admin' as const }
   },
-  // USER ACCOUNT (Limited to daily entry like lifting and labour)
-  'user@mill.com': { 
-    user: { id: 'user-uid', name: 'Staff User', role: 'user' }, 
-    password: 'staffpassword' 
-  },
+  user: {
+    email: 'user@mill.com',
+    password: 'staffpassword',
+    user: { id: 'user-uid', name: 'Staff User', role: 'user' as const }
+  }
 };
 
 interface AuthContextType {
   user: AppUser | null;
   login: (email: string, password?: string) => void;
   logout: () => void;
+  updateCredentials: (role: 'admin' | 'user', newEmail: string, newPassword?: string) => void;
   loading: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
+const CREDENTIALS_KEY = 'mandi-monitor-credentials-v2';
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [credentials, setCredentials] = useState(DEFAULT_CREDENTIALS);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
+    // Load stored credentials
+    const storedCreds = localStorage.getItem(CREDENTIALS_KEY);
+    if (storedCreds) {
+      try {
+        setCredentials(JSON.parse(storedCreds));
+      } catch (e) {
+        console.error("Failed to load custom credentials", e);
+      }
+    }
+
     // Check if user is already logged in
-    const stored = localStorage.getItem('mandi-monitor-user');
-    if (stored) {
-      setUser(JSON.parse(stored));
+    const storedUser = localStorage.getItem('mandi-monitor-user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
     }
     setLoading(false);
   }, []);
 
   const login = useCallback((email: string, password?: string) => {
-    // Check against the hardcoded list at the top of this file
-    const userData = INITIAL_CREDENTIALS[email];
+    const isAdmin = credentials.admin.email === email && credentials.admin.password === password;
+    const isUser = credentials.user.email === email && credentials.user.password === password;
     
-    if (userData && (userData.password === password)) {
-      setUser(userData.user);
-      localStorage.setItem('mandi-monitor-user', JSON.stringify(userData.user));
+    if (isAdmin) {
+      setUser(credentials.admin.user);
+      localStorage.setItem('mandi-monitor-user', JSON.stringify(credentials.admin.user));
       router.push('/select-mill');
-      toast({
-        title: 'Login Successful',
-        description: `Welcome, ${userData.user.name}!`,
-      });
+      toast({ title: 'Login Successful', description: `Welcome, ${credentials.admin.user.name}!` });
+    } else if (isUser) {
+      setUser(credentials.user.user);
+      localStorage.setItem('mandi-monitor-user', JSON.stringify(credentials.user.user));
+      router.push('/select-mill');
+      toast({ title: 'Login Successful', description: `Welcome, ${credentials.user.user.name}!` });
     } else {
       toast({
         title: 'Login Failed',
-        description: 'Incorrect email or password. Please check your credentials.',
+        description: 'Incorrect email or password.',
         variant: 'destructive',
       });
     }
-  }, [router, toast]);
+  }, [credentials, router, toast]);
 
   const logout = useCallback(() => {
     setUser(null);
@@ -78,8 +87,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/');
   }, [router]);
 
+  const updateCredentials = useCallback((role: 'admin' | 'user', newEmail: string, newPassword?: string) => {
+    setCredentials(prev => {
+      const updated = {
+        ...prev,
+        [role]: {
+          ...prev[role],
+          email: newEmail,
+          password: newPassword || prev[role].password
+        }
+      };
+      localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    toast({ title: 'Success', description: `${role.toUpperCase()} credentials updated successfully.` });
+  }, [toast]);
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, updateCredentials, loading }}>
       {children}
     </AuthContext.Provider>
   );
