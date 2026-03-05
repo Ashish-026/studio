@@ -5,6 +5,26 @@ import { useRouter } from 'next/navigation';
 import type { User as AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * ---------------------------------------------------------
+ * CUSTOMIZE YOUR LOGIN DETAILS HERE
+ * ---------------------------------------------------------
+ * You can change the 'email' and 'password' below to 
+ * whatever you like. 
+ */
+const INITIAL_CREDENTIALS: Record<string, { user: AppUser; password?: string }> = {
+  // ADMIN ACCOUNT (Full access to Targets and Stock Transfers)
+  'admin@mill.com': { 
+    user: { id: 'admin-uid', name: 'Mill Owner', role: 'admin' }, 
+    password: 'password123' 
+  },
+  // USER ACCOUNT (Limited to daily entry like lifting and labour)
+  'user@mill.com': { 
+    user: { id: 'user-uid', name: 'Staff User', role: 'user' }, 
+    password: 'staffpassword' 
+  },
+};
+
 interface AuthContextType {
   user: AppUser | null;
   login: (email: string, password?: string) => void;
@@ -14,11 +34,6 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-const hardcodedUsers: Record<string, { user: AppUser; password?: string }> = {
-  'admin@example.com': { user: { id: 'admin-uid', name: 'Admin User', role: 'admin' }, password: 'admin' },
-  'user@example.com': { user: { id: 'user-uid', name: 'Regular User', role: 'user' }, password: 'user' },
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Check if user is already logged in
     const stored = localStorage.getItem('mandi-monitor-user');
     if (stored) {
       setUser(JSON.parse(stored));
@@ -34,7 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback((email: string, password?: string) => {
-    const userData = hardcodedUsers[email];
+    // Check against the hardcoded list at the top of this file
+    const userData = INITIAL_CREDENTIALS[email];
+    
     if (userData && (userData.password === password)) {
       setUser(userData.user);
       localStorage.setItem('mandi-monitor-user', JSON.stringify(userData.user));
@@ -46,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       toast({
         title: 'Login Failed',
-        description: 'Invalid email or password.',
+        description: 'Incorrect email or password. Please check your credentials.',
         variant: 'destructive',
       });
     }

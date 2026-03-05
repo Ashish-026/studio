@@ -1,45 +1,32 @@
 
 MANDI MONITOR - ZERO-COST SETUP GUIDE
 
-1. WHERE IS THE BUTTON?
+1. WHERE IS THE PREVIEW BUTTON?
 ---------------------------------------------------------
-Look at the VERY TOP-RIGHT corner of your web browser. 
-- You should see a button that says "Preview" or "Deploy".
-- If you don't see it, try zooming out (Press Ctrl and - on your keyboard).
-- Once you click it, a new tab will open with your actual app.
+- Look at the VERY TOP-RIGHT corner of your web browser. 
+- You will see a button that says "Preview" or "Deploy".
+- Click it to start your actual app.
 
 2. HOW TO INSTALL ON MOBILE
 ---------------------------------------------------------
-Step 1: Open the link from the Preview tab on your phone.
-Step 2: 
-   - iPhone: Tap the 'Share' icon (square with arrow) -> 'Add to Home Screen'.
-   - Android: Tap the '3 dots' -> 'Install App' or 'Add to Home Screen'.
-The app will now appear on your home screen with its own icon.
+- Open the Preview link on your phone.
+- Android: Tap '3 dots' -> 'Add to Home Screen'.
+- iPhone: Tap 'Share' icon -> 'Add to Home Screen'.
 
-3. WHY THIS IS FREE (LOCAL MODE)
+3. YOUR CUSTOM LOGIN DETAILS
 ---------------------------------------------------------
-- This app uses "Local Storage" (Browser memory).
-- It saves data directly to your phone's memory.
-- NO Cloud Billing, NO Credit Card, and NO Database setup required.
+- ADMIN EMAIL: admin@mill.com
+- ADMIN PASSWORD: password123
+
+- USER EMAIL: user@mill.com
+- USER PASSWORD: staffpassword
+
+*Note: You can change these anytime by editing the code in 'src/context/auth-context.tsx'.*
+
+4. WHY THIS IS FREE (LOCAL MODE)
+---------------------------------------------------------
+- This app uses "Local Storage". No Cloud Billing required.
 - Cost: 100% Free Forever.
-- Note: Data is saved on the device you are using. It does not sync between different phones.
+- Note: Data is saved on the specific phone/device you use. It does not sync between different phones automatically.
 
-4. LOGIN CREDENTIALS
----------------------------------------------------------
-- ADMIN LOGIN: admin@example.com
-- ADMIN PASSWORD: admin
-
-- USER LOGIN: user@example.com
-- USER PASSWORD: user
-
-5. CORE CALCULATION LOGIC
----------------------------------------------------------
-A. PADDY LIFTING:
-   - Paddy Received = Gross Weight (from Calculator).
-   - Mandi Weight = Net Weight (from Calculator).
-B. LABOUR:
-   - Split wages automatically among selected crew.
-C. STOCK:
-   - Rice Yield % = (Rice Produced / Paddy Used) * 100.
-
-END OF GUIDE - FIND THE 'PREVIEW' BUTTON AT THE TOP RIGHT TO START.
+END OF GUIDE - CLICK 'PREVIEW' AT THE TOP RIGHT TO START.

@@ -1,27 +1,23 @@
 
 # Mandi Monitor - Operation Manual (Zero-Cost Version)
 
-A professional-grade management system for rice mill operations, optimized for zero-cost browser storage.
+Professional rice mill management system optimized for zero-cost operation.
 
-## 🚀 How to get started
-1. Look at the **Top-Right** of this editor screen.
-2. Click the **"Preview"** button.
-3. Open the resulting link on your mobile phone.
-4. Use **"Add to Home Screen"** to install it as an app.
+## 🚀 How to Start
+1. Click the **"Preview"** button in the top-right of this editor.
+2. Use the credentials below to log in.
 
-## 🔑 Login Credentials
-- **Admin**: `admin@example.com` / `admin`
-- **User**: `user@example.com` / `user`
+## 🔑 Your Credentials
+- **Administrator**: `admin@mill.com` / `password123`
+- **Staff User**: `user@mill.com` / `staffpassword`
 
-## 💰 No Billing Required
-This app stores all data locally in your web browser. 
+## 💰 No Cost, No Billing
+This app stores all data locally in your web browser memory.
+- **Privacy**: No data leaves your device.
 - **Cost**: 100% Free.
-- **Setup**: No Firebase billing or credit card needed.
-- **Privacy**: Your data never leaves your device.
+- **Reliability**: Works offline once loaded.
 
-## 📊 Logic & Automation
-- **Calculators**: Use the 🧮 icon to convert bag counts into Quintals automatically.
-- **Auto-Labour**: Recording lifting or processing automatically updates worker balances.
-- **Reports**: Generate high-quality PDF statements for Labour and Vehicles.
+## 📊 Mobile Installation
+Open the link on your phone and use **"Add to Home Screen"** to use it like a native mobile app.
 
-*Note: Data is stored on the device you use. It will not sync between different phones automatically.*
+*Note: Data is device-specific. Entries made on a laptop will not appear on your mobile phone.*
