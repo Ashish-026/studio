@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Sprout } from 'lucide-react';
+import { Factory as MillIcon } from 'lucide-react';
 
 const formSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -45,7 +45,7 @@ export function LoginForm() {
       <CardHeader className="text-center">
         <div className="flex justify-center items-center mb-4">
             <div className="bg-primary/10 p-3 rounded-full">
-                <Sprout className="h-10 w-10 text-primary" />
+                <MillIcon className="h-10 w-10 text-primary" />
             </div>
         </div>
         <CardTitle className="text-3xl font-headline text-primary">Mandi Monitor</CardTitle>

@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, Sprout, ChevronsUpDown, Factory, Calendar, Settings } from 'lucide-react';
+import { LogOut, Factory as MillIcon, ChevronsUpDown, Factory, Calendar, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
 import { useMill } from '@/hooks/use-mill';
@@ -52,7 +52,7 @@ export function AppHeader() {
       <div className="container flex h-16 items-center px-4 md:px-6">
         <Link href="/dashboard" className="mr-6 flex items-center space-x-2">
           <div className="bg-primary p-1.5 rounded-lg shadow-sm">
-            <Sprout className="h-5 w-5 text-white" />
+            <MillIcon className="h-5 w-5 text-white" />
           </div>
           <span className="font-bold font-headline text-xl text-primary tracking-tight">Mandi Monitor</span>
         </Link>
