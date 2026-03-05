@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -81,12 +80,12 @@ export function PaddyLifted() {
   const [selectedMandi, setSelectedMandi] = useState('All');
 
   const uniqueMandis = useMemo(() => {
-    const mandiNames = targetAllocations.map((allocation) => allocation.mandiName);
+    const mandiNames = (targetAllocations || []).map((allocation) => allocation.mandiName);
     return [...new Set(mandiNames)];
   }, [targetAllocations]);
 
   const filteredItems = useMemo(() => {
-    return paddyLiftedItems.filter(item => selectedMandi === 'All' || item.mandiName === selectedMandi);
+    return (paddyLiftedItems || []).filter(item => selectedMandi === 'All' || item.mandiName === selectedMandi);
   }, [paddyLiftedItems, selectedMandi]);
   
   const physicalEntries = useMemo(() => 
@@ -127,7 +126,7 @@ export function PaddyLifted() {
   const numberOfLabours = physicalForm.watch('numberOfLabours');
   const selectedLabourerIds = physicalForm.watch('labourerIds').map(l => l.value);
 
-  useMemo(() => {
+  useEffect(() => {
     const currentCount = fields.length;
     if (numberOfLabours > currentCount) {
         for(let i = currentCount; i < numberOfLabours; i++) {
@@ -301,6 +300,9 @@ export function PaddyLifted() {
   };
   
   const handleCalculatorConfirm = (values: { grossQuintals: number; netQuintals: number; netWeightKg: number }) => {
+    // Correct mapping per user instruction:
+    // Paddy Received = Gross weight
+    // Mandi Weight = Net quantity
     physicalForm.setValue('totalPaddyReceived', values.grossQuintals);
     physicalForm.setValue('mandiWeight', values.netQuintals);
     setCalculatorOpen(false);
@@ -487,7 +489,7 @@ export function PaddyLifted() {
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                    {labourers
+                                    {(labourers || [])
                                         .filter(l => !selectedLabourerIds.includes(l.id) || l.id === field.value)
                                         .map((l) => (
                                         <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
@@ -691,16 +693,16 @@ export function PaddyLifted() {
                             name="mandiName"
                             render={({ field }) => (
                                 <FormItem>
-                                <FormLabel>Mandi Name</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                    <SelectTrigger><SelectValue placeholder="Select a mandi" /></SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                    {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem>))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
+                                    <FormLabel>Mandi Name</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormControl>
+                                        <SelectTrigger><SelectValue placeholder="Select a mandi" /></SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                        {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem>))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
                                 </FormItem>
                             )}
                         />

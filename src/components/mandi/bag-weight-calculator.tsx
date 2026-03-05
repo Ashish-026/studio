@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -78,7 +77,11 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
     }, [activeTab, watchedUniformValues, watchedNonUniformValues]);
     
     function handleConfirm() {
-        onConfirm({ grossQuintals: summary.grossQuintals, netQuintals: summary.netQuintals, netWeightKg: summary.netWeightKg });
+        onConfirm({ 
+            grossQuintals: summary.grossQuintals, 
+            netQuintals: summary.netQuintals, 
+            netWeightKg: summary.netWeightKg 
+        });
     }
 
     return (

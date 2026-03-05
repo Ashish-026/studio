@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
@@ -23,51 +22,34 @@ interface MandiContextType {
 
 const MandiContext = createContext<MandiContextType | null>(null);
 
-const initialTargets: TargetAllocation[] = [
-    { id: '1', mandiName: 'Bargarh Main', date: new Date('2023-11-10'), target: 5000 },
-    { id: '2', mandiName: 'Sambalpur Town', date: new Date('2023-11-12'), target: 7500 },
-    { id: '3', mandiName: 'Bargarh Main', date: new Date('2023-11-15'), target: 2500 },
-];
-
-const initialPaddyLifted: PaddyLifted[] = [
-    { id: '1', mandiName: 'Bargarh Main', farmerName: 'Ramesh Patel', totalPaddyReceived: 120, mandiWeight: 118.5, date: new Date('2023-11-20'), entryType: 'physical', vehicleType: 'farmer' },
-    { id: '2', mandiName: 'Sambalpur Town', farmerName: 'Suresh Meher', totalPaddyReceived: 80, mandiWeight: 79.2, date: new Date('2023-11-21'), entryType: 'physical', vehicleType: 'own' },
-    { id: '3', mandiName: 'Bargarh Main', farmerName: 'Monetary Entry', moneyReceived: 220000, ratePerQuintal: 2200, totalPaddyReceived: 100, mandiWeight: 0, date: new Date('2023-11-22'), entryType: 'monetary' },
-];
-
 const parseStoredData = (key: string, initialData: any[]) => {
     try {
-        const stored = localStorage.getItem(key);
+        const stored = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
         if (!stored) return initialData;
 
         const parsed = JSON.parse(stored);
-        // Revive dates
         return parsed.map((item: any) => ({
             ...item,
             date: item.date ? new Date(item.date) : undefined,
-            dateAdded: item.dateAdded ? new Date(item.dateAdded) : undefined,
             workEntries: item.workEntries?.map((w: any) => ({...w, date: new Date(w.date)})),
             payments: item.payments?.map((p: any) => ({...p, date: new Date(p.date)})),
             trips: item.trips?.map((t: any) => ({...t, date: new Date(t.date)})),
         }));
     } catch (e) {
-        console.error(`Failed to parse ${key} from localStorage`, e);
         return initialData;
     }
 }
 
-
 export function MandiProvider({ children }: { children: ReactNode }) {
   const { addMandiProcessing: addMandiProcessingToStock, mandiProcessingHistory, transferredInStock } = useStockData();
-
 
   const [targetAllocations, setTargetAllocations] = useState<TargetAllocation[]>([]);
   const [paddyLiftedItems, setPaddyLiftedItems] = useState<PaddyLifted[]>([]);
   const [stockReleases, setStockReleases] = useState<MandiStockRelease[]>([]);
 
   useEffect(() => {
-    setTargetAllocations(parseStoredData('targetAllocations', initialTargets));
-    setPaddyLiftedItems(parseStoredData('paddyLiftedItems', initialPaddyLifted));
+    setTargetAllocations(parseStoredData('targetAllocations', []));
+    setPaddyLiftedItems(parseStoredData('paddyLiftedItems', []));
     setStockReleases(parseStoredData('stockReleases', []));
   }, []);
 
@@ -84,15 +66,15 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   }, [stockReleases]);
 
   const totalRiceFromProcessing = useMemo(() => {
-    return (mandiProcessingHistory || []).reduce((acc, item) => acc + item.riceYield, 0);
+    return (mandiProcessingHistory || []).reduce((acc, item) => acc + (Number(item.riceYield) || 0), 0);
   }, [mandiProcessingHistory]);
 
   const totalRiceSupplied = useMemo(() => {
-      return (stockReleases || []).reduce((acc, item) => acc + item.quantity, 0);
+      return (stockReleases || []).reduce((acc, item) => acc + (Number(item.quantity) || 0), 0);
   }, [stockReleases]);
   
   const totalTransferredInStock = useMemo(() => {
-      return (transferredInStock || []).reduce((sum, t) => sum + t.quantity, 0);
+      return (transferredInStock || []).reduce((sum, t) => sum + (Number(t.quantity) || 0), 0);
   }, [transferredInStock]);
 
   const availableRiceForSupply = useMemo(() => {
@@ -128,7 +110,6 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   const updateStockRelease = useCallback((id: string, updatedStockRelease: Omit<MandiStockRelease, 'id' | 'date'>) => {
     setStockReleases(prev => (prev || []).map(sr => sr.id === id ? { ...sr, ...updatedStockRelease } : sr));
   }, []);
-
 
   return (
     <MandiContext.Provider value={{ targetAllocations, paddyLiftedItems, processingHistory: mandiProcessingHistory, stockReleases, addTarget, updateTarget, addPaddyLifted, updatePaddyLifted, addMandiProcessing: addMandiProcessingToStock, addStockRelease, availableRiceForSupply, totalRiceFromProcessing, updateStockRelease }}>
