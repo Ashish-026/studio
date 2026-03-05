@@ -1,46 +1,46 @@
-# Mandi Monitor - Technical Blueprint
+# Mandi Monitor - Operation Manual
 
-A professional-grade management system for rice mill operations, built with Next.js 15, Tailwind CSS, and Shadcn UI.
+A professional-grade management system for rice mill operations, built with Next.js 15 and Firebase Cloud Firestore.
 
-## 0. Default Login Credentials
+## 0. Login Credentials
 **Admin Access:**
-- Email: `admin@example.com`
-- Password: `admin`
+- Email: `admin@example.com` / Password: `admin`
 
 **User Access:**
-- Email: `user@example.com`
-- Password: `user`
+- Email: `user@example.com` / Password: `user`
 
-## 1. Application Logic & Formulas
+## 1. User Workflow
 
-### A. Weight Calculations (The Bag Calculator)
-The core of the system is the **Bag Weight Calculator**, which prevents manual entry errors.
-- **Gross Weight**: `(Bags × Weight per Bag) / 100`
-- **Net Weight**: `(Gross Weight × 100 - Total Deductions) / 100`
-- **Quintal Conversion**: All internal weights are stored in Quintals (100kg = 1 Qtl).
+### A. The Setup Phase
+1. **Context**: Upon login, select the operational Mill and the Marketing Season (KMS). 
+2. **Targets**: Admins should record the Government Allotted Targets in the Mandi Register.
 
-### B. Register Accounting
-- **Labour Balance**: `Sum(Daily Wages + Item Wages) - Sum(Paid Amount)`
-  - *Payable*: Balance > 0
-  - *Advance*: Balance < 0
-- **Vehicle Balance**: `Sum(Trip Charges OR Monthly Rent) - Sum(Paid Amount)`
-- **Equivalent Paddy**: `Money Received / Market Rate` (Used for Monetary Lifting).
+### B. Daily Operations
+1. **Paddy Lifting**: Record arrivals in the Mandi Register. Use the **Bag Weight Calculator** to ensure precision.
+   - *Automation*: Selecting "Hired Vehicle" or adding "Labour Charges" during lifting will automatically create entries in the Vehicle and Labour registers respectively.
+2. **Milling (Processing)**: In the Stock Register, record the processing of paddy.
+   - *Logic*: Processing 100 Qtl of Paddy will decrease Paddy stock and increase Rice, Bran, and Broken Rice stock based on the yields you enter.
+3. **Payments**: Record payments to Labourers and Vehicle Owners directly in their respective registers to maintain an accurate "Balance."
 
-### C. Processing & Yields
-- **Yield Percentage**: `(Rice Produced / Paddy Used) × 100`
-- **Inventory Tracking**: Processing `100 Qtl` of Paddy will subtract `100` from Paddy stock and add calculated yields to Rice, Bran, and Broken Rice stocks.
+## 2. Calculation Logic
 
-## 2. Automation Workflow
-We implemented "Trigger Logic" to eliminate double-entry:
-1. **Lifting Entry**: User enters data in the Mandi Register.
-2. **Vehicle Trigger**: If the vehicle is "Hired," the system automatically adds a trip to the **Vehicle Register** and calculates the debt to the owner.
-3. **Labour Trigger**: If a "Labour Charge" is recorded, the system automatically creates a work entry in the **Labour Register**, splitting the total charge among the selected workers.
+### Weight Calculations
+- **Gross Weight**: Total weight of paddy including bags.
+- **Net Weight**: Weight after deducting bag tare and moisture.
+- **Mapping**: Paddy Received = Gross; Mandi Weight = Net.
 
-## 3. Technical Features
-- **localStorage Persistence**: All data is saved locally in the browser with "Date Revival" logic to maintain time-stamps.
-- **Role-Based Access**: Admins handle targets and monetary lifting; Users handle operational data.
-- **PDF Reporting**: High-resolution account statements for Labourers and Vehicle Owners can be downloaded as PDFs.
-- **Decoupled KMS Year**: The marketing season selection acts as a filter for viewing, while data entry remains independent to ensure no records are hidden.
+### Accounting
+- **Balance**: `Total Earned (Wages/Rent) - Total Paid`.
+- **Positive Balance**: Money the Mill owes (Payable).
+- **Negative Balance**: Money paid in advance (Advance).
+
+## 3. Cloud Synchronization
+This app uses **Firebase Firestore**. 
+- **Real-Time**: Changes made on one device appear on all other logged-in devices instantly.
+- **Security**: Data is persistent and stored safely in Google’s cloud infrastructure.
+
+## 4. Reporting
+Use the **"Download PDF"** buttons found in the Labour and Vehicle accounts to generate high-resolution statements for external stakeholders.
 
 ---
-*Built for numeric stability and operational efficiency.*
+*Built for operational efficiency and numeric stability.*

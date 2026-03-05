@@ -1,42 +1,49 @@
-MANDI MONITOR - FINAL DEVELOPMENT LOG & CLOUD GUIDE
+MANDI MONITOR - USER GUIDE & DEVELOPMENT LOG
 
-1. CORE ARCHITECTURE (NOW CLOUD ENABLED)
+1. QUICK START FOR NON-CODERS
+---------------------------------------------------------
+Step 1: Open the App and Login.
+        - Admin: admin@example.com (Password: admin)
+        - User: user@example.com (Password: user)
+Step 2: Select your "Mill" and "KMS Year" (Season).
+Step 3: Start entering data! Your data is saved automatically to the Cloud.
+
+2. HOW TO ENTER DATA (STEP-BY-STEP)
+---------------------------------------------------------
+A. SETTING TARGETS (Admin Only)
+   - Go to Mandi Register -> Target Allotment.
+   - Enter the Mandi name and the total Quintals allotted by the Govt.
+
+B. RECORDING PADDY ARRIVAL (Lifting)
+   - Go to Mandi Register -> Paddy Lifted.
+   - Click "Add Physical Entry".
+   - Tip: Click the Calculator icon [🧮] to enter weights bag-by-bag. It will 
+     automatically fill the "Paddy Received" and "Mandi Weight" fields.
+
+C. MANAGING LABOUR
+   - Add worker names in the Labour Register first.
+   - When filling any form (Lifting or Processing), select the workers involved.
+   - The system will split the total charge equally among them and update their balance.
+
+D. VEHICLE LOGISTICS
+   - If you use a "Hired" vehicle during Paddy Lifting, the system automatically 
+     creates a record in the Vehicle Register. 
+   - You only need to go to the Vehicle Register to record payments made to the owner.
+
+E. STOCK & MILLING
+   - Check the Stock Register to see how much Paddy is in your godown.
+   - Use "Processing" to record milling. It converts Paddy into Rice, Bran, and Broken Rice.
+
+3. GENERATING REPORTS (PDF)
+---------------------------------------------------------
+- Every Labourer and Vehicle Owner has a "PDF" button.
+- Click it to download a professional statement showing all work, trips, and payments.
+
+4. CORE ARCHITECTURE (CLOUD ENABLED)
 ---------------------------------------------------------
 - Platform: Next.js 15 + Firebase Firestore.
-- Free Tier: Operates on Firebase "Spark Plan" (100% Free).
-- Real-Time Sync: All registers update instantly across all your devices.
-
-2. REGISTER LOGIC & FORMULAS
----------------------------------------------------------
-A. MANDI REGISTER
-- Gross Weight = (Bag Count * Weight per Bag) / 100.
-- Net Weight = (Gross Weight * 100 - Deductions in kg) / 100.
-- UI Sync: "Paddy Received" maps to Gross; "Mandi Weight" maps to Net.
-
-B. LABOUR REGISTER
-- Worker Balance = Total Wages - Total Payments.
-- Group Work: Automatically splits unloading charges across a crew.
-
-C. VEHICLE REGISTER
-- Logistics: Automatically captures trips from Mandi/Private forms.
-- Formula: Balance = Total Rent - Total Payments.
-
-D. STOCK REGISTER
-- Processing: Subtracts Paddy and adds (Rice, Bran, Broken Rice).
-- Yield % = (Rice Yield / Paddy Used) * 100.
-
-3. NON-CODER'S GUIDE TO STARTING THE APP
----------------------------------------------------------
-Step 1: Go to https://console.firebase.google.com/
-Step 2: Find project "studio-391139845-c7694".
-Step 3: On the left menu, click "Build" then "Firestore Database".
-Step 4: If you see "Cloud Firestore" with tabs like "Data" and "Rules", you are DONE!
-        - If you see a "Create Database" button, click it and select "Test Mode".
-
-4. DEFAULT LOGIN CREDENTIALS
----------------------------------------------------------
-Admin: admin@example.com / admin
-User: user@example.com / user
+- Database: All records are synced to the Google Cloud (Firebase).
+- Reliability: Data stays safe even if you switch phones or clear your browser.
 
 ---------------------------------------------------------
-END OF SPECIFICATIONS - DATA IS NOW SECURE IN THE CLOUD.
+END OF MANUAL - SYSTEM IS READY FOR OPERATION.
