@@ -1,14 +1,25 @@
+
 MANDI MONITOR - USER GUIDE & DEVELOPMENT LOG
 
-1. QUICK START FOR NON-CODERS
+1. HOW TO USE ON MOBILE (INSTALLATION)
+---------------------------------------------------------
+This app is a Web App. You don't need the Play Store.
+Step 1: Deploy/Publish your app to get a web link (URL).
+Step 2: Open that link on your mobile phone browser.
+Step 3: 
+   - iPhone: Tap 'Share' -> 'Add to Home Screen'.
+   - Android: Tap 'Settings (3 dots)' -> 'Install App'.
+The app will now appear on your home screen with its own icon.
+
+2. QUICK START FOR NON-CODERS
 ---------------------------------------------------------
 Step 1: Open the App and Login.
         - Admin: admin@example.com (Password: admin)
         - User: user@example.com (Password: user)
 Step 2: Select your "Mill" and "KMS Year" (Season).
-Step 3: Start entering data! Your data is saved automatically to the Cloud.
+Step 3: Start entering data! Your data is saved automatically to the Cloud (Firebase).
 
-2. HOW TO ENTER DATA (STEP-BY-STEP)
+3. HOW TO ENTER DATA (STEP-BY-STEP)
 ---------------------------------------------------------
 A. SETTING TARGETS (Admin Only)
    - Go to Mandi Register -> Target Allotment.
@@ -17,27 +28,18 @@ A. SETTING TARGETS (Admin Only)
 B. RECORDING PADDY ARRIVAL (Lifting)
    - Go to Mandi Register -> Paddy Lifted.
    - Click "Add Physical Entry".
-   - Tip: Click the Calculator icon [🧮] to enter weights bag-by-bag. It will 
-     automatically fill the "Paddy Received" and "Mandi Weight" fields.
+   - Tip: Click the Calculator icon [🧮] to enter weights bag-by-bag. 
+     - "Gross Weight" goes to "Paddy Received".
+     - "Net Weight" goes to "Mandi Weight".
 
 C. MANAGING LABOUR
    - Add worker names in the Labour Register first.
    - When filling any form (Lifting or Processing), select the workers involved.
-   - The system will split the total charge equally among them and update their balance.
+   - The system will split the total charge equally among them.
 
 D. VEHICLE LOGISTICS
-   - If you use a "Hired" vehicle during Paddy Lifting, the system automatically 
-     creates a record in the Vehicle Register. 
-   - You only need to go to the Vehicle Register to record payments made to the owner.
-
-E. STOCK & MILLING
-   - Check the Stock Register to see how much Paddy is in your godown.
-   - Use "Processing" to record milling. It converts Paddy into Rice, Bran, and Broken Rice.
-
-3. GENERATING REPORTS (PDF)
----------------------------------------------------------
-- Every Labourer and Vehicle Owner has a "PDF" button.
-- Click it to download a professional statement showing all work, trips, and payments.
+   - If you use a "Hired" vehicle, the system automatically creates a record 
+     in the Vehicle Register. You only need to go there to record payments.
 
 4. CORE ARCHITECTURE (CLOUD ENABLED)
 ---------------------------------------------------------
