@@ -1,10 +1,10 @@
-'use client';
+'use server';
 
 import { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
 import type { MandiProcessingResult, MandiStockRelease, TargetAllocation, PaddyLifted } from '@/lib/types';
 import { useStockData } from './stock-context';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, doc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, query, orderBy } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface MandiContextType {
@@ -38,6 +38,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!db) return;
 
+    // Listen to Target Allocations
     const unsubTargets = onSnapshot(collection(db, 'targetAllocations'), (s) => {
       setTargetAllocations(s.docs.map(d => {
           const data = d.data();
@@ -45,6 +46,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
       }));
     });
 
+    // Listen to Paddy Lifting
     const unsubLifting = onSnapshot(collection(db, 'paddyLiftedItems'), (s) => {
       setPaddyLiftedItems(s.docs.map(d => {
           const data = d.data();
@@ -52,6 +54,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
       }));
     });
 
+    // Listen to Stock Releases (Supply)
     const unsubReleases = onSnapshot(collection(db, 'stockReleases'), (s) => {
       setStockReleases(s.docs.map(d => {
           const data = d.data();
