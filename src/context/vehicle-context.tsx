@@ -41,8 +41,14 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => {
         const item = doc.data();
-        const trips = (item.trips || []).map((t: any) => ({...t, date: t.date?.toDate() || new Date(t.date)}));
-        const payments = (item.payments || []).map((p: any) => ({...p, date: p.date?.toDate() || new Date(p.date)}));
+        const trips = (item.trips || []).map((t: any) => ({
+            ...t, 
+            date: t.date?.toDate ? t.date.toDate() : new Date(t.date)
+        }));
+        const payments = (item.payments || []).map((p: any) => ({
+            ...p, 
+            date: p.date?.toDate ? p.date.toDate() : new Date(p.date)
+        }));
         
         const { totalRent, totalPaid, balance } = calculateTotals(item.rentType, item.rentAmount, payments, trips);
         
@@ -54,7 +60,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
           totalRent,
           totalPaid,
           balance,
-          dateAdded: item.dateAdded?.toDate() || new Date(item.dateAdded)
+          dateAdded: item.dateAdded?.toDate ? item.dateAdded.toDate() : new Date(item.dateAdded)
         } as Vehicle;
       });
       setVehicles(data);
@@ -67,13 +73,12 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
   const addVehicle = useCallback((item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'trips' | 'totalRent' | 'totalPaid' | 'balance'>) => {
     if (!db) return '';
     
-    const existingVehicle = vehicles.find(v => v.vehicleNumber === item.vehicleNumber);
+    const existingVehicle = (vehicles || []).find(v => v.vehicleNumber === item.vehicleNumber);
     if (existingVehicle) return existingVehicle.id;
 
     const id = Date.now().toString() + '-v';
-    const newVehicle: Partial<Vehicle> = {
+    const newVehicle = {
         ...item,
-        id,
         dateAdded: new Date(),
         payments: [],
         trips: [],
@@ -84,7 +89,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
 
   const addRentPayment = useCallback((vehicleId: string, amount: number) => {
     if (!db) return;
-    const vehicle = vehicles.find(v => v.id === vehicleId);
+    const vehicle = (vehicles || []).find(v => v.id === vehicleId);
     if (!vehicle) return;
 
     const newPayment: Payment = {
@@ -98,7 +103,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
 
   const addTrip = useCallback((vehicleId: string, trip: Omit<VehicleTrip, 'id' | 'date'>) => {
     if (!db) return;
-    const vehicle = vehicles.find(v => v.id === vehicleId || v.vehicleNumber === vehicleId);
+    const vehicle = (vehicles || []).find(v => v.id === vehicleId || v.vehicleNumber === vehicleId);
     if (vehicle && vehicle.rentType === 'per_trip') {
         const newTrip: VehicleTrip = {
             ...trip,
@@ -112,7 +117,7 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
   
   const updateTrip = useCallback((vehicleId: string, tripId: string, updatedTripData: VehicleTrip) => {
     if (!db) return;
-    const vehicle = vehicles.find(v => v.id === vehicleId);
+    const vehicle = (vehicles || []).find(v => v.id === vehicleId);
     if (vehicle) {
         const updatedTrips = vehicle.trips.map(t => t.id === tripId ? { ...t, ...updatedTripData } : t);
         updateDocumentNonBlocking(doc(db, 'vehicles', vehicleId), { trips: updatedTrips });

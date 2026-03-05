@@ -1,79 +1,43 @@
-MANDI MONITOR - FINAL DEVELOPMENT LOG & TECHNICAL SPECIFICATIONS
+MANDI MONITOR - FINAL DEVELOPMENT LOG & CLOUD GUIDE
 
-This document contains the complete logic, calculation formulas, and architectural rules the Mandi Monitor application is built on.
-
-0. DEFAULT LOGIN CREDENTIALS
+1. CORE ARCHITECTURE (NOW CLOUD ENABLED)
 ---------------------------------------------------------
-Admin Access (Full Control):
-- Email: admin@example.com
-- Password: admin
-
-User Access (Data Entry):
-- Email: user@example.com
-- Password: user
-
-1. CORE ARCHITECTURE
----------------------------------------------------------
-- React Context API: Used for global state management across registers.
-- Persistent Storage: Data is stored in 'localStorage'.
-- Date Revival: A custom reviver converts JSON date strings back into JavaScript Date objects during hydration.
-- Decoupled Viewing: The KMS Year selection in the header filters visible data but does not restrict data entry, ensuring no records are lost across seasons.
+- Platform: Next.js 15 + Firebase Firestore.
+- Free Tier: Operates on Firebase "Spark Plan" (100% Free).
+- Real-Time Sync: All registers update instantly across all your devices.
 
 2. REGISTER LOGIC & FORMULAS
 ---------------------------------------------------------
-
 A. MANDI REGISTER
-- Target Allotment: Quintal-based targets set by Admins.
-- Physical Lifting: Records Paddy arrival.
-  - Formula: Gross Weight = (Bag Count * Weight per Bag) / 100 (in Quintals).
-  - Formula: Net Weight = (Gross Weight * 100 - Total Deductions in kg) / 100 (in Quintals).
-  - UI Sync: "Paddy Received" field fetches Gross Weight; "Mandi Weight" field fetches Net Weight from the calculator.
-- Monetary Lifting: Cash entries that track target achievement.
-  - Formula: Equivalent Quintals = Money Received / Rate per Quintal.
+- Gross Weight = (Bag Count * Weight per Bag) / 100.
+- Net Weight = (Gross Weight * 100 - Deductions in kg) / 100.
+- UI Sync: "Paddy Received" maps to Gross; "Mandi Weight" maps to Net.
 
 B. LABOUR REGISTER
-- Worker Management: Individual account tracking for every labourer.
-- Wage Types: 
-  - Daily: Fixed rate per shift.
-  - Item Rate: Quantity * Rate per Item.
-- Group Work: Splits a total wage (e.g., truck unloading) equally among a selected crew.
-- Accounting Formula: Balance = Total Wages - Total Payments.
-  - Positive Balance: Payable (Mill owes worker).
-  - Negative Balance: Advance (Worker owes work).
+- Worker Balance = Total Wages - Total Payments.
+- Group Work: Automatically splits unloading charges across a crew.
 
 C. VEHICLE REGISTER
-- Grouping: Records grouped by Owner/Agency for master statements.
-- Rent Types: Monthly (fixed) or Per-Trip (calculated).
-- Trip Log: Automatically captures trips from Mandi and Private lifting forms.
-- Accounting Formula: Balance = Total Rent - Total Payments.
+- Logistics: Automatically captures trips from Mandi/Private forms.
+- Formula: Balance = Total Rent - Total Payments.
 
 D. STOCK REGISTER
-- Logic: Central hub for all Paddy/Rice stock.
-- Processing: Subtracts input (Paddy/Rice) and adds output (Rice, Bran, Broken Rice).
-- Yield Formula: Yield % = (Rice Yield / Paddy Used) * 100.
-- Transfers: Specialized "Private to Mandi" tool for internal stock re-allocation.
+- Processing: Subtracts Paddy and adds (Rice, Bran, Broken Rice).
+- Yield % = (Rice Yield / Paddy Used) * 100.
 
-3. BAG WEIGHT CALCULATOR LOGIC
+3. NON-CODER'S GUIDE TO STARTING THE APP
 ---------------------------------------------------------
-- Uniform Mode: Inputs = Bag Count, Weight per Bag, Deductions.
-- Non-Uniform Mode: Inputs = List of individual bag weights, Deductions.
-- Output: Returns both 'Gross Quintals' and 'Net Quintals' to the calling form to ensure numeric accuracy.
+Step 1: Go to https://console.firebase.google.com/
+Step 2: Find project "studio-391139845-c7694".
+Step 3: Click "Firestore Database" in the left menu.
+Step 4: Click "Create Database".
+Step 5: Select "Start in Test Mode" and pick a location near you.
+Step 6: Click "Enable". Your app is now live and saving data!
 
-4. AUTOMATION TRIGGERS
+4. DEFAULT LOGIN CREDENTIALS
 ---------------------------------------------------------
-Whenever a 'Physical Lifting' or 'Private Purchase' is saved:
-1. IF (Vehicle == 'Hired') -> Automatically CALL VehicleContext.addTrip() -> Logs journey & updates Owner Balance.
-2. IF (Labour Charge > 0) -> Automatically CALL LabourContext.addGroupWorkEntry() -> Splits wage across selected crew.
-
-5. DATA STABILITY RULES
----------------------------------------------------------
-- Numeric Casting: All string inputs from forms are cast using `Number()` or `parseFloat()` before any calculation to prevent NaN or ".toFixed is not a function" errors.
-- Build Safety: All data loops (map/reduce) include default empty arrays `[]` to prevent crashes during the production build process.
-
-6. REPORTING
----------------------------------------------------------
-- PDF Generation: Uses 'jspdf' and 'html2canvas'.
-- Logic: Clones the data table into a high-res hidden element, captures it as an image, and generates a multi-page PDF document for professional sharing.
+Admin: admin@example.com / admin
+User: user@example.com / user
 
 ---------------------------------------------------------
-END OF SPECIFICATIONS
+END OF SPECIFICATIONS - DATA IS NOW SECURE IN THE CLOUD.

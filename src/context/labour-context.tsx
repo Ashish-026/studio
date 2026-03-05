@@ -1,15 +1,9 @@
-'use server';
-/**
- * @fileOverview Labour Data Context with Firestore integration.
- * Manages workers, work entries, and payments with real-time cloud sync.
- */
-
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext, useEffect } from 'react';
 import type { Labourer, LabourWorkEntry, Payment } from '@/lib/types';
-import { useFirestore, useUser } from '@/firebase';
-import { doc, onSnapshot, setDoc, collection, query, where } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { doc, onSnapshot, collection, query } from 'firebase/firestore';
 import { updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface LabourContextType {
@@ -34,21 +28,22 @@ export function LabourProvider({ children }: { children: ReactNode }) {
   const [labourers, setLabourers] = useState<Labourer[]>([]);
   const [loading, setLoading] = useState(true);
   const db = useFirestore();
-  const { user: firebaseUser } = useUser();
 
   useEffect(() => {
     if (!db) return;
 
-    // Listen to the global labourers collection
-    // In a production app, we would scope this by Mill ID
     const q = query(collection(db, 'labourers'));
-    
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => {
         const item = doc.data();
-        // Revive dates
-        const workEntries = (item.workEntries || []).map((w: any) => ({...w, date: w.date?.toDate() || new Date(w.date)}));
-        const payments = (item.payments || []).map((p: any) => ({...p, date: p.date?.toDate() || new Date(p.date)}));
+        const workEntries = (item.workEntries || []).map((w: any) => ({
+            ...w, 
+            date: w.date?.toDate ? w.date.toDate() : new Date(w.date)
+        }));
+        const payments = (item.payments || []).map((p: any) => ({
+            ...p, 
+            date: p.date?.toDate ? p.date.toDate() : new Date(p.date)
+        }));
         
         const { totalWages, totalPaid, balance } = calculateTotals(workEntries, payments);
         
@@ -64,6 +59,9 @@ export function LabourProvider({ children }: { children: ReactNode }) {
       });
       setLabourers(data);
       setLoading(false);
+    }, (error) => {
+        console.error("Firestore Listen Error:", error);
+        setLoading(false);
     });
 
     return () => unsubscribe();
@@ -72,8 +70,7 @@ export function LabourProvider({ children }: { children: ReactNode }) {
   const addLabourer = useCallback((labourerName: string) => {
     if (!db) return;
     const id = Date.now().toString() + '-l';
-    const newLabourer: Partial<Labourer> = {
-        id,
+    const newLabourer = {
         name: labourerName,
         workEntries: [],
         payments: [],
@@ -105,10 +102,10 @@ export function LabourProvider({ children }: { children: ReactNode }) {
   }, [db, labourers]);
 
   const addGroupWorkEntry = useCallback((labourerIds: string[], totalCharge: number, description: string, quantity: number) => {
-    if (!db || labourerIds.length === 0) return;
+    if (!db || !labourerIds || labourerIds.length === 0) return;
     
     const wagePerLabourer = totalCharge / labourerIds.length;
-    const ratePerItem = totalCharge / quantity;
+    const ratePerItem = quantity > 0 ? totalCharge / quantity : 0;
 
     labourerIds.forEach(id => {
         const labourer = labourers.find(l => l.id === id);

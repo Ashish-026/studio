@@ -4,7 +4,7 @@ import { createContext, useState, useCallback, ReactNode, useContext, useMemo, u
 import type { MandiProcessingResult, MandiStockRelease, TargetAllocation, PaddyLifted } from '@/lib/types';
 import { useStockData } from './stock-context';
 import { useFirestore } from '@/firebase';
-import { collection, onSnapshot, query, doc } from 'firebase/firestore';
+import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface MandiContextType {
@@ -39,15 +39,24 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     if (!db) return;
 
     const unsubTargets = onSnapshot(collection(db, 'targetAllocations'), (s) => {
-      setTargetAllocations(s.docs.map(d => ({ ...d.data(), id: d.id, date: d.data().date?.toDate() || new Date(d.data().date) } as TargetAllocation)));
+      setTargetAllocations(s.docs.map(d => {
+          const data = d.data();
+          return { ...data, id: d.id, date: data.date?.toDate ? data.date.toDate() : new Date(data.date) } as TargetAllocation;
+      }));
     });
 
     const unsubLifting = onSnapshot(collection(db, 'paddyLiftedItems'), (s) => {
-      setPaddyLiftedItems(s.docs.map(d => ({ ...d.data(), id: d.id, date: d.data().date?.toDate() || new Date(d.data().date) } as PaddyLifted)));
+      setPaddyLiftedItems(s.docs.map(d => {
+          const data = d.data();
+          return { ...data, id: d.id, date: data.date?.toDate ? data.date.toDate() : new Date(data.date) } as PaddyLifted;
+      }));
     });
 
     const unsubReleases = onSnapshot(collection(db, 'stockReleases'), (s) => {
-      setStockReleases(s.docs.map(d => ({ ...d.data(), id: d.id, date: d.data().date?.toDate() || new Date(d.data().date) } as MandiStockRelease)));
+      setStockReleases(s.docs.map(d => {
+          const data = d.data();
+          return { ...data, id: d.id, date: data.date?.toDate ? data.date.toDate() : new Date(data.date) } as MandiStockRelease;
+      }));
       setLoading(false);
     });
 
