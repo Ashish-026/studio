@@ -1,8 +1,10 @@
-
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext, useEffect, useMemo } from 'react';
+import { createContext, useState, useCallback, ReactNode, useContext, useEffect } from 'react';
 import type { Vehicle, Payment, VehicleTrip } from '@/lib/types';
+import { useFirestore } from '@/firebase';
+import { collection, onSnapshot, query, doc } from 'firebase/firestore';
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface VehicleContextType {
   vehicles: Vehicle[];
@@ -10,172 +12,115 @@ interface VehicleContextType {
   addRentPayment: (vehicleId: string, amount: number) => void;
   addTrip: (vehicleId: string, trip: Omit<VehicleTrip, 'id' | 'date'>) => void;
   updateTrip: (vehicleId: string, tripId: string, updatedTrip: VehicleTrip) => void;
+  loading: boolean;
 }
 
 const VehicleContext = createContext<VehicleContextType | null>(null);
 
-const initialVehicles: Vehicle[] = [
-    {
-        id: 'v1',
-        vehicleNumber: 'OR02AB1234',
-        driverName: 'Rakesh Sharma',
-        ownerName: 'Sharma Transport',
-        rentType: 'monthly',
-        rentAmount: 30000,
-        payments: [{ id: 'vp1', amount: 30000, date: new Date('2024-07-01') }],
-        trips: [],
-        totalRent: 30000,
-        totalPaid: 30000,
-        balance: 0,
-        dateAdded: new Date('2024-06-15')
-    },
-    {
-        id: 'v2',
-        vehicleNumber: 'OD05CD5678',
-        driverName: 'Sanjay Yadav',
-        ownerName: 'Yadav Logistics',
-        rentType: 'per_trip',
-        rentAmount: 0, // Not applicable for per_trip
-        payments: [],
-        trips: [
-            { id: 't1', date: new Date('2024-07-02'), source: 'Bargarh', destination: 'Sambalpur', quantity: 120, tripCharge: 2500 },
-            { id: 't2', date: new Date('2024-07-04'), source: 'Sambalpur', destination: 'Bhubaneswar', quantity: 150, tripCharge: 6000 },
-        ],
-        totalRent: 8500,
-        totalPaid: 0,
-        balance: 8500,
-        dateAdded: new Date('2024-07-01')
-    }
-];
-
 const calculateTotals = (rentType: Vehicle['rentType'], rentAmount: number, payments: Payment[], trips: VehicleTrip[]) => {
     let totalRent = 0;
     if (rentType === 'per_trip') {
-        totalRent = (trips || []).reduce((acc, trip) => acc + trip.tripCharge, 0);
+        totalRent = (trips || []).reduce((acc, trip) => acc + (Number(trip.tripCharge) || 0), 0);
     } else {
-        totalRent = rentAmount; // This is a simplification. A real app would calculate monthly rent based on time.
+        totalRent = Number(rentAmount) || 0;
     }
-    const totalPaid = (payments || []).reduce((acc, p) => acc + p.amount, 0);
+    const totalPaid = (payments || []).reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
     const balance = totalRent - totalPaid;
     return { totalRent, totalPaid, balance };
 };
 
-const parseStoredData = (key: string, initialData: any[]) => {
-    try {
-        const stored = localStorage.getItem(key);
-        if (!stored) return initialData;
-
-        const parsed = JSON.parse(stored);
-        // Revive dates
-        return parsed.map((item: any) => ({
-            ...item,
-            date: item.date ? new Date(item.date) : undefined,
-            dateAdded: item.dateAdded ? new Date(item.dateAdded) : undefined,
-            payments: item.payments?.map((p: any) => ({...p, date: new Date(p.date)})),
-            trips: item.trips?.map((t: any) => ({...t, date: new Date(t.date)})),
-        }));
-    } catch (e) {
-        console.error(`Failed to parse ${key} from localStorage`, e);
-        return initialData;
-    }
-}
-
-
 export function VehicleProvider({ children }: { children: ReactNode }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const db = useFirestore();
 
   useEffect(() => {
-    const storedVehicles = parseStoredData('vehicles', initialVehicles);
-    const updatedVehicles = (storedVehicles || []).map((v: Vehicle) => {
-        const { totalRent, totalPaid, balance } = calculateTotals(v.rentType, v.rentAmount, v.payments, v.trips);
-        return { ...v, totalRent, totalPaid, balance };
+    if (!db) return;
+
+    const q = query(collection(db, 'vehicles'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => {
+        const item = doc.data();
+        const trips = (item.trips || []).map((t: any) => ({...t, date: t.date?.toDate() || new Date(t.date)}));
+        const payments = (item.payments || []).map((p: any) => ({...p, date: p.date?.toDate() || new Date(p.date)}));
+        
+        const { totalRent, totalPaid, balance } = calculateTotals(item.rentType, item.rentAmount, payments, trips);
+        
+        return {
+          ...item,
+          id: doc.id,
+          trips,
+          payments,
+          totalRent,
+          totalPaid,
+          balance,
+          dateAdded: item.dateAdded?.toDate() || new Date(item.dateAdded)
+        } as Vehicle;
+      });
+      setVehicles(data);
+      setLoading(false);
     });
-    setVehicles(updatedVehicles);
-  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('vehicles', JSON.stringify(vehicles));
-  }, [vehicles]);
+    return () => unsubscribe();
+  }, [db]);
 
   const addVehicle = useCallback((item: Omit<Vehicle, 'id' | 'dateAdded' | 'payments' | 'trips' | 'totalRent' | 'totalPaid' | 'balance'>) => {
-    let vehicleId = '';
-    setVehicles(prev => {
-        const existingVehicle = (prev || []).find(v => v.vehicleNumber === item.vehicleNumber);
-        if (existingVehicle) {
-            vehicleId = existingVehicle.id;
-            return prev; // Don't add if it already exists
-        }
+    if (!db) return '';
+    
+    const existingVehicle = vehicles.find(v => v.vehicleNumber === item.vehicleNumber);
+    if (existingVehicle) return existingVehicle.id;
 
-        const isPerTrip = item.rentType === 'per_trip';
-        const rentAmount = isPerTrip ? 0 : item.rentAmount;
-        const totalRent = isPerTrip ? 0 : rentAmount;
-        
-        const newVehicle: Vehicle = {
-            ...item,
-            id: new Date().toISOString() + '-v',
-            dateAdded: new Date(),
-            payments: [],
-            trips: [],
-            rentAmount: rentAmount,
-            totalRent: totalRent,
-            totalPaid: 0,
-            balance: totalRent,
-        };
-        vehicleId = newVehicle.id;
-        return [...(prev || []), newVehicle];
-    });
-    return vehicleId;
-  }, []);
+    const id = Date.now().toString() + '-v';
+    const newVehicle: Partial<Vehicle> = {
+        ...item,
+        id,
+        dateAdded: new Date(),
+        payments: [],
+        trips: [],
+    };
+    setDocumentNonBlocking(doc(db, 'vehicles', id), newVehicle, { merge: true });
+    return id;
+  }, [db, vehicles]);
 
   const addRentPayment = useCallback((vehicleId: string, amount: number) => {
-    setVehicles(prev => (prev || []).map(v => {
-        if(v.id === vehicleId) {
-            const newPayment: Payment = {
-                id: new Date().toISOString(),
-                amount,
-                date: new Date(),
-            };
-            const updatedPayments = [...v.payments, newPayment];
-            const { totalRent, totalPaid, balance } = calculateTotals(v.rentType, v.rentAmount, updatedPayments, v.trips);
-            return { ...v, payments: updatedPayments, totalPaid, balance };
-        }
-        return v;
-    }));
-  }, []);
+    if (!db) return;
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (!vehicle) return;
+
+    const newPayment: Payment = {
+        id: Date.now().toString() + '-p',
+        amount: Number(amount),
+        date: new Date(),
+    };
+    const updatedPayments = [...(vehicle.payments || []), newPayment];
+    updateDocumentNonBlocking(doc(db, 'vehicles', vehicleId), { payments: updatedPayments });
+  }, [db, vehicles]);
 
   const addTrip = useCallback((vehicleId: string, trip: Omit<VehicleTrip, 'id' | 'date'>) => {
-    setVehicles(prev => {
-        return (prev || []).map(v => {
-            const targetVehicle = v.id === vehicleId || v.vehicleNumber === vehicleId;
-            if (targetVehicle && v.rentType === 'per_trip') {
-                const newTrip: VehicleTrip = {
-                    ...trip,
-                    id: new Date().toISOString(),
-                    date: new Date(),
-                };
-                const updatedTrips = [...v.trips, newTrip];
-                const { totalRent, totalPaid, balance } = calculateTotals(v.rentType, v.rentAmount, v.payments, updatedTrips);
-                return { ...v, trips: updatedTrips, totalRent, balance };
-            }
-            return v;
-        });
-    });
-  }, []);
+    if (!db) return;
+    const vehicle = vehicles.find(v => v.id === vehicleId || v.vehicleNumber === vehicleId);
+    if (vehicle && vehicle.rentType === 'per_trip') {
+        const newTrip: VehicleTrip = {
+            ...trip,
+            id: Date.now().toString(),
+            date: new Date(),
+        };
+        const updatedTrips = [...(vehicle.trips || []), newTrip];
+        updateDocumentNonBlocking(doc(db, 'vehicles', vehicle.id), { trips: updatedTrips });
+    }
+  }, [db, vehicles]);
   
   const updateTrip = useCallback((vehicleId: string, tripId: string, updatedTripData: VehicleTrip) => {
-    setVehicles(prev => (prev || []).map(v => {
-        if (v.id === vehicleId) {
-            const updatedTrips = v.trips.map(t => t.id === tripId ? { ...t, ...updatedTripData } : t);
-            const { totalRent, totalPaid, balance } = calculateTotals(v.rentType, v.rentAmount, v.payments, updatedTrips);
-            return { ...v, trips: updatedTrips, totalRent, balance };
-        }
-        return v;
-    }));
-  }, []);
-
+    if (!db) return;
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (vehicle) {
+        const updatedTrips = vehicle.trips.map(t => t.id === tripId ? { ...t, ...updatedTripData } : t);
+        updateDocumentNonBlocking(doc(db, 'vehicles', vehicleId), { trips: updatedTrips });
+    }
+  }, [db, vehicles]);
 
   return (
-    <VehicleContext.Provider value={{ vehicles, addVehicle, addRentPayment, addTrip, updateTrip }}>
+    <VehicleContext.Provider value={{ vehicles, addVehicle, addRentPayment, addTrip, updateTrip, loading }}>
       {children}
     </VehicleContext.Provider>
   );
