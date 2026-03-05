@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
@@ -24,9 +25,9 @@ interface MandiContextType {
 const MandiContext = createContext<MandiContextType | null>(null);
 
 const KEYS = {
-  TARGETS: 'mandi-monitor-targets',
-  LIFTING: 'mandi-monitor-lifting',
-  RELEASES: 'mandi-monitor-releases'
+  TARGETS: 'mandi-monitor-targets-v2',
+  LIFTING: 'mandi-monitor-lifting-v2',
+  RELEASES: 'mandi-monitor-releases-v2'
 };
 
 export function MandiProvider({ children }: { children: ReactNode }) {

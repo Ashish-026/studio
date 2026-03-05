@@ -1,16 +1,16 @@
 
 MANDI MONITOR - ZERO-COST SETUP GUIDE
 
-1. HOW TO GET YOUR APP LINK
+1. WHERE IS THE BUTTON?
 ---------------------------------------------------------
-Step 1: Look at the top-right corner of this screen.
-Step 2: Click the button that says "Preview" or "Deploy".
-Step 3: A new window will open with your app. Copy that web address (link).
-Step 4: WhatsApp or Email that link to your mobile phone.
+Look at the VERY TOP-RIGHT corner of your web browser. 
+- You should see a button that says "Preview" or "Deploy".
+- If you don't see it, try zooming out (Press Ctrl and - on your keyboard).
+- Once you click it, a new tab will open with your actual app.
 
-2. HOW TO INSTALL ON MOBILE (NO DOWNLOAD NEEDED)
+2. HOW TO INSTALL ON MOBILE
 ---------------------------------------------------------
-Step 1: Open the link on your phone (Chrome for Android, Safari for iPhone).
+Step 1: Open the link from the Preview tab on your phone.
 Step 2: 
    - iPhone: Tap the 'Share' icon (square with arrow) -> 'Add to Home Screen'.
    - Android: Tap the '3 dots' -> 'Install App' or 'Add to Home Screen'.
@@ -18,10 +18,11 @@ The app will now appear on your home screen with its own icon.
 
 3. WHY THIS IS FREE (LOCAL MODE)
 ---------------------------------------------------------
-- This app uses "Local Storage".
+- This app uses "Local Storage" (Browser memory).
 - It saves data directly to your phone's memory.
 - NO Cloud Billing, NO Credit Card, and NO Database setup required.
 - Cost: 100% Free Forever.
+- Note: Data is saved on the device you are using. It does not sync between different phones.
 
 4. LOGIN CREDENTIALS
 ---------------------------------------------------------
@@ -38,4 +39,4 @@ B. LABOUR:
 C. STOCK:
    - Rice Yield % = (Rice Produced / Paddy Used) * 100.
 
-END OF GUIDE - CLICK 'PREVIEW' TO START.
+END OF GUIDE - FIND THE 'PREVIEW' BUTTON AT THE TOP RIGHT TO START.

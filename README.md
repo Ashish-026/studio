@@ -4,9 +4,10 @@
 A professional-grade management system for rice mill operations, optimized for zero-cost browser storage.
 
 ## 🚀 How to get started
-1. Click the **"Preview"** button in the top-right of the editor.
-2. Open the resulting link on your mobile phone.
-3. Use **"Add to Home Screen"** to install it as an app.
+1. Look at the **Top-Right** of this editor screen.
+2. Click the **"Preview"** button.
+3. Open the resulting link on your mobile phone.
+4. Use **"Add to Home Screen"** to install it as an app.
 
 ## 💰 No Billing Required
 This app stores all data locally in your web browser. 
