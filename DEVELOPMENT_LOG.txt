@@ -1,35 +1,41 @@
 
 MANDI MONITOR - ZERO-COST SETUP GUIDE
 
-1. HOW TO USE WITHOUT MONEY (LOCAL MODE)
+1. HOW TO GET YOUR APP LINK
 ---------------------------------------------------------
-The app is now configured to use "Local Storage".
-- NO Cloud Billing required.
-- NO Credit Card needed.
-- Data stays on YOUR device (phone or computer).
+Step 1: Look at the top-right corner of this screen.
+Step 2: Click the button that says "Preview" or "Deploy".
+Step 3: A new window will open with your app. Copy that web address (link).
+Step 4: WhatsApp or Email that link to your mobile phone.
 
-2. HOW TO USE ON MOBILE (INSTALLATION)
+2. HOW TO INSTALL ON MOBILE (NO DOWNLOAD NEEDED)
 ---------------------------------------------------------
-Step 1: In this editor, click 'Preview' or 'Deploy' to get a link.
-Step 2: Open that link on your phone.
-Step 3: 
-   - iPhone: Tap 'Share' -> 'Add to Home Screen'.
-   - Android: Tap 'Settings (3 dots)' -> 'Install App'.
-The app will now appear on your home screen.
+Step 1: Open the link on your phone (Chrome for Android, Safari for iPhone).
+Step 2: 
+   - iPhone: Tap the 'Share' icon (square with arrow) -> 'Add to Home Screen'.
+   - Android: Tap the '3 dots' -> 'Install App' or 'Add to Home Screen'.
+The app will now appear on your home screen with its own icon.
 
-3. LOGIN CREDENTIALS
+3. WHY THIS IS FREE (LOCAL MODE)
+---------------------------------------------------------
+- This app uses "Local Storage".
+- It saves data directly to your phone's memory.
+- NO Cloud Billing, NO Credit Card, and NO Database setup required.
+- Cost: 100% Free Forever.
+
+4. LOGIN CREDENTIALS
 ---------------------------------------------------------
 Admin: admin@example.com / Password: admin
 User: user@example.com / Password: user
 
-4. CORE CALCULATION LOGIC
+5. CORE CALCULATION LOGIC
 ---------------------------------------------------------
 A. PADDY LIFTING:
-   - Gross Weight = Paddy Received.
-   - Net Weight = Mandi Weight (official record).
+   - Paddy Received = Gross Weight (from Calculator).
+   - Mandi Weight = Net Weight (from Calculator).
 B. LABOUR:
    - Split wages automatically among selected crew.
 C. STOCK:
-   - Yield % = (Rice / Paddy Used) * 100.
+   - Rice Yield % = (Rice Produced / Paddy Used) * 100.
 
-END OF GUIDE - SYSTEM IS READY FOR ZERO-COST OPERATION.
+END OF GUIDE - CLICK 'PREVIEW' TO START.

@@ -3,19 +3,24 @@
 
 A professional-grade management system for rice mill operations, optimized for zero-cost browser storage.
 
+## 🚀 How to get started
+1. Click the **"Preview"** button in the top-right of the editor.
+2. Open the resulting link on your mobile phone.
+3. Use **"Add to Home Screen"** to install it as an app.
+
 ## 💰 No Billing Required
-This app has been modified to store all data locally in your web browser. 
+This app stores all data locally in your web browser. 
 - **Cost**: 100% Free.
-- **Setup**: No Firebase billing account or credit card needed.
+- **Setup**: No Firebase billing or credit card needed.
 - **Privacy**: Your data never leaves your device.
 
 ## 🔑 Login
 - **Admin**: `admin@example.com` / `admin`
 - **User**: `user@example.com` / `user`
 
-## 🚀 Quick Start
-1. **Lifting**: Use the calculator [🧮] to enter weights. Gross goes to "Received", Net goes to "Mandi".
-2. **Labour**: Add names once, then select them in forms to split wages.
-3. **Reports**: Click "PDF" to get official statements for printing.
+## 📊 Logic & Automation
+- **Calculators**: Use the 🧮 icon to convert bag counts into Quintals automatically.
+- **Auto-Labour**: Recording lifting or processing automatically updates worker balances.
+- **Reports**: Generate high-quality PDF statements for Labour and Vehicles.
 
-*Note: Since data is stored locally, it will not sync between different phones automatically.*
+*Note: Data is stored on the device you use. It will not sync between different phones automatically.*
