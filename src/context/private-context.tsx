@@ -15,90 +15,6 @@ interface PrivateContextType {
 
 const PrivateContext = createContext<PrivateContextType | null>(null);
 
-const initialPurchases: PrivatePurchase[] = [
-    { 
-        id: '1', 
-        farmerName: 'Gopal Verma',
-        itemType: 'paddy',
-        quantity: 150,
-        rate: 2000,
-        totalAmount: 300000,
-        amountPaid: 250000,
-        balance: 50000,
-        description: 'First batch of the season.',
-        date: new Date('2024-05-20'),
-        payments: [
-            { id: 'p1', amount: 200000, date: new Date('2024-05-20') },
-            { id: 'p2', amount: 50000, date: new Date('2024-06-01') },
-        ]
-    },
-    { 
-        id: '2', 
-        farmerName: 'Sunita Devi', 
-        itemType: 'rice',
-        quantity: 200, 
-        rate: 3750,
-        totalAmount: 750000,
-        amountPaid: 800000,
-        balance: -50000,
-        description: 'Advance for next delivery.',
-        date: new Date('2024-05-22'),
-        payments: [
-            { id: 'p3', amount: 800000, date: new Date('2024-05-22') }
-        ]
-    },
-    { 
-        id: '3', 
-        farmerName: 'Gopal Verma',
-        itemType: 'paddy',
-        quantity: 100,
-        rate: 2050,
-        totalAmount: 205000,
-        amountPaid: 205000,
-        balance: 0,
-        description: '',
-        date: new Date('2024-06-05'),
-        payments: [
-            { id: 'p4', amount: 205000, date: new Date('2024-06-05') }
-        ]
-    },
-];
-
-const initialSales: PrivateSale[] = [
-    {
-        id: 's1',
-        customerName: 'Local Mill Corp',
-        itemType: 'paddy',
-        quantity: 100,
-        rate: 2100,
-        totalAmount: 210000,
-        amountReceived: 210000,
-        balance: 0,
-        description: 'Full payment received.',
-        date: new Date('2024-06-10'),
-        payments: [
-            { id: 'sp1', amount: 210000, date: new Date('2024-06-10') }
-        ],
-        source: 'private',
-    },
-    {
-        id: 's2',
-        customerName: 'Regional Exporters',
-        itemType: 'rice',
-        quantity: 150,
-        rate: 3800,
-        totalAmount: 570000,
-        amountReceived: 300000,
-        balance: 270000,
-        description: 'Partial payment received, rest due next month.',
-        date: new Date('2024-06-12'),
-        payments: [
-            { id: 'sp2', amount: 300000, date: new Date('2024-06-12') }
-        ],
-        source: 'private',
-    }
-];
-
 const parseStoredData = (key: string, initialData: any[]) => {
     try {
         const stored = localStorage.getItem(key);
@@ -109,7 +25,7 @@ const parseStoredData = (key: string, initialData: any[]) => {
         return parsed.map((item: any) => ({
             ...item,
             date: new Date(item.date),
-            payments: item.payments.map((p: any) => ({...p, date: new Date(p.date)})),
+            payments: (item.payments || []).map((p: any) => ({...p, date: new Date(p.date)})),
         }));
     } catch (e) {
         console.error(`Failed to parse ${key} from localStorage`, e);
@@ -122,8 +38,8 @@ export function PrivateProvider({ children }: { children: ReactNode }) {
   const [sales, setSales] = useState<PrivateSale[]>([]);
 
   useEffect(() => {
-    setPurchases(parseStoredData('purchases', initialPurchases));
-    setSales(parseStoredData('sales', initialSales));
+    setPurchases(parseStoredData('purchases', []));
+    setSales(parseStoredData('sales', []));
   }, []);
 
   useEffect(() => {
@@ -137,14 +53,15 @@ export function PrivateProvider({ children }: { children: ReactNode }) {
 
   const addPurchase = useCallback((item: Omit<PrivatePurchase, 'id' | 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { initialPayment: number }) => {
     const totalAmount = item.quantity * item.rate;
+    const id = Date.now().toString();
     const newPurchase: PrivatePurchase = {
         ...item,
-        id: new Date().toISOString(),
+        id,
         date: new Date(),
         totalAmount,
         amountPaid: item.initialPayment,
         balance: totalAmount - item.initialPayment,
-        payments: item.initialPayment > 0 ? [{ id: new Date().toISOString() + '-p', amount: item.initialPayment, date: new Date() }] : []
+        payments: item.initialPayment > 0 ? [{ id: id + '-p', amount: item.initialPayment, date: new Date() }] : []
     };
     setPurchases((prev) => [...prev, newPurchase]);
   }, []);
@@ -153,7 +70,7 @@ export function PrivateProvider({ children }: { children: ReactNode }) {
     setPurchases(prev => prev.map(p => {
         if(p.id === purchaseId) {
             const newPayment: Payment = {
-                id: new Date().toISOString(),
+                id: Date.now().toString(),
                 amount,
                 date: new Date(),
             };
@@ -172,14 +89,15 @@ export function PrivateProvider({ children }: { children: ReactNode }) {
 
   const addSale = useCallback((item: Omit<PrivateSale, 'id' | 'date' | 'totalAmount' | 'amountReceived' | 'balance' | 'payments'> & { initialPayment: number }) => {
     const totalAmount = item.quantity * item.rate;
+    const id = Date.now().toString();
     const newSale: PrivateSale = {
         ...item,
-        id: new Date().toISOString(),
+        id,
         date: new Date(),
         totalAmount,
         amountReceived: item.initialPayment,
         balance: totalAmount - item.initialPayment,
-        payments: item.initialPayment > 0 ? [{ id: new Date().toISOString() + '-sp', amount: item.initialPayment, date: new Date() }] : []
+        payments: item.initialPayment > 0 ? [{ id: id + '-sp', amount: item.initialPayment, date: new Date() }] : []
     };
     setSales((prev) => [...prev, newSale]);
   }, []);
@@ -188,7 +106,7 @@ export function PrivateProvider({ children }: { children: ReactNode }) {
     setSales(prev => prev.map(s => {
         if(s.id === saleId) {
             const newPayment: Payment = {
-                id: new Date().toISOString(),
+                id: Date.now().toString(),
                 amount,
                 date: new Date(),
             };
