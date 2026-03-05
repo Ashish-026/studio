@@ -14,16 +14,17 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace('/dashboard');
+      // Direct go to selection screen if logged in
+      router.replace('/select-mill');
     }
   }, [user, loading, router]);
 
   if (loading || user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-12 bg-primary/20 rounded-full mb-4" />
-          <p className="text-primary font-medium">Verifying Session...</p>
+        <div className="flex flex-col items-center">
+          <div className="h-12 w-12 border-4 border-primary border-t-transparent animate-spin rounded-full mb-4" />
+          <p className="text-primary font-medium animate-pulse">Verifying Session...</p>
         </div>
       </div>
     );

@@ -22,12 +22,15 @@ function ProtectedDashboard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!userLoading && !user) {
-      router.replace('/');
-    } else if (!millLoading && !selectedMill) {
-      router.replace('/select-mill');
-    } else if (!kmsYearLoading && !selectedKmsYear) {
+    // Robust redirection check
+    if (!userLoading) {
+      if (!user) {
+        router.replace('/');
+      } else if (!millLoading && !selectedMill) {
+        router.replace('/select-mill');
+      } else if (!millLoading && selectedMill && !kmsYearLoading && !selectedKmsYear) {
         router.replace('/select-kms-year');
+      }
     }
   }, [user, userLoading, selectedMill, millLoading, selectedKmsYear, kmsYearLoading, router]);
 
@@ -43,8 +46,9 @@ function ProtectedDashboard({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="flex-1 container py-8">
-            <div className="flex justify-center items-center h-64">
-                <p>Loading user, mill and KMS year data...</p>
+            <div className="flex flex-col justify-center items-center h-64 space-y-4">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+                <p className="text-muted-foreground animate-pulse">Loading secure environment...</p>
             </div>
         </main>
       </div>
@@ -59,7 +63,6 @@ function ProtectedDashboard({ children }: { children: React.ReactNode }) {
           <VehicleProvider>
             <StockProvider>
               <MandiProvider>
-                {/* Hidden Master Report for PDF capture */}
                 <div className="absolute -left-[9999px] top-auto pointer-events-none" aria-hidden="true">
                   <div id="master-report-pdf">
                     <MasterReport />
