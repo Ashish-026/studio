@@ -2,16 +2,16 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Mandi Monitor',
+    name: 'Mandi Monitor - Professional Rice Mill Management',
     short_name: 'MandiApp',
-    description: 'Professional Rice Mill Management System',
+    description: 'Professional Rice Mill Management System for Official and Private Operations',
     start_url: '/',
     display: 'standalone',
     background_color: '#fdfcf7',
     theme_color: '#0b3d1e',
     icons: [
       {
-        src: 'https://placehold.co/192x192/0b3d1e/e9c46a?text=M&font=playfair-display',
+        src: 'https://placehold.co/192x192/0b3d1e/e9c46a?text=MM&font=playfair-display',
         sizes: '192x192',
         type: 'image/png',
       },

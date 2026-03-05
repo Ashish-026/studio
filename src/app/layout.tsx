@@ -17,11 +17,11 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: 'Mandi Monitor',
-  description: 'Professional Rice Mill Management System',
+  title: 'Mandi Monitor | Rice Mill Management',
+  description: 'Professional Rice Mill Management System for seamless Mandi and Private operations.',
   icons: {
-    icon: 'https://placehold.co/32x32/0b3d1e/e9c46a?text=M',
-    apple: 'https://placehold.co/180x180/0b3d1e/e9c46a?text=MM',
+    icon: 'https://placehold.co/32x32/0b3d1e/e9c46a?text=MM&font=playfair-display',
+    apple: 'https://placehold.co/180x180/0b3d1e/e9c46a?text=Mandi+Monitor&font=playfair-display',
   }
 };
 
