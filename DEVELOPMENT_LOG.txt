@@ -29,8 +29,9 @@ D. STOCK REGISTER
 ---------------------------------------------------------
 Step 1: Go to https://console.firebase.google.com/
 Step 2: Find project "studio-391139845-c7694".
-Step 3: Click "Firestore Database" in the left menu.
-Step 4: Click "Create Database".
+Step 3: On the left menu, click "Build" then "Firestore Database".
+Step 4: If you see a "Create Database" button, click it. 
+        - If you don't see it, your database is likely already created!
 Step 5: Select "Start in Test Mode" and pick a location near you.
 Step 6: Click "Enable". Your app is now live and saving data!
 

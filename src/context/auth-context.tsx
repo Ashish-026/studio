@@ -1,24 +1,15 @@
 'use client';
 
-import { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useState, useEffect, useCallback, ReactNode, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import type { User as AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import type { User as FirebaseUser } from 'firebase/auth';
-
 
 interface AuthContextType {
   user: AppUser | null;
-  firebaseUser: FirebaseUser | null;
   login: (email: string, password?: string) => void;
-  verifyOtp: (otp: string) => void;
-  signInWithGoogle: () => void;
   logout: () => void;
   loading: boolean;
-  authStep: string;
-  currentUsername: string | null;
-  resetAuthStep: () => void;
-  isGoogleAuthd: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -28,7 +19,6 @@ const hardcodedUsers: Record<string, { user: AppUser; password?: string }> = {
   'user@example.com': { user: { id: 'user-uid', name: 'Regular User', role: 'user' }, password: 'user' },
 };
 
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +26,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    // We no longer check localStorage for a user, ensuring the app always starts logged out.
+    const stored = localStorage.getItem('mandi-monitor-user');
+    if (stored) {
+      setUser(JSON.parse(stored));
+    }
     setLoading(false);
   }, []);
 
@@ -58,7 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [router, toast]);
-  
 
   const logout = useCallback(() => {
     setUser(null);
@@ -68,22 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/');
   }, [router]);
 
-
   return (
-    <AuthContext.Provider value={{ 
-        user, 
-        firebaseUser: null,
-        login, 
-        logout, 
-        loading, 
-        // The following are now placeholders and not used in the simplified flow
-        verifyOtp: () => {},
-        signInWithGoogle: () => {},
-        authStep: 'credentials',
-        currentUsername: null,
-        resetAuthStep: () => {},
-        isGoogleAuthd: false
-    }}>
+    <AuthContext.Provider value={{ user, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
