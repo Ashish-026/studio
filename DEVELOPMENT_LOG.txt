@@ -26,8 +26,11 @@ The app will now appear on your home screen with its own icon.
 
 4. LOGIN CREDENTIALS
 ---------------------------------------------------------
-Admin: admin@example.com / Password: admin
-User: user@example.com / Password: user
+- ADMIN LOGIN: admin@example.com
+- ADMIN PASSWORD: admin
+
+- USER LOGIN: user@example.com
+- USER PASSWORD: user
 
 5. CORE CALCULATION LOGIC
 ---------------------------------------------------------

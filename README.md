@@ -9,15 +9,15 @@ A professional-grade management system for rice mill operations, optimized for z
 3. Open the resulting link on your mobile phone.
 4. Use **"Add to Home Screen"** to install it as an app.
 
+## 🔑 Login Credentials
+- **Admin**: `admin@example.com` / `admin`
+- **User**: `user@example.com` / `user`
+
 ## 💰 No Billing Required
 This app stores all data locally in your web browser. 
 - **Cost**: 100% Free.
 - **Setup**: No Firebase billing or credit card needed.
 - **Privacy**: Your data never leaves your device.
-
-## 🔑 Login
-- **Admin**: `admin@example.com` / `admin`
-- **User**: `user@example.com` / `user`
 
 ## 📊 Logic & Automation
 - **Calculators**: Use the 🧮 icon to convert bag counts into Quintals automatically.
