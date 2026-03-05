@@ -29,6 +29,7 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 const CREDENTIALS_KEY = 'mandi-monitor-credentials-v2';
+const SESSION_KEY = 'mandi-monitor-session';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -38,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load stored credentials
+    // Load stored credentials (these stay saved even after logout)
     const storedCreds = localStorage.getItem(CREDENTIALS_KEY);
     if (storedCreds) {
       try {
@@ -48,10 +49,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Check if user is already logged in
-    const storedUser = localStorage.getItem('mandi-monitor-user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    // Check if user is already logged in for this SPECIFIC session
+    // We use sessionStorage so closing the app automatically logs them out
+    const sessionUser = sessionStorage.getItem(SESSION_KEY);
+    if (sessionUser) {
+      setUser(JSON.parse(sessionUser));
     }
     setLoading(false);
   }, []);
@@ -62,12 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (isAdmin) {
       setUser(credentials.admin.user);
-      localStorage.setItem('mandi-monitor-user', JSON.stringify(credentials.admin.user));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(credentials.admin.user));
       router.push('/select-mill');
       toast({ title: 'Login Successful', description: `Welcome, ${credentials.admin.user.name}!` });
     } else if (isUser) {
       setUser(credentials.user.user);
-      localStorage.setItem('mandi-monitor-user', JSON.stringify(credentials.user.user));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(credentials.user.user));
       router.push('/select-mill');
       toast({ title: 'Login Successful', description: `Welcome, ${credentials.user.user.name}!` });
     } else {
@@ -81,9 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     setUser(null);
-    localStorage.removeItem('mandi-monitor-user');
-    localStorage.removeItem('mandi-monitor-mill');
-    localStorage.removeItem('mandi-monitor-kms-year');
+    sessionStorage.removeItem(SESSION_KEY);
+    // Note: We don't remove the Mill or KMS year from localStorage so they are remembered for next login
     router.push('/');
   }, [router]);
 

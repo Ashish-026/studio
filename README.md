@@ -5,11 +5,17 @@ Professional rice mill management system optimized for zero-cost operation.
 
 ## 🚀 How to Start
 1. Click the **"Preview"** button in the top-right of this editor.
-2. Use the credentials below to log in.
+2. Use your credentials to log in.
 
 ## 🔑 Your Credentials
-- **Administrator**: `admin@mill.com` / `password123`
-- **Staff User**: `user@mill.com` / `staffpassword`
+- **Default Administrator**: `admin@mill.com` / `password123`
+- **Customization**: You can change these in the **Settings** menu once logged in.
+
+## 🔒 Security: Automatic Logout
+For your security, the app will automatically log you out whenever you close the browser window or swipe the app closed on your mobile phone.
+
+## 🔄 Automatic Updates
+You **do not** need to reinstall the app to get new features or fixes. The app updates itself automatically every time it is opened.
 
 ## 💰 No Cost, No Billing
 This app stores all data locally in your web browser memory.

@@ -15,18 +15,19 @@ MANDI MONITOR - ZERO-COST SETUP GUIDE
 
 3. YOUR CUSTOM LOGIN DETAILS
 ---------------------------------------------------------
-- ADMIN EMAIL: admin@mill.com
-- ADMIN PASSWORD: password123
+- You can change your Email and Password in the 'Settings' page.
+- DEFAULT ADMIN EMAIL: admin@mill.com
+- DEFAULT ADMIN PASSWORD: password123
 
-- USER EMAIL: user@mill.com
-- USER PASSWORD: staffpassword
+4. AUTOMATIC LOGOUT & UPDATES
+---------------------------------------------------------
+- AUTO-LOGOUT: When you close the browser tab or swipe away the mobile app, you are automatically logged out for security.
+- NO REINSTALL NEEDED: When I make changes to your app, you don't need to reinstall it. The updates happen automatically every time you open the app link.
 
-*Note: You can change these anytime by editing the code in 'src/context/auth-context.tsx'.*
-
-4. WHY THIS IS FREE (LOCAL MODE)
+5. WHY THIS IS FREE (LOCAL MODE)
 ---------------------------------------------------------
 - This app uses "Local Storage". No Cloud Billing required.
 - Cost: 100% Free Forever.
-- Note: Data is saved on the specific phone/device you use. It does not sync between different phones automatically.
+- Note: Data is saved on the specific phone/device you use.
 
 END OF GUIDE - CLICK 'PREVIEW' AT THE TOP RIGHT TO START.
