@@ -10,8 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Tractor } from 'lucide-react';
-import { Separator } from '../ui/separator';
+import { Sprout } from 'lucide-react';
 
 const formSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -34,7 +33,7 @@ export function LoginForm() {
   }, [user, loading, router]);
   
   if (loading || user) {
-    return null; // Or a loading spinner
+    return null;
   }
 
   const handleLoginSubmit = (values: z.infer<typeof formSchema>) => {
@@ -42,14 +41,16 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-sm shadow-xl border-none bg-white/95 backdrop-blur-sm">
       <CardHeader className="text-center">
         <div className="flex justify-center items-center mb-4">
-            <Tractor className="h-8 w-8 text-primary" />
+            <div className="bg-primary/10 p-3 rounded-full">
+                <Sprout className="h-10 w-10 text-primary" />
+            </div>
         </div>
-        <CardTitle className="text-2xl font-headline">Mandi Monitor</CardTitle>
-        <CardDescription>
-            Sign in to access your dashboard
+        <CardTitle className="text-3xl font-headline text-primary">Mandi Monitor</CardTitle>
+        <CardDescription className="text-muted-foreground/80">
+            Professional Rice Mill Management
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -62,7 +63,7 @@ export function LoginForm() {
                 <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                    <Input placeholder="admin@example.com" {...field} />
+                    <Input placeholder="admin@mill.com" {...field} className="bg-muted/30" />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -75,13 +76,13 @@ export function LoginForm() {
                 <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                    <Input type="password" placeholder="password" {...field} />
+                    <Input type="password" placeholder="••••••••" {...field} className="bg-muted/30" />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
             )}
             />
-            <Button type="submit" className="w-full bg-accent hover:bg-accent/90">
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 text-lg rounded-xl shadow-lg transition-all hover:scale-[1.02]">
                 Log In
             </Button>
         </form>
