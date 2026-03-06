@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext, useEffect } from 'react';
+import { createContext, useState, useCallback, ReactNode, useContext, useEffect, useMemo } from 'react';
 import type { Labourer, LabourWorkEntry, Payment } from '@/lib/types';
 
 interface LabourContextType {
@@ -27,7 +27,6 @@ export function LabourProvider({ children }: { children: ReactNode }) {
   const [labourers, setLabourers] = useState<Labourer[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load from LocalStorage
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -46,7 +45,6 @@ export function LabourProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  // Save to LocalStorage
   useEffect(() => {
     if (!loading) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(labourers));
@@ -134,8 +132,17 @@ export function LabourProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const contextValue = useMemo(() => ({
+    labourers,
+    addLabourer,
+    addWorkEntry,
+    addGroupWorkEntry,
+    addPayment,
+    loading
+  }), [labourers, addLabourer, addWorkEntry, addGroupWorkEntry, addPayment, loading]);
+
   return (
-    <LabourContext.Provider value={{ labourers, addLabourer, addWorkEntry, addGroupWorkEntry, addPayment, loading }}>
+    <LabourContext.Provider value={contextValue}>
       {children}
     </LabourContext.Provider>
   );

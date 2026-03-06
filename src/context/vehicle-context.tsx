@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useCallback, ReactNode, useContext, useEffect } from 'react';
+import { createContext, useState, useCallback, ReactNode, useContext, useEffect, useMemo } from 'react';
 import type { Vehicle, Payment, VehicleTrip } from '@/lib/types';
 
 interface VehicleContextType {
@@ -121,8 +121,17 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const contextValue = useMemo(() => ({
+    vehicles,
+    addVehicle,
+    addRentPayment,
+    addTrip,
+    updateTrip,
+    loading
+  }), [vehicles, addVehicle, addRentPayment, addTrip, updateTrip, loading]);
+
   return (
-    <VehicleContext.Provider value={{ vehicles, addVehicle, addRentPayment, addTrip, updateTrip, loading }}>
+    <VehicleContext.Provider value={contextValue}>
       {children}
     </VehicleContext.Provider>
   );
