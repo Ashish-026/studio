@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Load custom credentials from long-term memory
     const storedCreds = localStorage.getItem(CREDENTIALS_KEY);
     if (storedCreds) {
       try {
@@ -48,9 +49,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // SESSION LOGOUT LOGIC: Only check Session Storage. 
+    // If user closes tab, Session Storage is wiped automatically by the browser.
     const sessionUser = sessionStorage.getItem(SESSION_KEY);
     if (sessionUser) {
-      setUser(JSON.parse(sessionUser));
+      try {
+        setUser(JSON.parse(sessionUser));
+      } catch (e) {
+        sessionStorage.removeItem(SESSION_KEY);
+      }
     }
     setLoading(false);
   }, []);
@@ -62,12 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isAdmin) {
       setUser(credentials.admin.user);
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(credentials.admin.user));
-      router.push('/select-mill');
+      window.location.href = '/select-mill';
       toast({ title: 'Login Successful', description: `Welcome, ${credentials.admin.user.name}!` });
     } else if (isUser) {
       setUser(credentials.user.user);
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(credentials.user.user));
-      router.push('/select-mill');
+      window.location.href = '/select-mill';
       toast({ title: 'Login Successful', description: `Welcome, ${credentials.user.user.name}!` });
     } else {
       toast({
@@ -76,13 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: 'destructive',
       });
     }
-  }, [credentials, router, toast]);
+  }, [credentials, toast]);
 
   const logout = useCallback(() => {
     setUser(null);
     sessionStorage.removeItem(SESSION_KEY);
-    router.push('/');
-  }, [router]);
+    window.location.href = '/';
+  }, []);
 
   const updateCredentials = useCallback((role: 'admin' | 'user', newEmail: string, newPassword?: string) => {
     setCredentials(prev => {

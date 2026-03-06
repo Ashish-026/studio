@@ -14,8 +14,8 @@ export default function SelectMillPage() {
 
   const handleSelectMill = (millId: string) => {
     selectMill(millId);
-    // Explicitly navigate to ensure Next.js picks it up
-    router.push('/select-kms-year');
+    // Use hard navigation to ensure the next route is registered correctly
+    window.location.href = '/select-kms-year';
   };
 
   if (loading) {

@@ -22,7 +22,7 @@ function ProtectedDashboard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Robust redirection check
+    // Independent redirection check: redirects to login if no session, or setup screens if data missing
     if (!userLoading) {
       if (!user) {
         router.replace('/');
@@ -48,7 +48,7 @@ function ProtectedDashboard({ children }: { children: React.ReactNode }) {
         <main className="flex-1 container py-8">
             <div className="flex flex-col justify-center items-center h-64 space-y-4">
                 <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-                <p className="text-muted-foreground animate-pulse">Loading secure environment...</p>
+                <p className="text-muted-foreground animate-pulse">Initializing Mill Environment...</p>
             </div>
         </main>
       </div>

@@ -1,33 +1,32 @@
 
-MANDI MONITOR - ZERO-COST SETUP GUIDE
+MANDI MONITOR - SEAMLESS SETUP & FIXES
 
-1. WHERE IS THE PREVIEW BUTTON?
+1. RESOLVING 404 ERRORS
 ---------------------------------------------------------
-- Look at the VERY TOP-RIGHT corner of your web browser. 
-- You will see a button that says "Preview" or "Deploy".
-- Click it to start your actual app.
+- If you see "Page Not Found" or a 404 error on your mobile:
+  1. Click 'PREVIEW' or 'DEPLOY' at the top-right of the editor again.
+  2. Refresh your browser tab.
+  3. Ensure you are using absolute paths (e.g., your-link.com/ instead of your-link.com/dashboard/settings).
 
-2. HOW TO INSTALL ON MOBILE
+2. SERVER-INDEPENDENT MODE
 ---------------------------------------------------------
-- Open the Preview link on your phone.
-- Android: Tap '3 dots' -> 'Add to Home Screen'.
-- iPhone: Tap 'Share' icon -> 'Add to Home Screen'.
+- This app is designed to work WITHOUT a server.
+- All data is saved to 'Local Storage' (long-term) and 'Session Storage' (temporary).
+- NO CLOUD BILLING: 100% Free forever.
 
-3. YOUR CUSTOM LOGIN DETAILS
+3. MOBILE INSTALLATION (Refined)
 ---------------------------------------------------------
-- You can change your Email and Password in the 'Settings' page.
-- DEFAULT ADMIN EMAIL: admin@mill.com
-- DEFAULT ADMIN PASSWORD: password123
+- Android: Open Preview -> 3 Dots -> 'Add to Home Screen'.
+- iPhone: Open Preview -> Share Icon -> 'Add to Home Screen'.
+- The app icon is a professional Forest Green Mill icon.
 
-4. AUTOMATIC LOGOUT & UPDATES
+4. AUTOMATIC UPDATES & LOGOUT
 ---------------------------------------------------------
-- AUTO-LOGOUT: When you close the browser tab or swipe away the mobile app, you are automatically logged out for security.
-- NO REINSTALL NEEDED: When I make changes to your app, you don't need to reinstall it. The updates happen automatically every time you open the app link.
+- LOGOUT: Closing the browser tab or swiping away the mobile app logs you out automatically.
+- UPDATES: Just open the app again to get the latest fixes. No need to reinstall.
 
-5. WHY THIS IS FREE (LOCAL MODE)
+5. DATA CLEARING
 ---------------------------------------------------------
-- This app uses "Local Storage". No Cloud Billing required.
-- Cost: 100% Free Forever.
-- Note: Data is saved on the specific phone/device you use.
+- To wipe everything and start fresh, use the 'Clear All Records' button in Settings.
 
-END OF GUIDE - CLICK 'PREVIEW' AT THE TOP RIGHT TO START.
+END OF LOG.

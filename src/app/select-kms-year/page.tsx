@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from 'lucide-react';
@@ -12,12 +11,11 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 export default function SelectKmsYearPage() {
   const { availableKmsYears, selectKmsYear, loading } = useKmsYear();
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
-  const router = useRouter();
 
   const handleSelectYear = () => {
     if (selectedYear) {
       selectKmsYear(selectedYear);
-      // Use window.location for a hard refresh to ensure the dashboard picks up the new KMS
+      // Hard refresh navigation to ensure the Dashboard environment is initialized cleanly
       window.location.href = '/dashboard';
     }
   };
