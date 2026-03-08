@@ -11,7 +11,9 @@ MANDI MONITOR - SEAMLESS SETUP & FIXES
 2. SERVER-INDEPENDENT MODE (TRUE ZERO-COST)
 ---------------------------------------------------------
 - This app is designed to work WITHOUT a server once loaded.
-- All data is saved to 'Local Storage' (long-term) and 'Session Storage' (temporary).
+- STORAGE DEFINITIONS:
+    * Local Storage (Permanent): Sum of ALL records ever saved. This is the "Total Usage" of your device's capacity (~5MB limit).
+    * Session Storage (Temporary): Clears when you close the tab. Used only for security (keeping you logged in).
 - NO CLOUD BILLING: 100% Free forever.
 - If the Firebase project is deleted, the app remains functional as long as the code is hosted anywhere or cached on a mobile device.
 
@@ -29,7 +31,7 @@ MANDI MONITOR - SEAMLESS SETUP & FIXES
 
 5. LOGOUT LOGIC
 ---------------------------------------------------------
-- For your security, closing the browser tab or swiping the mobile app closed will log you out automatically.
-- Your data remains safe in Local Storage.
+- For your security, closing the browser tab or swiping the mobile app closed will log you out automatically (clearing Session Storage).
+- Your actual data (records) remains safe in Local Storage.
 
 END OF LOG.

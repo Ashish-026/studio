@@ -8,11 +8,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, FileJson, Database } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, FileJson, Database, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRef, useState, useEffect } from 'react';
 import { Progress } from '../ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 const settingsSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -38,7 +39,7 @@ export default function SettingsPage() {
         }
       }
       const mbUsed = total / (1024 * 1024);
-      const limit = 5; // Standard 5MB limit for safety
+      const limit = 5; // Standard 5MB limit for safety in most browsers
       setStorageUsage({
         used: mbUsed,
         percent: Math.min((mbUsed / limit) * 100, 100)
@@ -173,16 +174,30 @@ export default function SettingsPage() {
           <h1 className="text-3xl font-bold tracking-tight font-headline mb-2 text-primary">System Settings</h1>
           <p className="text-muted-foreground">Manage authentication, data backups, and system security.</p>
         </div>
-        <Card className="w-full md:w-72 bg-primary/5 border-primary/10 shadow-none">
-          <CardContent className="p-4 space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold text-primary/60 uppercase">
-              <span className="flex items-center gap-1"><Database className="h-3 w-3" /> Storage Usage</span>
-              <span>{storageUsage.used.toFixed(2)} MB / 5 MB</span>
-            </div>
-            <Progress value={storageUsage.percent} className="h-2 bg-primary/10" />
-            <p className="text-[10px] text-muted-foreground italic text-center">You can store ~10,000 procurement entries.</p>
-          </CardContent>
-        </Card>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Card className="w-full md:w-80 bg-primary/5 border-primary/10 shadow-none cursor-help">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-primary/60 uppercase">
+                    <span className="flex items-center gap-1">
+                      <Database className="h-3 w-3" /> Total Device Storage
+                    </span>
+                    <span>{storageUsage.used.toFixed(2)} MB / 5 MB</span>
+                  </div>
+                  <Progress value={storageUsage.percent} className="h-2 bg-primary/10" />
+                  <p className="text-[10px] text-muted-foreground italic text-center flex items-center justify-center gap-1">
+                    <Info className="h-2.5 w-2.5" /> This is the total data saved on this device.
+                  </p>
+                </CardContent>
+              </Card>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs text-xs p-3">
+              <p className="font-bold mb-1">What is Local Storage?</p>
+              <p>It is your device's permanent memory for this app. The percentage shows the total sum of all your Mandi, Labour, and Stock records. It stays saved even when you close the app.</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <div className="grid gap-8 md:grid-cols-2">
