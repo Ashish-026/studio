@@ -8,8 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { Factory as MillIcon } from 'lucide-react';
 
 const formSchema = z.object({
@@ -19,18 +17,14 @@ const formSchema = z.object({
 
 export function LoginForm() {
   const { login, user, loading } = useAuth();
-  const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '', password: '' },
   });
   
-  useEffect(() => {
-    if (!loading && user) {
-      router.replace('/dashboard');
-    }
-  }, [user, loading, router]);
+  // NOTE: Redirection is now handled by the parent AppController state, 
+  // not by router.push, to prevent 404 errors on server-independent devices.
   
   if (loading || user) {
     return null;

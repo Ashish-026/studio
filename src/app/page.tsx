@@ -29,6 +29,10 @@ import { ChevronLeft } from 'lucide-react';
 
 export type ViewState = 'main' | 'mandi' | 'private' | 'stock' | 'labour' | 'vehicle' | 'settings';
 
+/**
+ * SINGLE-PAGE CONTROLLER: This is the primary engine of the app.
+ * To resolve 404 errors, we stay on the root URL (/) at all times.
+ */
 function AppController() {
   const { user, loading: authLoading } = useAuth();
   const { selectedMill, loading: millLoading } = useMill();
@@ -38,6 +42,11 @@ function AppController() {
 
   useEffect(() => {
     setIsClient(true);
+    // FORCE ROOT URL: If the user lands on a sub-path, we push them to / 
+    // to prevent 404 errors when the server is idle.
+    if (window.location.pathname !== '/') {
+      window.history.replaceState({}, '', '/');
+    }
   }, []);
 
   if (!isClient || authLoading || millLoading || kmsLoading) {
@@ -51,7 +60,7 @@ function AppController() {
     );
   }
 
-  // 1. LOGIN SCREEN
+  // 1. LOGIN SCREEN (Inline)
   if (!user) {
     const loginBg = PlaceHolderImages.find((img) => img.id === 'login-background');
     return (
@@ -72,7 +81,7 @@ function AppController() {
     );
   }
 
-  // 2. SETUP SCREENS
+  // 2. SETUP SCREENS (Inline)
   if (!selectedMill) {
     return <MillSelectionInline />;
   }
@@ -81,7 +90,7 @@ function AppController() {
     return <KmsSelectionInline />;
   }
 
-  // 3. MAIN DASHBOARD & REGISTERS
+  // 3. INTERNAL VIEW SWITCHER (State-based, no URL change)
   const renderRegister = () => {
     switch (currentView) {
       case 'mandi': return <MandiDashboard />;
