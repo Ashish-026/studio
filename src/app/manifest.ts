@@ -4,9 +4,10 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Mandi Monitor - Professional Rice Mill Management',
     short_name: 'MandiApp',
-    description: 'Professional Rice Mill Management System for Official and Private Operations',
+    description: 'Professional Standalone Management System for Official and Private Operations',
     start_url: '/',
     display: 'standalone',
+    orientation: 'portrait',
     background_color: '#fdfcf7',
     theme_color: '#0b3d1e',
     icons: [

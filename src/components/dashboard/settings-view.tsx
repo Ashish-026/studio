@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -9,13 +8,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, Database, Info, Smartphone, HardDrive } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, Database, Info, Smartphone, HardDrive, Cpu } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRef, useState, useEffect } from 'react';
 import { Progress } from '@/components/ui/progress';
-import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import * as db from '@/lib/db';
+import { Badge } from '../ui/badge';
 
 const settingsSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -37,7 +37,7 @@ export default function SettingsPage() {
       if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.estimate) {
         const estimate = await navigator.storage.estimate();
         const usedMB = (estimate.usage || 0) / (1024 * 1024);
-        const quotaMB = (estimate.quota || 100 * 1024 * 1024) / (1024 * 1024); // Default to 100MB if quota missing
+        const quotaMB = (estimate.quota || 100 * 1024 * 1024) / (1024 * 1024); 
         
         setStorageUsage({
           used: usedMB,
@@ -146,7 +146,15 @@ export default function SettingsPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-headline mb-2 text-primary">System Settings</h1>
-          <p className="text-muted-foreground">Manage authentication, high-capacity storage, and backups.</p>
+          <div className="flex items-center gap-2 mb-2">
+            <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-200">
+              <Cpu className="h-3 w-3 mr-1" /> Standalone Native Mode
+            </Badge>
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+              <Smartphone className="h-3 w-3 mr-1" /> High-Capacity Active
+            </Badge>
+          </div>
+          <p className="text-muted-foreground">Manage authentication, high-capacity mobile storage, and master backups.</p>
         </div>
         <TooltipProvider>
           <Tooltip>
@@ -155,20 +163,20 @@ export default function SettingsPage() {
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold text-primary/60 uppercase">
                     <span className="flex items-center gap-1">
-                      <HardDrive className="h-3 w-3" /> Disk Capacity Usage
+                      <HardDrive className="h-3 w-3" /> Internal Data Usage
                     </span>
-                    <span>{storageUsage.used.toFixed(2)} MB Used</span>
+                    <span>{storageUsage.used.toFixed(2)} MB</span>
                   </div>
                   <Progress value={storageUsage.percent} className="h-2 bg-primary/10" />
                   <p className="text-[10px] text-muted-foreground italic text-center flex items-center justify-center gap-1">
-                    <Info className="h-2.5 w-2.5" /> Using internal mobile storage engine.
+                    <Info className="h-2.5 w-2.5" /> Using mobile internal database (IndexedDB).
                   </p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs text-xs p-3">
-              <p className="font-bold mb-1">High-Capacity Engine Active</p>
-              <p>The app is now using <strong>IndexedDB</strong>. This allows you to store thousands of farmers and millions of bag weights without hitting the old 5MB limit.</p>
+              <p className="font-bold mb-1">Unlimited Storage Engine</p>
+              <p>The app is now utilizing your phone's <strong>Internal Database (IndexedDB)</strong> instead of temporary browser memory. This allows for millions of bag weight entries without capacity errors.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -181,17 +189,17 @@ export default function SettingsPage() {
               <Smartphone className="h-5 w-5 text-primary" />
               <CardTitle>Device Storage Management</CardTitle>
             </div>
-            <CardDescription>Internal database tools for large-scale operations.</CardDescription>
+            <CardDescription>Industrial-grade storage tools for large-scale mill operations.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-3">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Your data is now stored in a high-performance internal database. It uses your phone's actual storage capacity.
+                Your data is stored in a <strong>Standalone Sandbox</strong>. It uses your device's actual storage capacity, ensuring 100% offline access and speed.
               </p>
               <ul className="text-[11px] space-y-1 list-disc pl-4 text-muted-foreground">
-                <li>Virtually unlimited records (up to GBs).</li>
-                <li>Operates 100% offline.</li>
-                <li><strong>Safe Mode:</strong> Still recommended to save backups at the end of each KMS season.</li>
+                <li><strong>No Limits:</strong> Store thousands of farmers and millions of weights.</li>
+                <li><strong>Safe Mode:</strong> Data is device-specific. Use backups to move data to new phones.</li>
+                <li><strong>Total Privacy:</strong> No data ever leaves this phone unless you export it.</li>
               </ul>
             </div>
 
@@ -200,7 +208,7 @@ export default function SettingsPage() {
                     <p className="text-xs font-bold uppercase opacity-60">Export</p>
                     <Button onClick={handleBackupData} variant="outline" className="w-full bg-white hover:bg-primary/5 rounded-xl border-primary/20 h-12">
                         <Download className="mr-2 h-4 w-4" />
-                        Master Backup
+                        Download Backup
                     </Button>
                 </div>
                 
@@ -222,30 +230,30 @@ export default function SettingsPage() {
               <AlertTriangle className="h-5 w-5 text-destructive" />
               <CardTitle>Danger Zone</CardTitle>
             </div>
-            <CardDescription>Permanent actions that cannot be undone.</CardDescription>
+            <CardDescription>Permanent actions that clear internal memory.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Wiping the system will remove every record from your device's internal database.
+              Wiping the database will remove all Mandi, Private, and Labour history from this device permanently.
             </p>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="w-full rounded-xl h-12">
                   <RefreshCcw className="mr-2 h-4 w-4" />
-                  Wipe Internal Database
+                  Clear Mobile Database
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent className="rounded-2xl border-none">
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete All Local Data?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will clear all Mandi, Private, and Labour records from this phone permanently.
+                    This will clear every single record from this phone. Ensure you have a backup if you need this data later.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={handleClearAllData} className="bg-destructive hover:bg-destructive/90 rounded-xl">
-                    Clear Database
+                    Wipe Database
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
