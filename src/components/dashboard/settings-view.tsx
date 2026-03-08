@@ -8,10 +8,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, FileJson } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, FileJson, Database } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
+import { Progress } from '../ui/progress';
 
 const settingsSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -26,7 +27,26 @@ export default function SettingsPage() {
   const { user, updateCredentials } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [storageUsage, setStorageUsage] = useState({ used: 0, percent: 0 });
   
+  useEffect(() => {
+    const calculateUsage = () => {
+      let total = 0;
+      for (const key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+          total += (localStorage[key].length * 2); // Approximate bytes (UTF-16)
+        }
+      }
+      const mbUsed = total / (1024 * 1024);
+      const limit = 5; // Standard 5MB limit for safety
+      setStorageUsage({
+        used: mbUsed,
+        percent: Math.min((mbUsed / limit) * 100, 100)
+      });
+    };
+    calculateUsage();
+  }, []);
+
   const adminForm = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),
     defaultValues: { email: '', password: '', confirmPassword: '' },
@@ -148,9 +168,21 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight font-headline mb-2 text-primary">System Settings</h1>
-        <p className="text-muted-foreground mb-8">Manage authentication, data backups, and system security.</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight font-headline mb-2 text-primary">System Settings</h1>
+          <p className="text-muted-foreground">Manage authentication, data backups, and system security.</p>
+        </div>
+        <Card className="w-full md:w-72 bg-primary/5 border-primary/10 shadow-none">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-primary/60 uppercase">
+              <span className="flex items-center gap-1"><Database className="h-3 w-3" /> Storage Usage</span>
+              <span>{storageUsage.used.toFixed(2)} MB / 5 MB</span>
+            </div>
+            <Progress value={storageUsage.percent} className="h-2 bg-primary/10" />
+            <p className="text-[10px] text-muted-foreground italic text-center">You can store ~10,000 procurement entries.</p>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-8 md:grid-cols-2">

@@ -235,7 +235,7 @@ export function PrivatePurchases() {
   const numberOfLabours = purchaseForm.watch('numberOfLabours');
   const selectedLabourerIds = purchaseForm.watch('labourerIds').map(l => l.value);
 
-  useMemo(() => {
+  useEffect(() => {
     const currentCount = fields.length;
     if (numberOfLabours > currentCount) {
         for(let i = currentCount; i < numberOfLabours; i++) {
@@ -279,7 +279,7 @@ export function PrivatePurchases() {
       });
     }
 
-    return Object.values(farmers);
+    return Object.values(farmers).sort((a, b) => a.name.localeCompare(b.name));
   }, [purchases]);
 
   function onPurchaseSubmit(values: z.infer<typeof purchaseFormSchema>) {
@@ -536,7 +536,7 @@ export function PrivatePurchases() {
             </Card>
           )}
 
-          <div>
+          <div className="render-optimized">
             <h3 className="text-lg font-semibold mb-2">Farmer Purchase History</h3>
             <div className="border rounded-lg">
                 {farmerAggregates.map(farmer => (
