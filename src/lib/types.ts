@@ -38,6 +38,12 @@ export type PaddyLifted = {
   labourerIds?: string[];
   labourCharge?: number;
   labourWageType?: 'per_item' | 'total_amount';
+  // New Fields for Token Logic
+  tokenNumber?: string;
+  mandiTokenLimit?: number;
+  privateOverflowQty?: number;
+  privateOverflowRate?: number;
+  isPrivateOverflow?: boolean;
 };
 
 export type MandiProcessingResult = {
