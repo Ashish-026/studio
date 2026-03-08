@@ -8,7 +8,8 @@ import { useMandiData } from '@/context/mandi-context';
 import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
 import { useStockData } from '@/context/stock-context';
-import { PlusCircle, DollarSign, Download, Edit, Car, Users, Calculator, Calendar as CalendarIcon, Info, ArrowRight } from 'lucide-react';
+import { useMill } from '@/hooks/use-mill';
+import { PlusCircle, DollarSign, Download, Edit, Car, Users, Calculator, Calendar as CalendarIcon, Info, ArrowRight, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,6 +30,7 @@ import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
 import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
+import { PaddyLiftingSlip } from './paddy-lifting-slip';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
@@ -55,6 +57,7 @@ const physicalFormSchema = z.object({
   tripCharge: z.coerce.number().optional(),
   source: z.string().optional(),
   destination: z.string().optional(),
+  individualBagWeights: z.array(z.number()).optional(),
 }).merge(labourDetailsSchema).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
@@ -86,6 +89,7 @@ export function PaddyLifted() {
   const { addVehicle, addTrip } = useVehicleData();
   const { addGroupWorkEntry, labourers } = useLabourData();
   const { addPurchase } = useStockData();
+  const { selectedMill } = useMill();
   const { toast } = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -97,8 +101,6 @@ export function PaddyLifted() {
   const [selectedMandi, setSelectedMandi] = useState('All');
 
   const [isPhysicalCalendarOpen, setIsPhysicalCalendarOpen] = useState(false);
-  const [isMonetaryCalendarOpen, setIsMonetaryCalendarOpen] = useState(false);
-  const [isEditCalendarOpen, setIsEditCalendarOpen] = useState(false);
 
   const uniqueMandis = useMemo(() => {
     const mandiNames = (targetAllocations || []).map((allocation) => allocation.mandiName);
@@ -111,10 +113,6 @@ export function PaddyLifted() {
   
   const physicalEntries = useMemo(() => 
     filteredItems.filter(item => item.entryType === 'physical' || !item.entryType).sort((a,b) => b.date.getTime() - a.date.getTime()), 
-  [filteredItems]);
-
-  const monetaryEntries = useMemo(() => 
-    filteredItems.filter(item => item.entryType === 'monetary').sort((a,b) => b.date.getTime() - a.date.getTime()), 
   [filteredItems]);
 
   const physicalForm = useForm<z.infer<typeof physicalFormSchema>>({
@@ -141,6 +139,7 @@ export function PaddyLifted() {
         labourerIds: [],
         labourCharge: 0,
         labourWageType: 'total_amount',
+        individualBagWeights: [],
     },
   });
 
@@ -150,10 +149,9 @@ export function PaddyLifted() {
   });
 
   const numberOfLabours = physicalForm.watch('numberOfLabours');
-  const selectedLabourerIds = physicalForm.watch('labourerIds').map(l => l.value);
-  const isOverflowEnabled = physicalForm.watch('isPrivateOverflow');
   const mandiWeight = physicalForm.watch('mandiWeight');
   const tokenLimit = physicalForm.watch('mandiTokenLimit');
+  const isOverflowEnabled = physicalForm.watch('isPrivateOverflow');
 
   const overflowQuantity = useMemo(() => {
     if (mandiWeight > 0 && tokenLimit > 0) {
@@ -186,7 +184,6 @@ export function PaddyLifted() {
   function onPhysicalSubmit(values: z.infer<typeof physicalFormSchema>) {
     const labourerIds = values.labourerIds.map(l => l.value).filter(Boolean);
     
-    // Handle split entry logic
     let finalMandiWeight = values.mandiWeight;
     let actualOverflow = 0;
 
@@ -194,7 +191,6 @@ export function PaddyLifted() {
         finalMandiWeight = values.mandiTokenLimit;
         actualOverflow = values.mandiWeight - values.mandiTokenLimit;
         
-        // Automated Private Purchase
         addPurchase({
             farmerName: values.farmerName,
             itemType: 'paddy',
@@ -206,13 +202,12 @@ export function PaddyLifted() {
             vehicleNumber: values.vehicleNumber,
             driverName: values.driverName,
             ownerName: values.ownerName,
-            tripCharge: 0, // Trip charge already handled by Mandi lifting
+            tripCharge: 0,
             source: values.source,
             destination: values.destination,
-            labourerIds: [], // Labour already handled
+            labourerIds: [],
             labourCharge: 0
         });
-        toast({ title: 'Private Entry Created', description: `${actualOverflow.toFixed(2)} Qtl moved to Private Register.` });
     }
 
     const submissionValues = { 
@@ -289,11 +284,16 @@ export function PaddyLifted() {
     setEditDialogOpen(true);
   };
 
-  const handleCalculatorConfirm = (vals: { grossQuintals: number; netQuintals: number; netWeightKg: number }) => {
+  const handleCalculatorConfirm = (vals: { grossQuintals: number; netQuintals: number; netWeightKg: number; bagWeights: number[] }) => {
     physicalForm.setValue('totalPaddyReceived', vals.grossQuintals);
     physicalForm.setValue('mandiWeight', vals.netQuintals);
+    physicalForm.setValue('individualBagWeights', vals.bagWeights);
     setCalculatorOpen(false);
   };
+
+  const handleDownloadSlip = (entry: PaddyLiftedType) => {
+    downloadPdf(`slip-${entry.id}`, `slip-${entry.farmerName.toLowerCase().replace(/\s+/g, '-')}-${entry.id.slice(-4)}`);
+  }
 
   return (
     <>
@@ -301,17 +301,17 @@ export function PaddyLifted() {
         <CardHeader className="px-0 pt-0">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <CardTitle className="text-2xl font-bold font-headline text-primary">Paddy Lifting Records</CardTitle>
-              <CardDescription>Procurement from Mandis with automated FAQ weight factors and Token management.</CardDescription>
+              <CardTitle className="text-2xl font-bold font-headline text-primary">Procurement Records</CardTitle>
+              <CardDescription>Track farmer arrivals, standardized Mandi weights, and Token-limit splits.</CardDescription>
             </div>
              <Button variant="outline" size="sm" onClick={() => downloadPdf('paddy-lifted-table', 'paddy-lifted-summary')} className="rounded-xl border-primary/20">
                 <Download className="mr-2 h-4 w-4" />
-                Export PDF
+                Export Summary PDF
             </Button>
           </div>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex items-center gap-4">
-                <Label htmlFor="mandi-filter" className="text-sm font-semibold uppercase tracking-tighter opacity-60">Filter Mandi:</Label>
+                <Label htmlFor="mandi-filter" className="text-sm font-semibold uppercase tracking-tighter opacity-60">Filter:</Label>
                 <Select value={selectedMandi} onValueChange={setSelectedMandi}>
                   <SelectTrigger className="w-[240px] rounded-xl border-primary/10 shadow-sm" id="mandi-filter">
                     <SelectValue placeholder="All Mandis" />
@@ -325,7 +325,7 @@ export function PaddyLifted() {
               <div className="flex gap-3">
                 <Button onClick={() => setShowPhysicalForm(!showPhysicalForm)} className="rounded-xl shadow-lg shadow-primary/10" disabled={uniqueMandis.length === 0}>
                   <PlusCircle className="mr-2 h-4 w-4" />
-                  {showPhysicalForm ? 'Cancel' : 'Physical Lifting'}
+                  {showPhysicalForm ? 'Cancel' : 'Farmer Arrival'}
                 </Button>
                 {isAdmin && (
                   <Button onClick={() => setShowMonetaryForm(!showMonetaryForm)} variant="secondary" className="rounded-xl shadow-md" disabled={uniqueMandis.length === 0}>
@@ -340,8 +340,8 @@ export function PaddyLifted() {
           {showPhysicalForm && (
             <Card className="bg-white border-primary/10 shadow-2xl rounded-3xl overflow-hidden animate-in zoom-in-95 duration-300">
               <CardHeader className="bg-primary/5 border-b border-primary/10 pb-4">
-                  <CardTitle className="text-lg font-bold text-primary">New Paddy Arrival Entry</CardTitle>
-                  <CardDescription>Enter procurement details. Use calculator for 78->75 standardized weights.</CardDescription>
+                  <CardTitle className="text-lg font-bold text-primary">New Farmer Procurement Entry</CardTitle>
+                  <CardDescription>Record weights and tokens. Use the calculator for bag-by-bag detailed entries.</CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 <Form {...physicalForm}>
@@ -351,11 +351,11 @@ export function PaddyLifted() {
                           <FormItem><FormLabel>Mandi Source</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>
                       )} />
                       <FormField control={physicalForm.control} name="farmerName" render={({ field }) => (
-                        <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="e.g., Rajesh Kumar" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="Full Name" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={physicalForm.control} name="date" render={({ field }) => (
                         <FormItem className="flex flex-col">
-                          <FormLabel>Arrival Date</FormLabel>
+                          <FormLabel>Date & Time</FormLabel>
                           <Popover open={isPhysicalCalendarOpen} onOpenChange={setIsPhysicalCalendarOpen}>
                             <PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("h-12 rounded-xl pl-3 text-left font-normal border-input", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger>
                             <PopoverContent className="w-auto p-0 rounded-2xl overflow-hidden" align="start"><Calendar mode="single" selected={field.value} onSelect={(date) => { field.onChange(date); setIsPhysicalCalendarOpen(false); }} initialFocus /></PopoverContent>
@@ -365,7 +365,7 @@ export function PaddyLifted() {
                       )} />
                        <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Total Gross (Actual Qtl)</FormLabel>
+                          <FormLabel>Total Weight (Actual Qtl)</FormLabel>
                             <div className="flex items-center gap-2">
                               <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} className="rounded-xl h-12" /></FormControl>
                               <Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)} className="h-12 w-12 rounded-xl border-primary/20 hover:bg-primary/5"><Calculator className="h-5 w-5 text-primary" /></Button>
@@ -374,7 +374,7 @@ export function PaddyLifted() {
                         </FormItem>
                       )} />
                       <FormField control={physicalForm.control} name="mandiWeight" render={({ field }) => (
-                        <FormItem><FormLabel>FAQ Standard (Mandi Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} className="rounded-xl h-12 bg-primary/5 border-primary/20 font-bold text-primary" /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Considered Mandi Qtl (FAQ)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} className="rounded-xl h-12 bg-primary/5 border-primary/20 font-bold text-primary" /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
 
@@ -393,7 +393,7 @@ export function PaddyLifted() {
                                 <FormItem><FormLabel>Token Number</FormLabel><FormControl><Input placeholder="Token ID" {...field} className="rounded-xl" /></FormControl></FormItem>
                             )} />
                             <FormField control={physicalForm.control} name="mandiTokenLimit" render={({ field }) => (
-                                <FormItem><FormLabel>Mandi Token Limit (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Token Quantity" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                <FormItem><FormLabel>Mandi Token Limit (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Limit" {...field} className="rounded-xl" /></FormControl></FormItem>
                             )} />
                             {isOverflowEnabled && (
                                 <>
@@ -404,65 +404,38 @@ export function PaddyLifted() {
                                         </div>
                                     </FormItem>
                                     <FormField control={physicalForm.control} name="privateOverflowRate" render={({ field }) => (
-                                        <FormItem><FormLabel>Private Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Rate for excess" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                        <FormItem><FormLabel>Private Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Rate" {...field} className="rounded-xl" /></FormControl></FormItem>
                                     )} />
                                 </>
                             )}
                         </div>
-                        {isOverflowEnabled && overflowQuantity > 0 && (
-                            <div className="flex items-center gap-2 text-xs font-medium text-destructive bg-white/50 p-3 rounded-xl border border-destructive/10">
-                                <ArrowRight className="h-3 w-3" />
-                                <span>On submission, <strong>{tokenLimit} Qtl</strong> will be registered here, and <strong>{overflowQuantity.toFixed(2)} Qtl</strong> will automatically appear in Private Register.</span>
-                            </div>
-                        )}
                     </div>
 
                     <Separator className="opacity-50" />
                     
                     <div className="space-y-6">
-                        <h3 className="text-md font-bold flex items-center gap-2 text-primary opacity-80"><Car className="h-5 w-5" /> Logistics & Transport</h3>
+                        <h3 className="text-md font-bold flex items-center gap-2 text-primary opacity-80"><Car className="h-5 w-5" /> Logistics</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
                            <FormField control={physicalForm.control} name="vehicleType" render={({ field }) => (
-                                <FormItem><FormLabel>Vehicle Ownership</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="farmer">Farmer's Vehicle</SelectItem><SelectItem value="own">Own Vehicle</SelectItem><SelectItem value="hired">Hired Vehicle</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Ownership</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="farmer">Farmer's Vehicle</SelectItem><SelectItem value="own">Own Vehicle</SelectItem><SelectItem value="hired">Hired Vehicle</SelectItem></SelectContent></Select><FormMessage /></FormItem>
                            )} />
                            {vehicleType === 'hired' && (
                             <>
                                 <FormField control={physicalForm.control} name="vehicleNumber" render={({ field }) => (
-                                    <FormItem><FormLabel>Vehicle Number</FormLabel><FormControl><Input placeholder="OD01AB1234" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input placeholder="Number" {...field} className="rounded-xl" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={physicalForm.control} name="ownerName" render={({ field }) => (
-                                    <FormItem><FormLabel>Agency/Owner</FormLabel><FormControl><Input placeholder="Agency Name" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    <FormItem><FormLabel>Agency</FormLabel><FormControl><Input placeholder="Owner Name" {...field} className="rounded-xl" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (
-                                    <FormItem><FormLabel>Rent/Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="0" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="0" {...field} className="rounded-xl" /></FormControl></FormItem>
                                 )} />
                             </>
                            )}
                         </div>
                     </div>
 
-                    <Separator className="opacity-50" />
-
-                    <div className="space-y-6">
-                        <h3 className="text-md font-bold flex items-center gap-2 text-primary opacity-80"><Users className="h-5 w-5" /> Labour Allocation</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormField control={physicalForm.control} name="numberOfLabours" render={({ field }) => (
-                                <FormItem><FormLabel>Crews/Persons</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>
-                            )} />
-                            <FormField control={physicalForm.control} name="labourCharge" render={({ field }) => (
-                                <FormItem><FormLabel>Total Unloading Fee (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="0" {...field} className="rounded-xl" /></FormControl></FormItem>
-                            )} />
-                        </div>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {fields.map((field, index) => (
-                            <FormField key={field.id} control={physicalForm.control} name={`labourerIds.${index}.value`} render={({ field }) => (
-                                <FormItem><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder={`Select Labourer ${index + 1}`} /></SelectTrigger></FormControl><SelectContent>{(labourers || []).map((l) => ( <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem> ))}</SelectContent></Select><FormMessage /></FormItem>
-                            )} />
-                            ))}
-                        </div>
-                    </div>
-
-                    <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl font-bold text-lg shadow-xl shadow-primary/20">Record Procurement Arrival</Button>
+                    <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl font-bold text-lg shadow-xl shadow-primary/20">Confirm Procurement Arrival</Button>
                   </form>
                 </Form>
               </CardContent>
@@ -470,43 +443,58 @@ export function PaddyLifted() {
           )}
 
           <div id="paddy-lifted-table" className="bg-white border border-primary/5 rounded-3xl overflow-hidden shadow-sm">
-              <div className="p-6 border-b border-primary/5">
-                  <h3 className="text-lg font-bold text-primary">Physical Procurement History</h3>
+              <div className="p-6 border-b border-primary/5 bg-primary/5">
+                  <h3 className="text-lg font-bold text-primary uppercase tracking-widest">Arrival History & Detailed Slips</h3>
               </div>
               <Table>
                   <TableHeader className="bg-muted/30">
                       <TableRow className="border-none">
+                          <TableHead className="font-bold py-4">RECORD ID</TableHead>
                           <TableHead className="font-bold py-4">Date</TableHead>
-                          <TableHead className="font-bold py-4">Mandi Source</TableHead>
-                          <TableHead className="font-bold py-4">Farmer / Token</TableHead>
-                          <TableHead className="font-bold py-4">Actual (Qtl)</TableHead>
+                          <TableHead className="font-bold py-4">Farmer / Mandi Source</TableHead>
+                          <TableHead className="text-right font-bold py-4">Actual (Qtl)</TableHead>
                           <TableHead className="text-right font-bold py-4">Mandi FAQ (Qtl)</TableHead>
-                          {isAdmin && <TableHead className="text-right font-bold py-4">Actions</TableHead>}
+                          <TableHead className="text-right font-bold py-4">Actions</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
                       {physicalEntries.length === 0 && (
-                          <TableRow><TableCell colSpan={isAdmin ? 6 : 5} className="text-center h-32 opacity-50 italic">No procurement records found.</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={6} className="text-center h-32 opacity-50 italic">No procurement records found.</TableCell></TableRow>
                       )}
                       {physicalEntries.map((item) => (
                       <TableRow key={item.id} className="hover:bg-primary/5 transition-colors">
-                          <TableCell className="text-xs">{format(item.date, 'dd MMM yyyy')}</TableCell>
-                          <TableCell className="font-bold text-primary">{item.mandiName}</TableCell>
+                          <TableCell className="font-mono text-[10px] text-muted-foreground">#{item.id.slice(-6)}</TableCell>
+                          <TableCell className="text-xs">{format(item.date, 'dd MMM yy')}</TableCell>
                           <TableCell>
                               <div className="flex flex-col">
-                                  <span className="font-medium">{item.farmerName}</span>
-                                  {item.tokenNumber && <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">TOKEN: {item.tokenNumber}</span>}
+                                  <span className="font-bold text-primary">{item.farmerName}</span>
+                                  <span className="text-[10px] uppercase font-medium opacity-60">{item.mandiName} {item.tokenNumber && `| TOKEN: ${item.tokenNumber}`}</span>
                               </div>
                           </TableCell>
-                          <TableCell className="text-xs">{item.totalPaddyReceived.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
+                          <TableCell className="text-right text-xs font-medium">{item.totalPaddyReceived.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
                           <TableCell className="text-right font-black text-primary">{item.mandiWeight.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
-                          {isAdmin && (
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)} className="rounded-lg hover:text-primary hover:bg-primary/10">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          )}
+                          <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                                <Button variant="outline" size="sm" onClick={() => handleDownloadSlip(item)} className="rounded-lg h-8 px-2 border-primary/20 hover:bg-primary/5 hover:text-primary">
+                                    <FileText className="h-3.5 w-3.5 mr-1" /> Slip
+                                </Button>
+                                {isAdmin && (
+                                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)} className="h-8 w-8 rounded-lg hover:text-primary hover:bg-primary/10">
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
+                            {/* Hidden printable slip */}
+                            <div className="absolute -left-[9999px] top-auto pointer-events-none" aria-hidden="true">
+                                <div id={`slip-${item.id}`}>
+                                    <PaddyLiftingSlip 
+                                        entry={item} 
+                                        millName={selectedMill?.name || 'Mandi Monitor'} 
+                                        millLocation={selectedMill?.location || 'Operational Facility'} 
+                                    />
+                                </div>
+                            </div>
+                          </TableCell>
                       </TableRow>
                       ))}
                   </TableBody>

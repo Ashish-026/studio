@@ -44,6 +44,8 @@ export type PaddyLifted = {
   privateOverflowQty?: number;
   privateOverflowRate?: number;
   isPrivateOverflow?: boolean;
+  // Detailed bag weights
+  individualBagWeights?: number[];
 };
 
 export type MandiProcessingResult = {
