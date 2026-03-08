@@ -108,6 +108,11 @@ export type PrivatePurchase = {
   labourerIds?: string[];
   labourCharge?: number;
   labourWageType?: 'per_item' | 'total_amount';
+  // New fields for detail tracking
+  individualBagWeights?: number[];
+  calculationMethod?: 'uniform' | 'bag-by-bag' | 'weighbridge';
+  deductionKg?: number;
+  grossWeightKg?: number;
 };
 
 export type PrivateSale = {

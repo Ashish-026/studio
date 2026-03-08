@@ -36,7 +36,15 @@ const weighbridgeSchema = z.object({
 });
 
 interface BagWeightCalculatorProps {
-    onConfirm: (values: { grossQuintals: number; netQuintals: number; netWeightKg: number; bagWeights: number[]; method: 'uniform' | 'bag-by-bag' | 'weighbridge' }) => void;
+    onConfirm: (values: { 
+        grossQuintals: number; 
+        netQuintals: number; 
+        netWeightKg: number; 
+        grossWeightKg: number;
+        deductionKg: number;
+        bagWeights: number[]; 
+        method: 'uniform' | 'bag-by-bag' | 'weighbridge' 
+    }) => void;
     onCancel: () => void;
     isPrivate?: boolean;
 }
@@ -137,6 +145,8 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false }: 
             grossQuintals: summary.grossQuintals, 
             netQuintals: summary.netQuintals, 
             netWeightKg: summary.netWeightKg,
+            grossWeightKg: summary.grossWeightKg,
+            deductionKg: summary.deductionKg,
             bagWeights: summary.bagWeights,
             method: activeTab as any
         });

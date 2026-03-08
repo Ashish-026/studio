@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { useStockData } from '@/context/stock-context';
 import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
-import { PlusCircle, ChevronDown, ChevronRight, Download, Car, Users, User as UserIcon, Calculator } from 'lucide-react';
+import { PlusCircle, ChevronDown, ChevronRight, Download, Car, Users, User as UserIcon, Calculator, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,7 @@ import { downloadPdf } from '@/lib/pdf-utils';
 import { Separator } from '../ui/separator';
 import type { PrivatePurchase, Payment } from '@/lib/types';
 import { BagWeightCalculator } from '../mandi/bag-weight-calculator';
+import { Badge } from '../ui/badge';
 
 
 const labourDetailsSchema = z.object({
@@ -46,6 +47,11 @@ const purchaseFormSchema = z.object({
   tripCharge: z.coerce.number().optional(),
   source: z.string().optional(),
   destination: z.string().optional(),
+  // Tracking fields
+  calculationMethod: z.enum(['uniform', 'bag-by-bag', 'weighbridge']).optional(),
+  deductionKg: z.coerce.number().optional(),
+  grossWeightKg: z.coerce.number().optional(),
+  individualBagWeights: z.array(z.number()).optional(),
 }).merge(labourDetailsSchema).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
@@ -81,62 +87,102 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
     };
 
     return (
-        <div ref={ref} className="p-4 bg-white">
-            <h4 className="font-semibold text-md my-2">Purchase Details for {farmer.name}</h4>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead style={{width: '10%'}}>Date</TableHead>
-                        <TableHead style={{width: '8%'}}>Type</TableHead>
-                        <TableHead style={{width: '20%'}}>Vehicle Details</TableHead>
-                        <TableHead style={{width: '10%'}} className="text-right">Rent(₹)</TableHead>
-                        <TableHead style={{width: '10%'}} className="text-right">Qty (Qtl)</TableHead>
-                        <TableHead style={{width: '10%'}} className="text-right">Rate (₹)</TableHead>
-                        <TableHead style={{width: '10%'}} className="text-right">Total (₹)</TableHead>
-                        <TableHead style={{width: '10%'}} className="text-right">Paid (₹)</TableHead>
-                        <TableHead style={{width: '12%'}} className="text-right">Balance (₹)</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {farmer.purchases.map((p: PrivatePurchase) => (
-                        <React.Fragment key={p.id}>
-                            <TableRow>
-                                <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
-                                <TableCell className="capitalize">{p.itemType}</TableCell>
-                                <TableCell className="break-words">{getVehicleDetails(p)}</TableCell>
-                                <TableCell className="text-right">{p.tripCharge ? formatCurrency(p.tripCharge) : '-'}</TableCell>
-                                <TableCell className="text-right">{p.quantity.toLocaleString('en-IN')}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(p.rate)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(p.totalAmount)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(p.amountPaid)}</TableCell>
-                                <TableCell className={`text-right font-semibold ${p.balance < 0 ? 'text-green-600' : p.balance > 0 ? 'text-destructive' : ''}`}>
-                                    {p.balance < 0 ? `${formatCurrency(Math.abs(p.balance))} (Adv)` : formatCurrency(p.balance)}
-                                </TableCell>
-                            </TableRow>
-                            {p.payments.length > 0 && (
-                                 <tr className="bg-muted/20">
-                                    <TableCell colSpan={10} className="p-0">
-                                        <div className="p-4">
-                                            <h4 className="font-semibold mb-2 text-sm">Payment History for Purchase on {format(p.date, 'dd MMM yyyy')}</h4>
-                                            <Table>
-                                                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead className="text-right">Amount (₹)</TableHead></TableRow></TableHeader>
-                                                <TableBody>
-                                                    {[...p.payments].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((payment: any) => (
-                                                        <TableRow key={payment.id}>
-                                                            <TableCell className="text-xs">{format(payment.date, 'dd MMM yyyy, hh:mm a')}</TableCell>
-                                                            <TableCell className="text-right text-xs">{formatCurrency(payment.amount)}</TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
+        <div ref={ref} className="p-8 bg-white text-black min-h-screen">
+            <div className="text-center mb-8 border-b-2 pb-4">
+                <h3 className="text-3xl font-black uppercase tracking-widest text-primary">Mill Account Statement</h3>
+                <p className="text-xl font-bold mt-2">Farmer: {farmer.name}</p>
+            </div>
+
+            <div className="mb-10 p-6 bg-primary/5 rounded-3xl border border-primary/10">
+                <h4 className="font-black text-lg uppercase mb-4 text-primary opacity-70">Summary Account</h4>
+                <div className="grid grid-cols-3 gap-8">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase opacity-50">Total Purchases</p>
+                        <p className="text-2xl font-black">{farmer.purchases.length}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold uppercase opacity-50">Total Value</p>
+                        <p className="text-2xl font-black">{formatCurrency(farmer.purchases.reduce((acc, p) => acc + p.totalAmount, 0))}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold uppercase opacity-50">Outstanding Balance</p>
+                        <p className={`text-2xl font-black ${farmer.totalBalance > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                            {formatCurrency(farmer.totalBalance)}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-12">
+                {farmer.purchases.map((p: PrivatePurchase) => (
+                    <div key={p.id} className="border-2 border-black/5 rounded-3xl overflow-hidden">
+                        <div className="bg-black/5 p-4 flex justify-between items-center">
+                            <div className="flex gap-4 items-center">
+                                <span className="bg-primary text-white text-[10px] font-black px-3 py-1 rounded-full uppercase">Purchase Record</span>
+                                <span className="text-xs font-bold font-mono">ID: #{p.id.slice(-6)}</span>
+                            </div>
+                            <span className="text-sm font-black">{format(p.date, 'dd MMM yyyy')}</span>
+                        </div>
+                        
+                        <div className="p-6">
+                            <div className="grid grid-cols-4 gap-6 mb-8">
+                                <div><p className="text-[10px] font-bold uppercase opacity-40">Item Type</p><p className="font-black capitalize">{p.itemType}</p></div>
+                                <div><p className="text-[10px] font-bold uppercase opacity-40">Net Quantity</p><p className="font-black">{p.quantity.toFixed(4)} Qtl</p></div>
+                                <div><p className="text-[10px] font-bold uppercase opacity-40">Rate</p><p className="font-black">{formatCurrency(p.rate)} / Qtl</p></div>
+                                <div><p className="text-[10px] font-bold uppercase opacity-40">Total Value</p><p className="font-black text-primary">{formatCurrency(p.totalAmount)}</p></div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-12 mb-8 items-start">
+                                <div className="space-y-4">
+                                    <div className="bg-muted/30 p-4 rounded-2xl border border-black/5">
+                                        <h5 className="text-[10px] font-black uppercase mb-2 opacity-60">Weight Details</h5>
+                                        <div className="space-y-1 text-xs">
+                                            <div className="flex justify-between"><span>Gross Weight:</span><span className="font-bold">{p.grossWeightKg?.toLocaleString() || (p.quantity * 100).toLocaleString()} kg</span></div>
+                                            <div className="flex justify-between text-destructive"><span>Quality Deduction:</span><span className="font-bold">- {p.deductionKg?.toFixed(2) || '0.00'} kg</span></div>
+                                            <div className="border-t mt-1 pt-1 flex justify-between font-black"><span>Final Net:</span><span>{(p.quantity * 100).toLocaleString()} kg</span></div>
                                         </div>
-                                    </TableCell>
-                                </tr>
+                                    </div>
+                                    <div className="text-xs">
+                                        <p className="opacity-50 font-bold uppercase text-[10px]">Logistics</p>
+                                        <p className="font-bold">{getVehicleDetails(p)}</p>
+                                    </div>
+                                </div>
+
+                                {p.individualBagWeights && p.individualBagWeights.length > 0 && (
+                                    <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10">
+                                        <h5 className="text-[10px] font-black uppercase mb-3 text-primary opacity-60">Per Bag Weights (kg)</h5>
+                                        <div className="grid grid-cols-6 gap-1 text-[10px]">
+                                            {p.individualBagWeights.map((w, idx) => (
+                                                <div key={idx} className="border bg-white text-center p-1 rounded font-bold">
+                                                    {w.toFixed(1)}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {p.payments.length > 0 && (
+                                <div className="mt-6 border-t pt-4">
+                                    <h5 className="text-[10px] font-black uppercase mb-3 opacity-60">Payment History</h5>
+                                    <div className="space-y-2">
+                                        {p.payments.map((pmt) => (
+                                            <div key={pmt.id} className="flex justify-between text-xs bg-muted/20 p-2 rounded-lg">
+                                                <span>{format(pmt.date, 'dd MMM yyyy, hh:mm a')}</span>
+                                                <span className="font-black text-green-700">{formatCurrency(pmt.amount)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
-                        </React.Fragment>
-                    ))}
-                </TableBody>
-            </Table>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <div className="mt-20 pt-8 border-t text-[10px] text-muted-foreground italic text-center uppercase tracking-widest">
+                Computer Generated Official Statement • Mandi Monitor Management System
+            </div>
         </div>
     );
 });
@@ -174,6 +220,10 @@ export function PrivatePurchases() {
       labourerIds: [],
       labourCharge: 0,
       labourWageType: 'total_amount',
+      calculationMethod: 'uniform',
+      deductionKg: 0,
+      grossWeightKg: 0,
+      individualBagWeights: [],
     },
   });
   
@@ -298,12 +348,22 @@ export function PrivatePurchases() {
     }).format(amount);
   }
 
-  const handleDownload = (farmerId: string) => {
-    downloadPdf(`printable-purchases-${farmerId}`, `purchase-summary-${farmerId}`);
+  const handleDownload = (farmerId: string, farmerName: string) => {
+    downloadPdf(`printable-purchases-${farmerId}`, `purchase-summary-${farmerName.toLowerCase().replace(/\s+/g, '-')}`);
   }
   
-  const handleCalculatorConfirm = (values: { netQuintals: number }) => {
+  const handleCalculatorConfirm = (values: { 
+    netQuintals: number; 
+    grossWeightKg: number; 
+    deductionKg: number; 
+    bagWeights: number[]; 
+    method: any 
+  }) => {
     purchaseForm.setValue('quantity', values.netQuintals);
+    purchaseForm.setValue('grossWeightKg', values.grossWeightKg);
+    purchaseForm.setValue('deductionKg', values.deductionKg);
+    purchaseForm.setValue('individualBagWeights', values.bagWeights);
+    purchaseForm.setValue('calculationMethod', values.method);
     setCalculatorOpen(false);
   };
 
@@ -355,9 +415,9 @@ export function PrivatePurchases() {
                       </div>
                       <FormField control={purchaseForm.control} name="quantity" render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Quantity (Qtl)</FormLabel>
+                          <FormLabel>Net Quantity (Qtl)</FormLabel>
                             <FormControl>
-                              <Input type="number" step="0.01" placeholder="150" {...field} />
+                              <Input type="number" step="0.01" placeholder="150" {...field} className="bg-primary/5 font-bold text-primary" />
                             </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -369,6 +429,16 @@ export function PrivatePurchases() {
                         <FormItem><FormLabel>Initial Amount Paid (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="50000" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
+                    
+                    <div className="bg-white p-4 rounded-xl border border-primary/10 grid grid-cols-3 gap-4">
+                        <div className="flex items-center gap-2">
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-xs">Method: <span className="font-bold capitalize">{purchaseForm.watch('calculationMethod') || 'Manual'}</span></span>
+                        </div>
+                        <div className="text-xs">Gross: <span className="font-bold">{purchaseForm.watch('grossWeightKg')?.toLocaleString() || '0'} kg</span></div>
+                        <div className="text-xs text-destructive">Deduction: <span className="font-bold">{purchaseForm.watch('deductionKg')?.toFixed(2) || '0.00'} kg</span></div>
+                    </div>
+
                     <FormField control={purchaseForm.control} name="description" render={({ field }) => (
                         <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Add any notes for this purchase..." {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
@@ -492,7 +562,7 @@ export function PrivatePurchases() {
                                 </div>
                             </CollapsibleTrigger>
                              <div className="flex items-center gap-2 self-end md:self-center ml-auto pl-8 md:pl-0">
-                                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(farmer.id); }}>
+                                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(farmer.id, farmer.name); }}>
                                     <Download className="mr-2 h-4 w-4" /> PDF
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); purchaseForm.setValue('farmerName', farmer.name); setShowForm(true); window.scrollTo({top: 0, behavior: 'smooth'}); }}>
@@ -513,6 +583,8 @@ export function PrivatePurchases() {
                                             <TableRow>
                                                 <TableHead>Date</TableHead>
                                                 <TableHead>Item</TableHead>
+                                                <TableHead>Method</TableHead>
+                                                <TableHead className="text-right">Deduction (kg)</TableHead>
                                                 <TableHead className="text-right">Total (₹)</TableHead>
                                                 <TableHead className="text-right">Balance (₹)</TableHead>
                                                 <TableHead className="text-right">Actions</TableHead>
@@ -523,6 +595,14 @@ export function PrivatePurchases() {
                                                 <TableRow key={p.id}>
                                                     <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
                                                     <TableCell className="capitalize">{p.itemType}</TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline" className="capitalize text-[10px]">
+                                                            {p.calculationMethod || 'manual'}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-right font-medium text-destructive">
+                                                        {p.deductionKg ? `-${p.deductionKg.toFixed(2)}` : '0.00'}
+                                                    </TableCell>
                                                     <TableCell className="text-right">{formatCurrency(p.totalAmount)}</TableCell>
                                                     <TableCell className={`text-right font-semibold ${p.balance < 0 ? 'text-green-600' : p.balance > 0 ? 'text-destructive' : ''}`}>
                                                         {p.balance < 0 ? `${formatCurrency(Math.abs(p.balance))} (Adv)` : formatCurrency(p.balance)}
