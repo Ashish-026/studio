@@ -1,8 +1,10 @@
+
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
 import type { MandiProcessingResult, MandiStockRelease, TargetAllocation, PaddyLifted } from '@/lib/types';
 import { useStockData } from './stock-context';
+import * as db from '@/lib/db';
 
 interface MandiContextType {
   targetAllocations: TargetAllocation[];
@@ -38,24 +40,23 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const load = (key: string, setFn: any) => {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setFn(parsed.map((item: any) => ({ ...item, date: new Date(item.date) })));
-        } catch (e) { console.error(e); }
-      }
+    const loadAll = async () => {
+      const targets = await db.getItem<any[]>(KEYS.TARGETS);
+      const lifting = await db.getItem<any[]>(KEYS.LIFTING);
+      const releases = await db.getItem<any[]>(KEYS.RELEASES);
+
+      if (targets) setTargetAllocations(targets.map(i => ({ ...i, date: new Date(i.date) })));
+      if (lifting) setPaddyLiftedItems(lifting.map(i => ({ ...i, date: new Date(i.date) })));
+      if (releases) setStockReleases(releases.map(i => ({ ...i, date: new Date(i.date) })));
+      
+      setLoading(false);
     };
-    load(KEYS.TARGETS, setTargetAllocations);
-    load(KEYS.LIFTING, setPaddyLiftedItems);
-    load(KEYS.RELEASES, setStockReleases);
-    setLoading(false);
+    loadAll();
   }, []);
 
-  useEffect(() => { if (!loading) localStorage.setItem(KEYS.TARGETS, JSON.stringify(targetAllocations)); }, [targetAllocations, loading]);
-  useEffect(() => { if (!loading) localStorage.setItem(KEYS.LIFTING, JSON.stringify(paddyLiftedItems)); }, [paddyLiftedItems, loading]);
-  useEffect(() => { if (!loading) localStorage.setItem(KEYS.RELEASES, JSON.stringify(stockReleases)); }, [stockReleases, loading]);
+  useEffect(() => { if (!loading) db.setItem(KEYS.TARGETS, targetAllocations); }, [targetAllocations, loading]);
+  useEffect(() => { if (!loading) db.setItem(KEYS.LIFTING, paddyLiftedItems); }, [paddyLiftedItems, loading]);
+  useEffect(() => { if (!loading) db.setItem(KEYS.RELEASES, stockReleases); }, [stockReleases, loading]);
 
   const totalRiceFromProcessing = useMemo(() => {
     return (mandiProcessingHistory || []).reduce((acc, item) => acc + (Number(item.riceYield) || 0), 0);

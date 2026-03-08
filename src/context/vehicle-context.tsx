@@ -1,7 +1,9 @@
+
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext, useEffect, useMemo } from 'react';
 import type { Vehicle, Payment, VehicleTrip } from '@/lib/types';
+import * as db from '@/lib/db';
 
 interface VehicleContextType {
   vehicles: Vehicle[];
@@ -33,27 +35,29 @@ export function VehicleProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        const revived = parsed.map((v: any) => ({
-          ...v,
-          dateAdded: new Date(v.dateAdded),
-          trips: (v.trips || []).map((t: any) => ({ ...t, date: new Date(t.date) })),
-          payments: (v.payments || []).map((p: any) => ({ ...p, date: new Date(p.date) })),
-        }));
-        setVehicles(revived);
-      } catch (e) {
-        console.error("Failed to load vehicle data", e);
+    const loadData = async () => {
+      const stored = await db.getItem<any[]>(STORAGE_KEY);
+      if (stored) {
+        try {
+          const revived = stored.map((v: any) => ({
+            ...v,
+            dateAdded: new Date(v.dateAdded),
+            trips: (v.trips || []).map((t: any) => ({ ...t, date: new Date(t.date) })),
+            payments: (v.payments || []).map((p: any) => ({ ...p, date: new Date(p.date) })),
+          }));
+          setVehicles(revived);
+        } catch (e) {
+          console.error("Failed to revive vehicle data", e);
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    loadData();
   }, []);
 
   useEffect(() => {
     if (!loading) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(vehicles));
+      db.setItem(STORAGE_KEY, vehicles);
     }
   }, [vehicles, loading]);
 

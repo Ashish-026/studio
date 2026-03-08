@@ -1,7 +1,9 @@
+
 'use client';
 
 import { createContext, useContext, ReactNode, useMemo, useState, useCallback, useEffect } from 'react';
 import type { StockItem, ProcessingResult, PrivatePurchase, Payment, PrivateSale, MandiProcessingResult } from '@/lib/types';
+import * as db from '@/lib/db';
 
 interface StockContextType {
   privateStock: StockItem;
@@ -40,32 +42,35 @@ export function StockProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const load = (key: string, setFn: any) => {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setFn(parsed.map((item: any) => ({
-            ...item,
-            date: new Date(item.date),
-            payments: (item.payments || []).map((p: any) => ({ ...p, date: new Date(p.date) }))
-          })));
-        } catch (e) { console.error(e); }
-      }
+    const loadAll = async () => {
+      const p = await db.getItem<any[]>(KEYS.PURCHASES);
+      const s = await db.getItem<any[]>(KEYS.SALES);
+      const pr = await db.getItem<any[]>(KEYS.PROCESSING);
+      const mp = await db.getItem<any[]>(KEYS.MANDI_PROC);
+      const tr = await db.getItem<any[]>(KEYS.TRANSFERS);
+
+      const revive = (arr: any[] | null) => (arr || []).map(item => ({
+        ...item,
+        date: new Date(item.date),
+        payments: (item.payments || []).map((pay: any) => ({ ...pay, date: new Date(pay.date) }))
+      }));
+
+      if (p) setPurchases(revive(p));
+      if (s) setSales(revive(s));
+      if (pr) setProcessingHistory(revive(pr));
+      if (mp) setMandiProcessingHistory(revive(mp));
+      if (tr) setTransferredInStock(tr.map(i => ({ ...i, date: new Date(i.date) })));
+      
+      setLoading(false);
     };
-    load(KEYS.PURCHASES, setPurchases);
-    load(KEYS.SALES, setSales);
-    load(KEYS.PROCESSING, setProcessingHistory);
-    load(KEYS.MANDI_PROC, setMandiProcessingHistory);
-    load(KEYS.TRANSFERS, setTransferredInStock);
-    setLoading(false);
+    loadAll();
   }, []);
 
-  useEffect(() => { if (!loading) localStorage.setItem(KEYS.PURCHASES, JSON.stringify(purchases)); }, [purchases, loading]);
-  useEffect(() => { if (!loading) localStorage.setItem(KEYS.SALES, JSON.stringify(sales)); }, [sales, loading]);
-  useEffect(() => { if (!loading) localStorage.setItem(KEYS.PROCESSING, JSON.stringify(processingHistory)); }, [processingHistory, loading]);
-  useEffect(() => { if (!loading) localStorage.setItem(KEYS.MANDI_PROC, JSON.stringify(mandiProcessingHistory)); }, [mandiProcessingHistory, loading]);
-  useEffect(() => { if (!loading) localStorage.setItem(KEYS.TRANSFERS, JSON.stringify(transferredInStock)); }, [transferredInStock, loading]);
+  useEffect(() => { if (!loading) db.setItem(KEYS.PURCHASES, purchases); }, [purchases, loading]);
+  useEffect(() => { if (!loading) db.setItem(KEYS.SALES, sales); }, [sales, loading]);
+  useEffect(() => { if (!loading) db.setItem(KEYS.PROCESSING, processingHistory); }, [processingHistory, loading]);
+  useEffect(() => { if (!loading) db.setItem(KEYS.MANDI_PROC, mandiProcessingHistory); }, [mandiProcessingHistory, loading]);
+  useEffect(() => { if (!loading) db.setItem(KEYS.TRANSFERS, transferredInStock); }, [transferredInStock, loading]);
 
   const privateStock = useMemo<StockItem>(() => {
     const purchasedPaddy = (purchases || []).filter(p => p.itemType === 'paddy').reduce((acc, p) => acc + p.quantity, 0);

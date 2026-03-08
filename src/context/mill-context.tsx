@@ -1,7 +1,9 @@
+
 'use client';
 
 import { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import type { Mill } from '@/lib/types';
+import * as db from '@/lib/db';
 
 interface MillContextType {
   mills: Mill[];
@@ -23,24 +25,21 @@ export function MillProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const storedMill = localStorage.getItem('mandi-monitor-mill');
+    const loadMill = async () => {
+      const storedMill = await db.getItem<Mill>('mandi-monitor-mill');
       if (storedMill) {
-        setSelectedMill(JSON.parse(storedMill));
+        setSelectedMill(storedMill);
       }
-    } catch (error) {
-      console.error('Failed to parse mill from localStorage', error);
-      localStorage.removeItem('mandi-monitor-mill');
-    } finally {
       setLoading(false);
-    }
+    };
+    loadMill();
   }, []);
 
   const selectMill = useCallback((millId: string) => {
     const mill = mills.find((m) => m.id === millId);
     if (mill) {
       setSelectedMill(mill);
-      localStorage.setItem('mandi-monitor-mill', JSON.stringify(mill));
+      db.setItem('mandi-monitor-mill', mill);
     }
   }, [mills]);
 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -8,12 +9,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, FileJson, Database, Info, History, Smartphone } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, Database, Info, Smartphone, HardDrive } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRef, useState, useEffect } from 'react';
 import { Progress } from '@/components/ui/progress';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import * as db from '@/lib/db';
 
 const settingsSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -31,19 +33,17 @@ export default function SettingsPage() {
   const [storageUsage, setStorageUsage] = useState({ used: 0, percent: 0 });
   
   useEffect(() => {
-    const calculateUsage = () => {
-      let total = 0;
-      for (const key in localStorage) {
-        if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-          total += (localStorage[key].length * 2); // Approximate bytes (UTF-16)
-        }
+    const calculateUsage = async () => {
+      if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.estimate) {
+        const estimate = await navigator.storage.estimate();
+        const usedMB = (estimate.usage || 0) / (1024 * 1024);
+        const quotaMB = (estimate.quota || 100 * 1024 * 1024) / (1024 * 1024); // Default to 100MB if quota missing
+        
+        setStorageUsage({
+          used: usedMB,
+          percent: Math.min((usedMB / quotaMB) * 100, 100)
+        });
       }
-      const mbUsed = total / (1024 * 1024);
-      const limit = 5; // Standard 5MB limit for safety in most browsers
-      setStorageUsage({
-        used: mbUsed,
-        percent: Math.min((mbUsed / limit) * 100, 100)
-      });
     };
     calculateUsage();
   }, []);
@@ -68,8 +68,8 @@ export default function SettingsPage() {
     userForm.reset();
   }
 
-  const handleBackupData = () => {
-    const data: Record<string, string> = {};
+  const handleBackupData = async () => {
+    const data: Record<string, any> = {};
     const keys = [
       'mandi-monitor-credentials-v2',
       'mandi-monitor-mill',
@@ -86,24 +86,21 @@ export default function SettingsPage() {
       'mandi-monitor-transfers'
     ];
     
-    keys.forEach(key => {
-      const val = localStorage.getItem(key);
+    for (const key of keys) {
+      const val = await db.getItem(key);
       if (val) data[key] = val;
-    });
+    }
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     const timestamp = new Date().toISOString().split('T')[0];
-    link.download = `Mandi_Monitor_Backup_${timestamp}.json`;
+    link.download = `Mandi_Monitor_Master_Backup_${timestamp}.json`;
     link.click();
     URL.revokeObjectURL(url);
     
-    toast({
-      title: "Backup Created",
-      description: "Your mill records have been saved to your device.",
-    });
+    toast({ title: "Master Backup Created", description: "All database records have been exported." });
   };
 
   const handleRestoreData = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,51 +108,28 @@ export default function SettingsPage() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
         const data = JSON.parse(content);
         
-        Object.entries(data).forEach(([key, value]) => {
-          localStorage.setItem(key, value as string);
-        });
+        for (const [key, value] of Object.entries(data)) {
+          await db.setItem(key, value);
+        }
 
-        toast({
-          title: "Restore Successful",
-          description: "All records have been recovered. Reloading system...",
-        });
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        toast({ title: "Database Restored", description: "Records recovered. Reloading system..." });
+        setTimeout(() => window.location.reload(), 1500);
       } catch (err) {
-        toast({
-          variant: "destructive",
-          title: "Restore Failed",
-          description: "This file is not a valid Mandi Monitor backup.",
-        });
+        toast({ variant: "destructive", title: "Restore Failed", description: "Invalid backup file format." });
       }
     };
     reader.readAsText(file);
   };
 
-  const handleClearAllData = () => {
-    const keysToKeep = ['mandi-monitor-credentials-v2', 'mandi-monitor-mill', 'mandi-monitor-kms-year'];
-    const keys = Object.keys(localStorage);
-    keys.forEach(key => {
-      if (!keysToKeep.includes(key)) {
-        localStorage.removeItem(key);
-      }
-    });
-
-    toast({
-      title: "Data Cleared",
-      description: "All register records have been wiped. The app will now reload.",
-    });
-
-    setTimeout(() => {
-      window.location.reload();
-    }, 1500);
+  const handleClearAllData = async () => {
+    await db.clearAll();
+    toast({ title: "System Wiped", description: "All internal records have been deleted." });
+    setTimeout(() => window.location.reload(), 1500);
   };
 
   if (user?.role !== 'admin') {
@@ -172,7 +146,7 @@ export default function SettingsPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-headline mb-2 text-primary">System Settings</h1>
-          <p className="text-muted-foreground">Manage authentication, data backups, and system security.</p>
+          <p className="text-muted-foreground">Manage authentication, high-capacity storage, and backups.</p>
         </div>
         <TooltipProvider>
           <Tooltip>
@@ -181,20 +155,20 @@ export default function SettingsPage() {
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold text-primary/60 uppercase">
                     <span className="flex items-center gap-1">
-                      <Database className="h-3 w-3" /> App Storage Limit
+                      <HardDrive className="h-3 w-3" /> Disk Capacity Usage
                     </span>
-                    <span>{storageUsage.used.toFixed(2)} MB / 5 MB</span>
+                    <span>{storageUsage.used.toFixed(2)} MB Used</span>
                   </div>
                   <Progress value={storageUsage.percent} className="h-2 bg-primary/10" />
                   <p className="text-[10px] text-muted-foreground italic text-center flex items-center justify-center gap-1">
-                    <Info className="h-2.5 w-2.5" /> Sandboxed browser memory usage.
+                    <Info className="h-2.5 w-2.5" /> Using internal mobile storage engine.
                   </p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs text-xs p-3">
-              <p className="font-bold mb-1">PWA / Installed App Storage</p>
-              <p>Even when "Installed", the app uses your phone's <strong>Browser Storage engine</strong>. This engine is limited to 5MB for safety. When you get close to the limit, save a Backup and Wipe records to start fresh.</p>
+              <p className="font-bold mb-1">High-Capacity Engine Active</p>
+              <p>The app is now using <strong>IndexedDB</strong>. This allows you to store thousands of farmers and millions of bag weights without hitting the old 5MB limit.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -205,19 +179,19 @@ export default function SettingsPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Smartphone className="h-5 w-5 text-primary" />
-              <CardTitle>Installed Storage Logic</CardTitle>
+              <CardTitle>Device Storage Management</CardTitle>
             </div>
-            <CardDescription>How data lives on your mobile device.</CardDescription>
+            <CardDescription>Internal database tools for large-scale operations.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-3">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                This app does <strong>not</strong> use your general mobile memory (where photos live). It uses a "Locked Box" inside your browser. 
+                Your data is now stored in a high-performance internal database. It uses your phone's actual storage capacity.
               </p>
               <ul className="text-[11px] space-y-1 list-disc pl-4 text-muted-foreground">
-                <li>Works perfectly offline without a server.</li>
-                <li>Limited to 5MB total usage per device.</li>
-                <li><strong>Important:</strong> Data on your phone will NOT appear on your laptop unless you transfer a Backup file.</li>
+                <li>Virtually unlimited records (up to GBs).</li>
+                <li>Operates 100% offline.</li>
+                <li><strong>Safe Mode:</strong> Still recommended to save backups at the end of each KMS season.</li>
               </ul>
             </div>
 
@@ -226,22 +200,16 @@ export default function SettingsPage() {
                     <p className="text-xs font-bold uppercase opacity-60">Export</p>
                     <Button onClick={handleBackupData} variant="outline" className="w-full bg-white hover:bg-primary/5 rounded-xl border-primary/20 h-12">
                         <Download className="mr-2 h-4 w-4" />
-                        Save Backup
+                        Master Backup
                     </Button>
                 </div>
                 
                 <div className="space-y-2">
                     <p className="text-xs font-bold uppercase opacity-60">Import</p>
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={handleRestoreData} 
-                        accept=".json" 
-                        className="hidden" 
-                    />
+                    <input type="file" ref={fileInputRef} onChange={handleRestoreData} accept=".json" className="hidden" />
                     <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full bg-white hover:bg-primary/5 rounded-xl border-primary/20 h-12">
                         <Upload className="mr-2 h-4 w-4" />
-                        Load Backup
+                        Load Records
                     </Button>
                 </div>
             </div>
@@ -258,26 +226,26 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Clearing records will remove all data from your Mandi, Labour, Stock, and Vehicle registers permanently from this device.
+              Wiping the system will remove every record from your device's internal database.
             </p>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="w-full rounded-xl h-12">
                   <RefreshCcw className="mr-2 h-4 w-4" />
-                  Wipe System Database
+                  Wipe Internal Database
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent className="rounded-2xl border-none">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogTitle>Delete All Local Data?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will delete all entries across all registers. Ensure you have a Backup File before proceeding.
+                    This will clear all Mandi, Private, and Labour records from this phone permanently.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
                   <AlertDialogAction onClick={handleClearAllData} className="bg-destructive hover:bg-destructive/90 rounded-xl">
-                    Yes, Wipe Everything
+                    Clear Database
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

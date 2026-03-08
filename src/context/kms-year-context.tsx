@@ -1,6 +1,8 @@
+
 'use client';
 
 import { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import * as db from '@/lib/db';
 
 interface KmsYearContextType {
   availableKmsYears: string[];
@@ -22,14 +24,12 @@ const generateKmsYears = () => {
   return years;
 };
 
-// Function to determine KMS year from a date
 const getKmsYearForDate = (date: Date): string => {
     const year = date.getFullYear();
-    const month = date.getMonth(); // 0-indexed (0 for January)
-    // KMS is generally Oct-Sep. If date is Oct, Nov, Dec, it's the start of a new KMS year.
-    if (month >= 9) { // October, November, December
+    const month = date.getMonth();
+    if (month >= 9) {
       return `${year}-${(year + 1).toString().slice(-2)}`;
-    } else { // Jan-Sep
+    } else {
       return `${year - 1}-${year.toString().slice(-2)}`;
     }
 };
@@ -40,22 +40,19 @@ export function KmsYearProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const storedYear = localStorage.getItem('mandi-monitor-kms-year');
+    const loadYear = async () => {
+      const storedYear = await db.getItem<string>('mandi-monitor-kms-year');
       if (storedYear) {
-        setSelectedKmsYear(JSON.parse(storedYear));
+        setSelectedKmsYear(storedYear);
       }
-    } catch (error) {
-      console.error('Failed to parse KMS year from localStorage', error);
-      localStorage.removeItem('mandi-monitor-kms-year');
-    } finally {
       setLoading(false);
-    }
+    };
+    loadYear();
   }, []);
 
   const selectKmsYear = useCallback((year: string) => {
     setSelectedKmsYear(year);
-    localStorage.setItem('mandi-monitor-kms-year', JSON.stringify(year));
+    db.setItem('mandi-monitor-kms-year', year);
   }, []);
 
   return (

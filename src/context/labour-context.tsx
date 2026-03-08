@@ -1,7 +1,9 @@
+
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext, useEffect, useMemo } from 'react';
 import type { Labourer, LabourWorkEntry, Payment } from '@/lib/types';
+import * as db from '@/lib/db';
 
 interface LabourContextType {
   labourers: Labourer[];
@@ -28,26 +30,28 @@ export function LabourProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        const revived = parsed.map((l: any) => ({
-          ...l,
-          workEntries: (l.workEntries || []).map((w: any) => ({ ...w, date: new Date(w.date) })),
-          payments: (l.payments || []).map((p: any) => ({ ...p, date: new Date(p.date) })),
-        }));
-        setLabourers(revived);
-      } catch (e) {
-        console.error("Failed to load labour data", e);
+    const loadData = async () => {
+      const stored = await db.getItem<any[]>(STORAGE_KEY);
+      if (stored) {
+        try {
+          const revived = stored.map((l: any) => ({
+            ...l,
+            workEntries: (l.workEntries || []).map((w: any) => ({ ...w, date: new Date(w.date) })),
+            payments: (l.payments || []).map((p: any) => ({ ...p, date: new Date(p.date) })),
+          }));
+          setLabourers(revived);
+        } catch (e) {
+          console.error("Failed to revive labour data", e);
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    loadData();
   }, []);
 
   useEffect(() => {
     if (!loading) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(labourers));
+      db.setItem(STORAGE_KEY, labourers);
     }
   }, [labourers, loading]);
 
