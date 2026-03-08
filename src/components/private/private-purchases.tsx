@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, forwardRef } from 'react';
@@ -303,7 +302,7 @@ export function PrivatePurchases() {
     downloadPdf(`printable-purchases-${farmerId}`, `purchase-summary-${farmerId}`);
   }
   
-  const handleCalculatorConfirm = (values: { grossQuintals: number; netQuintals: number; netWeightKg: number }) => {
+  const handleCalculatorConfirm = (values: { netQuintals: number }) => {
     purchaseForm.setValue('quantity', values.netQuintals);
     setCalculatorOpen(false);
   };
@@ -566,7 +565,11 @@ export function PrivatePurchases() {
           </DialogContent>
       </Dialog>
       <Dialog open={isCalculatorOpen} onOpenChange={setCalculatorOpen}>
-        <BagWeightCalculator onConfirm={handleCalculatorConfirm} onCancel={() => setCalculatorOpen(false)} />
+        <BagWeightCalculator 
+            onConfirm={handleCalculatorConfirm} 
+            onCancel={() => setCalculatorOpen(false)} 
+            isPrivate={true}
+        />
       </Dialog>
     </>
   );

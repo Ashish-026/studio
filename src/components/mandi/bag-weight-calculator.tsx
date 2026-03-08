@@ -16,14 +16,14 @@ import { ScrollArea } from '../ui/scroll-area';
 
 const uniformBagSchema = z.object({
     numberOfBags: z.coerce.number().int().min(1, "Must have at least one bag."),
-    weightPerBag: z.coerce.number().positive("Actual weight per bag must be positive."),
-    consideredWeight: z.coerce.number().positive("Mandi standard weight must be positive."),
+    weightPerBag: z.coerce.number().positive("Weight per bag must be positive."),
+    consideredWeight: z.coerce.number().positive("Standard weight must be positive."),
     deduction: z.coerce.number().min(0).default(0),
 });
 
 const bagByBagSchema = z.object({
     bags: z.array(z.object({ weight: z.coerce.number().positive("Weight must be positive.") })).min(1, "Add at least one bag."),
-    consideredWeight: z.coerce.number().positive("Mandi standard weight per bag must be positive."),
+    consideredWeight: z.coerce.number().positive("Standard weight must be positive."),
     weightPerBag: z.coerce.number().positive("Base weight for ratio (e.g. 78)"),
     deduction: z.coerce.number().min(0).default(0),
 });
@@ -38,15 +38,16 @@ const weighbridgeSchema = z.object({
 interface BagWeightCalculatorProps {
     onConfirm: (values: { grossQuintals: number; netQuintals: number; netWeightKg: number; bagWeights: number[]; method: 'uniform' | 'bag-by-bag' | 'weighbridge' }) => void;
     onCancel: () => void;
+    isPrivate?: boolean;
 }
 
-export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculatorProps) {
+export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false }: BagWeightCalculatorProps) {
     const [activeTab, setActiveTab] = useState('uniform');
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const uniformForm = useForm<z.infer<typeof uniformBagSchema>>({
         resolver: zodResolver(uniformBagSchema),
-        defaultValues: { numberOfBags: 0, weightPerBag: 78, consideredWeight: 75, deduction: 0 },
+        defaultValues: { numberOfBags: 0, weightPerBag: isPrivate ? 75 : 78, consideredWeight: 75, deduction: 0 },
     });
 
     const bagByBagForm = useForm<z.infer<typeof bagByBagSchema>>({
@@ -71,43 +72,59 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
     const summary = useMemo(() => {
         let grossWeightKg = 0;
         let deductionKg = 0;
-        let mandiWeightKg = 0;
+        let netWeightKg = 0;
+        let finalWeightForRecordKg = 0;
         let bagWeights: number[] = [];
 
         if (activeTab === 'uniform') {
             const { numberOfBags, weightPerBag, consideredWeight, deduction } = watchedUniformValues;
             grossWeightKg = (numberOfBags || 0) * (weightPerBag || 0);
             deductionKg = parseFloat(String(deduction || 0));
-            mandiWeightKg = (numberOfBags || 0) * (consideredWeight || 0);
+            
+            if (isPrivate) {
+                finalWeightForRecordKg = grossWeightKg - deductionKg;
+            } else {
+                finalWeightForRecordKg = (numberOfBags || 0) * (consideredWeight || 0);
+            }
             bagWeights = Array(numberOfBags || 0).fill(weightPerBag || 0);
         } else if (activeTab === 'bag-by-bag') {
             const { bags, consideredWeight, weightPerBag, deduction } = watchedBagByBagValues;
             bagWeights = (bags || []).map(b => parseFloat(String(b.weight)) || 0).filter(w => w > 0);
             grossWeightKg = bagWeights.reduce((acc, w) => acc + w, 0);
             deductionKg = parseFloat(String(deduction || 0));
-            mandiWeightKg = (grossWeightKg / (weightPerBag || 78)) * (consideredWeight || 75);
+            
+            if (isPrivate) {
+                finalWeightForRecordKg = grossWeightKg - deductionKg;
+            } else {
+                finalWeightForRecordKg = (grossWeightKg / (weightPerBag || 78)) * (consideredWeight || 75);
+            }
         } else {
             const { grossWeightTotal, weightPerBag, consideredWeight, deduction } = watchedWeighbridgeValues;
             grossWeightKg = parseFloat(String(grossWeightTotal || 0));
             deductionKg = parseFloat(String(deduction || 0));
-            mandiWeightKg = (grossWeightKg / (weightPerBag || 78)) * (consideredWeight || 75);
+            
+            if (isPrivate) {
+                finalWeightForRecordKg = grossWeightKg - deductionKg;
+            } else {
+                finalWeightForRecordKg = (grossWeightKg / (weightPerBag || 78)) * (consideredWeight || 75);
+            }
             bagWeights = [];
         }
 
-        const netWeightKg = grossWeightKg - deductionKg;
+        netWeightKg = grossWeightKg - deductionKg;
         const grossQuintals = grossWeightKg > 0 ? grossWeightKg / 100 : 0;
-        const netQuintals = mandiWeightKg > 0 ? mandiWeightKg / 100 : 0;
+        const netQuintals = finalWeightForRecordKg > 0 ? finalWeightForRecordKg / 100 : 0;
         
         return {
             grossWeightKg,
             deductionKg,
             netWeightKg,
-            mandiWeightKg,
+            finalWeightForRecordKg,
             grossQuintals,
             netQuintals,
             bagWeights
         };
-    }, [activeTab, watchedUniformValues, watchedBagByBagValues, watchedWeighbridgeValues]);
+    }, [activeTab, watchedUniformValues, watchedBagByBagValues, watchedWeighbridgeValues, isPrivate]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -134,9 +151,13 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
             <DialogHeader className="bg-primary p-6 text-white shrink-0">
                 <DialogTitle className="text-2xl flex items-center gap-2">
                     <Scale className="h-7 w-7" />
-                    Paddy Weight Calculator
+                    {isPrivate ? 'Private Weight Calculator' : 'Paddy Weight Calculator'}
                 </DialogTitle>
-                <DialogDescription className="text-white/70 font-medium">Select your calculation method for standardized Mandi weights.</DialogDescription>
+                <DialogDescription className="text-white/70 font-medium">
+                    {isPrivate 
+                        ? 'Calculate total weight and deductions for private purchase.' 
+                        : 'Select your calculation method for standardized Mandi weights.'}
+                </DialogDescription>
             </DialogHeader>
             
             <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
@@ -154,19 +175,21 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
                                     <FormField control={uniformForm.control} name="numberOfBags" render={({ field }) => (
                                         <FormItem><FormLabel>Total Bag Count</FormLabel><FormControl><Input type="number" placeholder="e.g., 200" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                                     )} />
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className={`grid ${isPrivate ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                                         <FormField control={uniformForm.control} name="weightPerBag" render={({ field }) => (
-                                            <FormItem><FormLabel>Actual Avg (kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormLabel>{isPrivate ? 'Average Weight per Bag (kg)' : 'Actual Avg (kg)'}</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                                         )} />
-                                        <FormField control={uniformForm.control} name="consideredWeight" render={({ field }) => (
-                                            <FormItem><FormLabel>Mandi Standard (kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
-                                        )} />
+                                        {!isPrivate && (
+                                            <FormField control={uniformForm.control} name="consideredWeight" render={({ field }) => (
+                                                <FormItem><FormLabel>Mandi Standard (kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
+                                            )} />
+                                        )}
                                     </div>
                                     <FormField control={uniformForm.control} name="deduction" render={({ field }) => (
-                                        <FormItem><FormLabel>Extra Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="0" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Total Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="0" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                                     )} />
                                 </div>
-                                <CalculationResult summary={summary} />
+                                <CalculationResult summary={summary} isPrivate={isPrivate} />
                             </form>
                         </Form>
                     </TabsContent>
@@ -228,16 +251,21 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
                                         </Button>
                                     </ScrollArea>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <FormField control={bagByBagForm.control} name="weightPerBag" render={({ field }) => (
-                                            <FormItem><FormLabel>Ref (78kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl h-10" /></FormControl></FormItem>
-                                        )} />
-                                        <FormField control={bagByBagForm.control} name="consideredWeight" render={({ field }) => (
-                                            <FormItem><FormLabel>Target (75kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl h-10" /></FormControl></FormItem>
-                                        )} />
-                                    </div>
+                                    {!isPrivate && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <FormField control={bagByBagForm.control} name="weightPerBag" render={({ field }) => (
+                                                <FormItem><FormLabel>Ref (78kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl h-10" /></FormControl></FormItem>
+                                            )} />
+                                            <FormField control={bagByBagForm.control} name="consideredWeight" render={({ field }) => (
+                                                <FormItem><FormLabel>Target (75kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl h-10" /></FormControl></FormItem>
+                                            )} />
+                                        </div>
+                                    )}
+                                    <FormField control={bagByBagForm.control} name="deduction" render={({ field }) => (
+                                        <FormItem><FormLabel>Total Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="0" {...field} className="rounded-xl h-10" /></FormControl></FormItem>
+                                    )} />
                                 </div>
-                                <CalculationResult summary={summary} />
+                                <CalculationResult summary={summary} isPrivate={isPrivate} />
                             </form>
                         </Form>
                     </TabsContent>
@@ -248,27 +276,33 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
                                 <div className="space-y-6">
                                     <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-4">
                                         <Truck className="h-8 w-8 text-primary opacity-40" />
-                                        <p className="text-xs text-muted-foreground italic leading-relaxed">Use this mode for direct weighbridge readings. Standardization applies automatically based on the Reference/Target ratio.</p>
+                                        <p className="text-xs text-muted-foreground italic leading-relaxed">
+                                            {isPrivate 
+                                                ? 'Enter total vehicle weight. Deductions apply directly to the final quintals.' 
+                                                : 'Use this mode for direct weighbridge readings. Standardization applies automatically based on the Reference/Target ratio.'}
+                                        </p>
                                     </div>
                                     
                                     <FormField control={weighbridgeForm.control} name="grossWeightTotal" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-lg font-bold text-primary">Total Gross Bridge Weight (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="e.g., 15600" {...field} className="rounded-2xl h-16 text-2xl font-black text-primary border-primary/20 bg-white" /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel className="text-lg font-bold text-primary">Total Gross Weight (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="e.g., 15600" {...field} className="rounded-2xl h-16 text-2xl font-black text-primary border-primary/20 bg-white" /></FormControl><FormMessage /></FormItem>
                                     )} />
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <FormField control={weighbridgeForm.control} name="weightPerBag" render={({ field }) => (
-                                            <FormItem><FormLabel>Reference (e.g. 78)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl" /></FormControl></FormItem>
-                                        )} />
-                                        <FormField control={weighbridgeForm.control} name="consideredWeight" render={({ field }) => (
-                                            <FormItem><FormLabel>Target (e.g. 75)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl" /></FormControl></FormItem>
-                                        )} />
-                                    </div>
+                                    {!isPrivate && (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <FormField control={weighbridgeForm.control} name="weightPerBag" render={({ field }) => (
+                                                <FormItem><FormLabel>Reference (e.g. 78)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                            )} />
+                                            <FormField control={weighbridgeForm.control} name="consideredWeight" render={({ field }) => (
+                                                <FormItem><FormLabel>Target (e.g. 75)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                            )} />
+                                        </div>
+                                    )}
                                     
                                     <FormField control={weighbridgeForm.control} name="deduction" render={({ field }) => (
-                                        <FormItem><FormLabel>Manual Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="0" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                        <FormItem><FormLabel>Total Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="0" {...field} className="rounded-xl" /></FormControl></FormItem>
                                     )} />
                                 </div>
-                                <CalculationResult summary={summary} />
+                                <CalculationResult summary={summary} isPrivate={isPrivate} />
                             </form>
                         </Form>
                     </TabsContent>
@@ -276,7 +310,9 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
             </div>
            
             <DialogFooter className="bg-muted/30 p-6 border-t flex flex-col md:flex-row items-center gap-4 shrink-0">
-                <p className="text-[10px] text-muted-foreground italic max-w-xs text-center md:text-left">Formula: (Total Actual / Reference) * Target. All decimals preserved for mill accuracy.</p>
+                <p className="text-[10px] text-muted-foreground italic max-w-xs text-center md:text-left">
+                    {isPrivate ? 'Formula: Gross Weight - Deduction. Decimals preserved for accuracy.' : 'Formula: (Total Actual / Reference) * Target. All decimals preserved for mill accuracy.'}
+                </p>
                 <div className="hidden md:flex flex-1" />
                 <div className="flex w-full md:w-auto gap-3">
                     <Button type="button" variant="outline" onClick={onCancel} className="flex-1 md:flex-none rounded-xl h-14 px-8 border-primary/20 font-semibold">Cancel</Button>
@@ -293,7 +329,7 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
     );
 }
 
-function CalculationResult({ summary }: { summary: any }) {
+function CalculationResult({ summary, isPrivate }: { summary: any, isPrivate: boolean }) {
     return (
         <div className="space-y-4 rounded-3xl border border-primary/10 bg-primary/5 p-6 h-fit shadow-inner sticky top-0">
             <h3 className="text-lg font-bold text-primary flex items-center gap-2">
@@ -302,12 +338,15 @@ function CalculationResult({ summary }: { summary: any }) {
             </h3>
             <div className="space-y-3 text-sm">
                 <div className="flex justify-between font-medium"><span className="text-muted-foreground">Gross Weight</span><span className="font-bold">{summary.grossWeightKg.toLocaleString()} kg</span></div>
-                <div className="flex justify-between text-destructive font-medium"><span className="text-destructive/80">Manual Deduction</span><span className="font-bold">- {summary.deductionKg.toFixed(2)} kg</span></div>
+                <div className="flex justify-between text-destructive font-medium"><span className="text-destructive/80">Quality Deduction</span><span className="font-bold">- {summary.deductionKg.toFixed(2)} kg</span></div>
                 <Separator className="bg-primary/10" />
-                <div className="flex justify-between font-bold"><span className="text-primary/70">Standardized Mandi Wt</span><span className="text-primary text-lg">{summary.mandiWeightKg.toLocaleString()} kg</span></div>
+                <div className="flex justify-between font-bold">
+                    <span className="text-primary/70">{isPrivate ? 'Net Weight' : 'Standardized Mandi Wt'}</span>
+                    <span className="text-primary text-lg">{isPrivate ? summary.netWeightKg.toLocaleString() : summary.finalWeightForRecordKg.toLocaleString()} kg</span>
+                </div>
                 <div className="pt-4">
                     <Badge variant="secondary" className="w-full flex-col items-center py-4 rounded-2xl bg-primary text-white border-none shadow-lg gap-1">
-                        <span className="opacity-70 text-[10px] uppercase font-bold tracking-widest">Final Mandi Quantity</span>
+                        <span className="opacity-70 text-[10px] uppercase font-bold tracking-widest">{isPrivate ? 'Final Purchase Quantity' : 'Final Mandi Quantity'}</span>
                         <div className="flex items-baseline gap-1">
                             <span className="font-black text-3xl">{summary.netQuintals.toFixed(4)}</span>
                             <span className="text-xs opacity-60">Qtl</span>
