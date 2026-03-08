@@ -1,7 +1,6 @@
 'use client';
 
-import { createContext, useState, useEffect, useCallback, ReactNode, useContext, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { createContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import type { User as AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -35,11 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [credentials, setCredentials] = useState(DEFAULT_CREDENTIALS);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load custom credentials from long-term memory
     const storedCreds = localStorage.getItem(CREDENTIALS_KEY);
     if (storedCreds) {
       try {
@@ -49,8 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // SESSION LOGOUT LOGIC: Only check Session Storage. 
-    // If user closes tab, Session Storage is wiped automatically by the browser.
     const sessionUser = sessionStorage.getItem(SESSION_KEY);
     if (sessionUser) {
       try {
@@ -67,15 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isUser = credentials.user.email === email && credentials.user.password === password;
     
     if (isAdmin) {
-      setUser(credentials.admin.user);
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(credentials.admin.user));
-      window.location.href = '/select-mill';
-      toast({ title: 'Login Successful', description: `Welcome, ${credentials.admin.user.name}!` });
+      const u = credentials.admin.user;
+      setUser(u);
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(u));
+      toast({ title: 'Login Successful', description: `Welcome, ${u.name}!` });
     } else if (isUser) {
-      setUser(credentials.user.user);
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(credentials.user.user));
-      window.location.href = '/select-mill';
-      toast({ title: 'Login Successful', description: `Welcome, ${credentials.user.user.name}!` });
+      const u = credentials.user.user;
+      setUser(u);
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(u));
+      toast({ title: 'Login Successful', description: `Welcome, ${u.name}!` });
     } else {
       toast({
         title: 'Login Failed',
@@ -88,8 +83,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     sessionStorage.removeItem(SESSION_KEY);
-    window.location.href = '/';
-  }, []);
+    toast({ title: 'Logged Out', description: 'Session closed successfully.' });
+  }, [toast]);
 
   const updateCredentials = useCallback((role: 'admin' | 'user', newEmail: string, newPassword?: string) => {
     setCredentials(prev => {
