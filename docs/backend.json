@@ -40,44 +40,35 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "OscscRegisterEntry",
       "type": "object",
-      "description": "Represents an entry in the OSCSC register.",
+      "description": "Represents an entry in the OSCSC register (Target Allotment).",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the OscscRegisterEntry entity."
-        },
-        "targetAlloted": {
-          "type": "number",
-          "description": "Target alloted for this entry."
-        },
-        "physicalPaddyLifted": {
-          "type": "number",
-          "description": "Physical paddy lifted for this entry."
-        },
-        "balanceToBeLifted": {
-          "type": "number",
-          "description": "Balance to be lifted for this entry."
-        },
-        "nonPhysicallyLifted": {
-          "type": "number",
-          "description": "Amount of paddy not physically lifted."
+          "description": "Unique identifier for the entry."
         },
         "mandiName": {
           "type": "string",
-          "description": "Name of the mandi for this entry."
+          "description": "Name of the mandi."
         },
-        "targetAllotedDate": {
+        "mandiIdNumber": {
           "type": "string",
-          "description": "Date when the target was alloted.",
+          "description": "Official ID number of the mandi for corporation records."
+        },
+        "target": {
+          "type": "number",
+          "description": "Target allotted in quintals."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date when the target was allotted.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
-        "targetAlloted",
-        "physicalPaddyLifted",
-        "balanceToBeLifted",
-        "nonPhysicallyLifted"
+        "mandiName",
+        "target",
+        "date"
       ]
     },
     "PrivateRegisterEntry": {
