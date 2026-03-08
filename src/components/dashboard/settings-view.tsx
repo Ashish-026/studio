@@ -1,19 +1,19 @@
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, FileJson, Database, Info } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, FileJson, Database, Info, History } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRef, useState, useEffect } from 'react';
-import { Progress } from '../ui/progress';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const settingsSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -34,7 +34,7 @@ export default function SettingsPage() {
     const calculateUsage = () => {
       let total = 0;
       for (const key in localStorage) {
-        if (localStorage.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
           total += (localStorage[key].length * 2); // Approximate bytes (UTF-16)
         }
       }
@@ -181,20 +181,20 @@ export default function SettingsPage() {
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold text-primary/60 uppercase">
                     <span className="flex items-center gap-1">
-                      <Database className="h-3 w-3" /> Total Device Storage
+                      <Database className="h-3 w-3" /> Device Capacity
                     </span>
                     <span>{storageUsage.used.toFixed(2)} MB / 5 MB</span>
                   </div>
                   <Progress value={storageUsage.percent} className="h-2 bg-primary/10" />
                   <p className="text-[10px] text-muted-foreground italic text-center flex items-center justify-center gap-1">
-                    <Info className="h-2.5 w-2.5" /> This is the total data saved on this device.
+                    <Info className="h-2.5 w-2.5" /> Total persistent data on this device.
                   </p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs text-xs p-3">
               <p className="font-bold mb-1">What is Local Storage?</p>
-              <p>It is your device's permanent memory for this app. The percentage shows the total sum of all your Mandi, Labour, and Stock records. It stays saved even when you close the app.</p>
+              <p>It is your browser's permanent memory. The 5MB limit is set by the browser. If you hit the limit, download a <strong>Backup</strong>, then wipe the records to start a new season.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -207,32 +207,42 @@ export default function SettingsPage() {
               <FileJson className="h-5 w-5 text-primary" />
               <CardTitle>Data Portability</CardTitle>
             </div>
-            <CardDescription>Move your mill data between devices without a server.</CardDescription>
+            <CardDescription>Move your mill data between devices or archive old seasons.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-2">
-              <p className="text-sm font-medium">Export Records</p>
-              <p className="text-xs text-muted-foreground">Download a secure JSON file containing every entry from your registers.</p>
-              <Button onClick={handleBackupData} variant="outline" className="w-full bg-white hover:bg-primary/5 rounded-xl border-primary/20">
-                <Download className="mr-2 h-4 w-4" />
-                Backup to Local File
-              </Button>
+              <div className="flex items-center gap-2">
+                <History className="h-4 w-4 text-primary" />
+                <p className="text-sm font-bold">Archive & Rotation Strategy</p>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                To handle thousands of farmers across multiple years, download a backup file periodically. This file acts as your "Hard Drive" copy, while the device stays fast by only holding the current season.
+              </p>
             </div>
-            
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-2">
-              <p className="text-sm font-medium">Import Records</p>
-              <p className="text-xs text-muted-foreground">Restore data from a previously saved backup file.</p>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleRestoreData} 
-                accept=".json" 
-                className="hidden" 
-              />
-              <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full bg-white hover:bg-primary/5 rounded-xl border-primary/20">
-                <Upload className="mr-2 h-4 w-4" />
-                Restore from Backup
-              </Button>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div className="space-y-2">
+                    <p className="text-xs font-bold uppercase opacity-60">Export</p>
+                    <Button onClick={handleBackupData} variant="outline" className="w-full bg-white hover:bg-primary/5 rounded-xl border-primary/20 h-12">
+                        <Download className="mr-2 h-4 w-4" />
+                        Save Backup
+                    </Button>
+                </div>
+                
+                <div className="space-y-2">
+                    <p className="text-xs font-bold uppercase opacity-60">Import</p>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleRestoreData} 
+                        accept=".json" 
+                        className="hidden" 
+                    />
+                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full bg-white hover:bg-primary/5 rounded-xl border-primary/20 h-12">
+                        <Upload className="mr-2 h-4 w-4" />
+                        Load Backup
+                    </Button>
+                </div>
             </div>
           </CardContent>
         </Card>
@@ -251,7 +261,7 @@ export default function SettingsPage() {
             </p>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full rounded-xl">
+                <Button variant="destructive" className="w-full rounded-xl h-12">
                   <RefreshCcw className="mr-2 h-4 w-4" />
                   Wipe System Database
                 </Button>
@@ -288,15 +298,15 @@ export default function SettingsPage() {
             <Form {...adminForm}>
               <form onSubmit={adminForm.handleSubmit(onAdminSubmit)} className="space-y-4">
                 <FormField control={adminForm.control} name="email" render={({ field }) => (
-                  <FormItem><FormLabel>New Email</FormLabel><FormControl><Input placeholder="admin@mill.com" {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>New Email</FormLabel><FormControl><Input placeholder="admin@mill.com" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={adminForm.control} name="password" render={({ field }) => (
-                  <FormItem><FormLabel>New Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>New Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={adminForm.control} name="confirmPassword" render={({ field }) => (
-                  <FormItem><FormLabel>Confirm Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Confirm Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                 )} />
-                <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl">Update Admin Details</Button>
+                <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl h-12">Update Admin Details</Button>
               </form>
             </Form>
           </CardContent>
@@ -314,15 +324,15 @@ export default function SettingsPage() {
             <Form {...userForm}>
               <form onSubmit={userForm.handleSubmit(onUserSubmit)} className="space-y-4">
                 <FormField control={userForm.control} name="email" render={({ field }) => (
-                  <FormItem><FormLabel>New Email</FormLabel><FormControl><Input placeholder="user@mill.com" {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>New Email</FormLabel><FormControl><Input placeholder="user@mill.com" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={userForm.control} name="password" render={({ field }) => (
-                  <FormItem><FormLabel>New Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>New Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={userForm.control} name="confirmPassword" render={({ field }) => (
-                  <FormItem><FormLabel>Confirm Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Confirm Password</FormLabel><FormControl><Input type="password" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                 )} />
-                <Button type="submit" className="w-full rounded-xl">Update Staff Details</Button>
+                <Button type="submit" className="w-full rounded-xl h-12">Update Staff Details</Button>
               </form>
             </Form>
           </CardContent>

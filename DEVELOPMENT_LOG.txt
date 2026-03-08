@@ -17,19 +17,29 @@ MANDI MONITOR - SEAMLESS SETUP & FIXES
 - NO CLOUD BILLING: 100% Free forever.
 - If the Firebase project is deleted, the app remains functional as long as the code is hosted anywhere or cached on a mobile device.
 
-3. PERFORMANCE (FAST RESPONSE)
+3. STORAGE STRATEGY (INFINITE DATA)
+---------------------------------------------------------
+- The 5MB Browser Limit: All modern browsers limit Local Storage to 5MB per website.
+- Archiving: To handle multiple seasons or years of data (e.g., 5000+ farmers), users should follow the "Rotation Strategy":
+    1. At the end of a season, go to Settings -> Backup to Local File.
+    2. Save this file (e.g., "Season_2024_Final.json") to a safe place.
+    3. Wipe the device storage using "Wipe System Database".
+    4. Start the next season with a clean 5MB capacity.
+- Restoration: Any historical season can be viewed instantly by "Restoring" the old backup file.
+
+4. PERFORMANCE (FAST RESPONSE)
 ---------------------------------------------------------
 - Context Memoization: All data providers (Mandi, Labour, Stock) are memoized to prevent lag.
 - Calculations: Heavy stock and yield percentages are calculated only when data changes.
 - Rendering: Tables use hardware-accelerated CSS for smooth scrolling on mobile.
 
-4. MOBILE INSTALLATION
+5. MOBILE INSTALLATION
 ---------------------------------------------------------
 - Open the main link on your phone.
 - Tap 'Share' or '3 Dots' -> 'Add to Home Screen'.
 - The app will now work like a native app without 404 issues.
 
-5. LOGOUT LOGIC
+6. LOGOUT LOGIC
 ---------------------------------------------------------
 - For your security, closing the browser tab or swiping the mobile app closed will log you out automatically (clearing Session Storage).
 - Your actual data (records) remains safe in Local Storage.
