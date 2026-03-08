@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { AppHeader } from '@/components/dashboard/header';
@@ -14,27 +14,27 @@ import { KmsYearProvider } from '@/context/kms-year-context';
 import { useMill } from '@/hooks/use-mill';
 import { useKmsYear } from '@/hooks/use-kms-year';
 import { MasterReport } from '@/components/reports/master-report';
+import { MillSelectionInline } from '@/components/dashboard/mill-selection-inline';
+import { KmsSelectionInline } from '@/components/dashboard/kms-selection-inline';
 
 function ProtectedDashboard({ children }: { children: React.ReactNode }) {
   const { user, loading: userLoading } = useAuth();
   const { selectedMill, loading: millLoading } = useMill();
   const { selectedKmsYear, loading: kmsYearLoading } = useKmsYear();
   const router = useRouter();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    // Independent redirection check: redirects to login if no session, or setup screens if data missing
-    if (!userLoading) {
-      if (!user) {
-        router.replace('/');
-      } else if (!millLoading && !selectedMill) {
-        router.replace('/select-mill');
-      } else if (!millLoading && selectedMill && !kmsYearLoading && !selectedKmsYear) {
-        router.replace('/select-kms-year');
-      }
-    }
-  }, [user, userLoading, selectedMill, millLoading, selectedKmsYear, kmsYearLoading, router]);
+    setIsClient(true);
+  }, []);
 
-  if (userLoading || millLoading || kmsYearLoading || !user || !selectedMill || !selectedKmsYear) {
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.replace('/');
+    }
+  }, [user, userLoading, router]);
+
+  if (!isClient || userLoading || millLoading || kmsYearLoading) {
     return (
       <div className="flex flex-col min-h-screen">
         <header className="sticky top-0 z-50 w-full border-b bg-card">
@@ -48,11 +48,22 @@ function ProtectedDashboard({ children }: { children: React.ReactNode }) {
         <main className="flex-1 container py-8">
             <div className="flex flex-col justify-center items-center h-64 space-y-4">
                 <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-                <p className="text-muted-foreground animate-pulse">Initializing Mill Environment...</p>
+                <p className="text-muted-foreground animate-pulse text-sm">Synchronizing Mill Environment...</p>
             </div>
         </main>
       </div>
     );
+  }
+
+  if (!user) return null;
+
+  // INLINE SELECTION LOGIC: Fixes 404 errors by staying on the same URL
+  if (!selectedMill) {
+    return <MillSelectionInline />;
+  }
+
+  if (!selectedKmsYear) {
+    return <KmsSelectionInline />;
   }
 
   return (

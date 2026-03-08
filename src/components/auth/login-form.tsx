@@ -28,7 +28,7 @@ export function LoginForm() {
   
   useEffect(() => {
     if (!loading && user) {
-      router.replace('/select-mill');
+      router.replace('/dashboard');
     }
   }, [user, loading, router]);
   
@@ -41,16 +41,16 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-sm shadow-xl border-none bg-white/95 backdrop-blur-sm">
+    <Card className="w-full max-w-sm shadow-2xl border-none bg-white/95 backdrop-blur-md">
       <CardHeader className="text-center">
         <div className="flex justify-center items-center mb-4">
-            <div className="bg-primary/10 p-3 rounded-full">
-                <MillIcon className="h-10 w-10 text-primary" />
+            <div className="bg-primary/10 p-4 rounded-3xl">
+                <MillIcon className="h-12 w-12 text-primary" />
             </div>
         </div>
-        <CardTitle className="text-3xl font-headline text-primary">Mandi Monitor</CardTitle>
-        <CardDescription className="text-muted-foreground/80">
-            Professional Rice Mill Management
+        <CardTitle className="text-4xl font-headline text-primary">Mandi Monitor</CardTitle>
+        <CardDescription className="text-muted-foreground font-medium text-base">
+            Professional Mill Management
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -61,9 +61,9 @@ export function LoginForm() {
             name="email"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>Email Address</FormLabel>
                 <FormControl>
-                    <Input placeholder="admin@mill.com" {...field} className="bg-muted/30" />
+                    <Input placeholder="admin@mill.com" {...field} className="bg-muted/30 h-12 rounded-xl" />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -76,13 +76,13 @@ export function LoginForm() {
                 <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} className="bg-muted/30" />
+                    <Input type="password" placeholder="••••••••" {...field} className="bg-muted/30 h-12 rounded-xl" />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
             )}
             />
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-6 text-lg rounded-xl shadow-lg transition-all hover:scale-[1.02]">
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-8 text-xl rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95">
                 Log In
             </Button>
         </form>
