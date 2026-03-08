@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { useAuth } from '@/hooks/use-auth';
 import { useMandiData } from '@/context/mandi-context';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, PlusCircle, Download, Edit } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Download, Edit, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,10 +18,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { downloadPdf } from '@/lib/pdf-utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import type { TargetAllocation as TargetAllocationType } from '@/lib/types';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
+import { Badge } from '../ui/badge';
 
 
 const formSchema = z.object({
@@ -39,7 +39,11 @@ export function TargetAllotment() {
   const [showForm, setShowForm] = useState(false);
   const [editingTarget, setEditingTarget] = useState<TargetAllocationType | null>(null);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedMandi, setSelectedMandi] = useState('All');
+  const [selectedMandi, setSelectedMandi] = useState<string | null>(null);
+  
+  // State for auto-closing date pickers
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isEditCalendarOpen, setIsEditCalendarOpen] = useState(false);
 
   const uniqueMandis = useMemo(() => {
     const mandiNames = targetAllocations.map((allocation) => allocation.mandiName);
@@ -48,9 +52,7 @@ export function TargetAllotment() {
 
   const filteredAllocations = useMemo(() => {
     const sortedAllocations = [...targetAllocations].sort((a, b) => b.date.getTime() - a.date.getTime());
-    if (selectedMandi === 'All') {
-      return sortedAllocations;
-    }
+    if (!selectedMandi) return [];
     return sortedAllocations.filter(item => item.mandiName === selectedMandi);
   }, [targetAllocations, selectedMandi]);
 
@@ -96,81 +98,97 @@ export function TargetAllotment() {
 
   return (
     <>
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-start">
+    <Card className="border-none shadow-none bg-transparent">
+      <CardHeader className="px-0 pt-0">
+        <div className="flex justify-between items-start mb-6">
             <div>
-                <CardTitle>Target Allotment Details</CardTitle>
-                <CardDescription>View and manage mandi-wise target allocations. Only admins can add new targets.</CardDescription>
+                <CardTitle className="text-2xl font-bold font-headline text-primary">Target Allotment</CardTitle>
+                <CardDescription>Select a Mandi to view targets or add a new allocation.</CardDescription>
             </div>
             <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => downloadPdf('target-allotment-table', 'target-allotment-summary')}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download PDF
-                </Button>
                 {isAdmin && (
-                    <Button onClick={() => { setEditingTarget(null); setShowForm(!showForm); }} size="sm">
+                    <Button onClick={() => { setEditingTarget(null); setShowForm(!showForm); }} size="sm" className="rounded-xl shadow-md">
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        {showForm ? 'Cancel' : 'Add Target'}
+                        {showForm ? 'Cancel' : 'Add New Target'}
                     </Button>
                 )}
             </div>
         </div>
-        <div className="flex items-center gap-4 pt-4">
-              <Label htmlFor="mandi-filter-target" className="text-sm font-medium">Filter by Mandi:</Label>
-              <Select value={selectedMandi} onValueChange={setSelectedMandi}>
-                <SelectTrigger className="w-[280px]" id="mandi-filter-target">
-                  <SelectValue placeholder="Select a mandi" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Mandis</SelectLabel>
-                    <SelectItem value="All">All Mandis</SelectItem>
-                    {uniqueMandis.map((mandi) => (
-                      <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-          </div>
+
+        <div className="space-y-4">
+            <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Select Mandi to View Details</Label>
+            <div className="flex flex-wrap gap-3">
+                {uniqueMandis.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">No mandis registered yet. Add a target to begin.</p>
+                ) : (
+                    uniqueMandis.map((mandi) => (
+                        <Button
+                            key={mandi}
+                            variant={selectedMandi === mandi ? "default" : "outline"}
+                            className={cn(
+                                "h-14 px-6 rounded-2xl transition-all border-primary/10 shadow-sm hover:shadow-md",
+                                selectedMandi === mandi ? "bg-primary text-white scale-105" : "bg-white hover:bg-primary/5 hover:border-primary/30"
+                            )}
+                            onClick={() => setSelectedMandi(selectedMandi === mandi ? null : mandi)}
+                        >
+                            <MapPin className={cn("mr-2 h-4 w-4", selectedMandi === mandi ? "text-white" : "text-primary/40")} />
+                            <div className="flex flex-col items-start">
+                                <span className="font-bold">{mandi}</span>
+                                <span className="text-[10px] uppercase opacity-70">View History</span>
+                            </div>
+                        </Button>
+                    ))
+                )}
+            </div>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      
+      <CardContent className="px-0 space-y-8">
         {isAdmin && showForm && (
-          <Card className="bg-muted/50">
-            <CardHeader>
-                <CardTitle>New Target Allocation</CardTitle>
+          <Card className="bg-white border-primary/10 shadow-xl rounded-3xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+            <CardHeader className="bg-primary/5 border-b border-primary/10">
+                <CardTitle className="text-lg">New Target Allocation</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
                 <FormField control={form.control} name="mandiName" render={({ field }) => (
-                  <FormItem className="md:col-span-1">
+                  <FormItem>
                     <FormLabel>Mandi Name</FormLabel>
-                    <FormControl><Input placeholder="e.g., Bargarh Main" {...field} /></FormControl>
+                    <FormControl><Input placeholder="e.g., Bargarh Main" {...field} className="rounded-xl h-12" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="mandiIdNumber" render={({ field }) => (
-                  <FormItem className="md:col-span-1">
+                  <FormItem>
                     <FormLabel>Mandi ID Number</FormLabel>
-                    <FormControl><Input placeholder="e.g., M-12345" {...field} /></FormControl>
+                    <FormControl><Input placeholder="e.g., M-12345" {...field} className="rounded-xl h-12" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={form.control} name="date" render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
-                    <Popover>
+                    <FormLabel>Allocation Date</FormLabel>
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                         <PopoverTrigger asChild>
                         <FormControl>
-                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                            <Button variant={"outline"} className={cn("h-12 rounded-xl pl-3 text-left font-normal border-input", !field.value && "text-muted-foreground")}>
                             {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
                         </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus />
+                            <Calendar 
+                                mode="single" 
+                                selected={field.value} 
+                                onSelect={(date) => {
+                                    field.onChange(date);
+                                    setIsCalendarOpen(false); // AUTO-CLOSE ON SELECT
+                                }} 
+                                disabled={(date) => date > new Date() || date < new Date("1900-01-01")} 
+                                initialFocus 
+                            />
                         </PopoverContent>
                     </Popover>
                     <FormMessage />
@@ -179,107 +197,132 @@ export function TargetAllotment() {
                 <FormField control={form.control} name="target" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Target (Quintals)</FormLabel>
-                    <FormControl><Input type="number" placeholder="5000" {...field} /></FormControl>
+                    <FormControl><Input type="number" placeholder="5000" {...field} className="rounded-xl h-12" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
-                <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90">Add Allocation</Button>
+                <Button type="submit" className="lg:col-span-4 bg-primary hover:bg-primary/90 h-12 rounded-xl font-bold shadow-lg shadow-primary/20">Add Allocation</Button>
               </form>
             </Form>
             </CardContent>
           </Card>
         )}
-        <div id="target-allotment-table">
-            <h3 className="text-lg font-semibold mb-2">Allocation History</h3>
-            <div className="border rounded-lg">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                        <TableHead>Mandi Name</TableHead>
-                        <TableHead>Mandi ID</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Target (Quintals)</TableHead>
-                        {isAdmin && <TableHead className="text-right">Actions</TableHead>}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredAllocations.length === 0 && (
-                            <TableRow><TableCell colSpan={isAdmin ? 5 : 4} className="text-center">No targets allotted for this selection.</TableCell></TableRow>
-                        )}
-                        {filteredAllocations.map((item) => (
-                        <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.mandiName}</TableCell>
-                            <TableCell>{item.mandiIdNumber || 'N/A'}</TableCell>
-                            <TableCell>{format(item.date, 'dd MMM yyyy')}</TableCell>
-                            <TableCell className="text-right">{item.target.toLocaleString('en-IN')}</TableCell>
-                            {isAdmin && (
-                              <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" onClick={() => handleEditClick(item)}>
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            )}
-                        </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+
+        {selectedMandi && (
+            <div id="target-allotment-table" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                    <h3 className="text-xl font-bold font-headline flex items-center gap-2 text-primary">
+                        <Badge variant="secondary" className="px-3 py-1 rounded-lg text-lg bg-primary/10 text-primary border-none">{selectedMandi}</Badge>
+                        Allocation History
+                    </h3>
+                    <Button variant="outline" size="sm" onClick={() => downloadPdf('target-allotment-table-content', `targets-${selectedMandi.toLowerCase()}`)} className="rounded-xl border-primary/20 hover:bg-primary/5">
+                        <Download className="mr-2 h-4 w-4" />
+                        Export to PDF
+                    </Button>
+                </div>
+                
+                <div id="target-allotment-table-content" className="bg-white border border-primary/5 rounded-3xl overflow-hidden shadow-sm">
+                    <Table>
+                        <TableHeader className="bg-muted/30">
+                            <TableRow className="border-none">
+                                <TableHead className="font-bold py-4">Mandi ID</TableHead>
+                                <TableHead className="font-bold py-4">Date</TableHead>
+                                <TableHead className="text-right font-bold py-4">Target (Quintals)</TableHead>
+                                {isAdmin && <TableHead className="text-right font-bold py-4">Actions</TableHead>}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredAllocations.map((item) => (
+                            <TableRow key={item.id} className="hover:bg-primary/5 transition-colors">
+                                <TableCell className="font-medium">{item.mandiIdNumber || 'N/A'}</TableCell>
+                                <TableCell>{format(item.date, 'dd MMM yyyy')}</TableCell>
+                                <TableCell className="text-right font-bold text-primary">{item.target.toLocaleString('en-IN')}</TableCell>
+                                {isAdmin && (
+                                <TableCell className="text-right">
+                                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)} className="rounded-lg hover:text-primary hover:bg-primary/10">
+                                    <Edit className="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
+                                )}
+                            </TableRow>
+                            ))}
+                        </TableBody>
+                        <tfoot className="bg-primary/5 border-t border-primary/10">
+                            <TableRow>
+                                <TableCell colSpan={2} className="font-bold text-primary py-4">TOTAL ALLOTTED TARGET</TableCell>
+                                <TableCell className="text-right font-black text-primary text-lg py-4">
+                                    {totalTarget.toLocaleString('en-IN')} Qtl
+                                </TableCell>
+                                {isAdmin && <TableCell />}
+                            </TableRow>
+                        </tfoot>
+                    </Table>
+                </div>
             </div>
-             <div className="text-right font-bold text-lg mt-4 pr-4">
-                Total Allotted for {selectedMandi === 'All' ? 'All Mandis' : selectedMandi}: {totalTarget.toLocaleString('en-IN')} Quintals
-            </div>
-        </div>
+        )}
       </CardContent>
     </Card>
+
     <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Edit Target Allocation</DialogTitle>
+        <DialogContent className="rounded-3xl border-none p-0 overflow-hidden shadow-2xl">
+            <DialogHeader className="p-6 bg-primary text-white">
+                <DialogTitle className="text-xl">Edit Target Allocation</DialogTitle>
             </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="mandiName" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mandi Name</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="mandiIdNumber" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mandi ID Number</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="date" render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                        <FormControl>
-                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                        </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="target" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Target (Quintals)</FormLabel>
-                    <FormControl><Input type="number" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Save Changes</Button>
-              </form>
-            </Form>
+            <div className="p-6">
+                <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <FormField control={form.control} name="mandiName" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Mandi Name</FormLabel>
+                        <FormControl><Input {...field} className="rounded-xl h-12" /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )} />
+                    <FormField control={form.control} name="mandiIdNumber" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Mandi ID Number</FormLabel>
+                        <FormControl><Input {...field} className="rounded-xl h-12" /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )} />
+                    <FormField control={form.control} name="date" render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Allocation Date</FormLabel>
+                        <Popover open={isEditCalendarOpen} onOpenChange={setIsEditCalendarOpen}>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button variant={"outline"} className={cn("w-full h-12 rounded-xl pl-3 text-left font-normal border-input", !field.value && "text-muted-foreground")}>
+                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar 
+                                    mode="single" 
+                                    selected={field.value} 
+                                    onSelect={(date) => {
+                                        field.onChange(date);
+                                        setIsEditCalendarOpen(false); // AUTO-CLOSE ON SELECT
+                                    }} 
+                                    initialFocus 
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )} />
+                    <FormField control={form.control} name="target" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Target (Quintals)</FormLabel>
+                        <FormControl><Input type="number" {...field} className="rounded-xl h-12" /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )} />
+                    <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-12 rounded-xl font-bold text-lg shadow-lg shadow-accent/20">Save Changes</Button>
+                </form>
+                </Form>
+            </div>
         </DialogContent>
     </Dialog>
     </>

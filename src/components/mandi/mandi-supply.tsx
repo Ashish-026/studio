@@ -61,6 +61,9 @@ export function MandiSupply() {
   const [showForm, setShowForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<MandiStockRelease | null>(null);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  
+  // Auto-close calendar state
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const supplyForm = useForm<z.infer<typeof supplySchema>>({
     resolver: zodResolver(supplySchema),
@@ -225,14 +228,31 @@ export function MandiSupply() {
                   <form onSubmit={supplyForm.handleSubmit(onSupplySubmit)} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
                         <FormField control={supplyForm.control} name="date" render={({ field }) => (
-                            <FormItem className="flex flex-col"><FormLabel>Supply Date</FormLabel><Popover><PopoverTrigger asChild><FormControl>
-                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                            </FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                            </PopoverContent></Popover><FormMessage /></FormItem>
+                            <FormItem className="flex flex-col">
+                              <FormLabel>Supply Date</FormLabel>
+                              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                                <PopoverTrigger asChild>
+                                  <FormControl>
+                                    <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                    </Button>
+                                  </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar 
+                                      mode="single" 
+                                      selected={field.value} 
+                                      onSelect={(date) => {
+                                        field.onChange(date);
+                                        setIsCalendarOpen(false); // AUTO-CLOSE
+                                      }} 
+                                      initialFocus 
+                                    />
+                                </PopoverContent>
+                              </Popover>
+                              <FormMessage />
+                            </FormItem>
                         )} />
                         <FormField control={supplyForm.control} name="lotNumber" render={({ field }) => (
                             <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input placeholder="e.g., LOT-001" {...field} /></FormControl><FormMessage /></FormItem>

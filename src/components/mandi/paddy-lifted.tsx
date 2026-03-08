@@ -79,6 +79,11 @@ export function PaddyLifted() {
   const [isCalculatorOpen, setCalculatorOpen] = useState(false);
   const [selectedMandi, setSelectedMandi] = useState('All');
 
+  // State for auto-closing calendars
+  const [isPhysicalCalendarOpen, setIsPhysicalCalendarOpen] = useState(false);
+  const [isMonetaryCalendarOpen, setIsMonetaryCalendarOpen] = useState(false);
+  const [isEditCalendarOpen, setIsEditCalendarOpen] = useState(false);
+
   const uniqueMandis = useMemo(() => {
     const mandiNames = (targetAllocations || []).map((allocation) => allocation.mandiName);
     return [...new Set(mandiNames)];
@@ -300,9 +305,6 @@ export function PaddyLifted() {
   };
   
   const handleCalculatorConfirm = (values: { grossQuintals: number; netQuintals: number; netWeightKg: number }) => {
-    // Correct mapping per user instruction:
-    // Paddy Received = Gross weight
-    // Mandi Weight = Net quantity
     physicalForm.setValue('totalPaddyReceived', values.grossQuintals);
     physicalForm.setValue('mandiWeight', values.netQuintals);
     setCalculatorOpen(false);
@@ -390,14 +392,31 @@ export function PaddyLifted() {
                         <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="e.g., Ramesh Patel" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={physicalForm.control} name="date" render={({ field }) => (
-                        <FormItem className="flex flex-col"><FormLabel>Date</FormLabel><Popover><PopoverTrigger asChild><FormControl>
-                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                        </FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                        </PopoverContent></Popover><FormMessage /></FormItem>
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Date</FormLabel>
+                          <Popover open={isPhysicalCalendarOpen} onOpenChange={setIsPhysicalCalendarOpen}>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar 
+                                  mode="single" 
+                                  selected={field.value} 
+                                  onSelect={(date) => {
+                                    field.onChange(date);
+                                    setIsPhysicalCalendarOpen(false); // AUTO-CLOSE
+                                  }} 
+                                  initialFocus 
+                                />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
                       )} />
                        <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (
                         <FormItem>
@@ -546,14 +565,31 @@ export function PaddyLifted() {
                                 <FormItem><FormLabel>Rate per Quintal (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="2200" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                              <FormField control={monetaryForm.control} name="date" render={({ field }) => (
-                                <FormItem className="flex flex-col"><FormLabel>Date</FormLabel><Popover><PopoverTrigger asChild><FormControl>
-                                    <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                </FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                </PopoverContent></Popover><FormMessage /></FormItem>
+                                <FormItem className="flex flex-col">
+                                  <FormLabel>Date</FormLabel>
+                                  <Popover open={isMonetaryCalendarOpen} onOpenChange={setIsMonetaryCalendarOpen}>
+                                    <PopoverTrigger asChild>
+                                      <FormControl>
+                                        <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                        </Button>
+                                      </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar 
+                                          mode="single" 
+                                          selected={field.value} 
+                                          onSelect={(date) => {
+                                            field.onChange(date);
+                                            setIsMonetaryCalendarOpen(false); // AUTO-CLOSE
+                                          }} 
+                                          initialFocus 
+                                        />
+                                    </PopoverContent>
+                                  </Popover>
+                                  <FormMessage />
+                                </FormItem>
                              )} />
                         </div>
                         <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90">Add Monetary Entry</Button>
@@ -682,6 +718,25 @@ export function PaddyLifted() {
                         <FormField control={monetaryForm.control} name="ratePerQuintal" render={({ field }) => (
                             <FormItem><FormLabel>Rate per Quintal (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
+                        <FormField control={monetaryForm.control} name="date" render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Date</FormLabel>
+                            <Popover open={isEditCalendarOpen} onOpenChange={setIsEditCalendarOpen}>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                      {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar mode="single" selected={field.value} onSelect={(date) => { field.onChange(date); setIsEditCalendarOpen(false); }} initialFocus />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )} />
                         <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Save Changes</Button>
                     </form>
                 </Form>
@@ -708,6 +763,25 @@ export function PaddyLifted() {
                         />
                         <FormField control={physicalForm.control} name="farmerName" render={({ field }) => (
                             <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={physicalForm.control} name="date" render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Date</FormLabel>
+                            <Popover open={isEditCalendarOpen} onOpenChange={setIsEditCalendarOpen}>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                      {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar mode="single" selected={field.value} onSelect={(date) => { field.onChange(date); setIsEditCalendarOpen(false); }} initialFocus />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
                         )} />
                         <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (
                             <FormItem><FormLabel>Paddy Received (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
