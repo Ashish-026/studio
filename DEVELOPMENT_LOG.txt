@@ -12,7 +12,8 @@ MANDI MONITOR - SEAMLESS SETUP & FIXES
 ---------------------------------------------------------
 - This app is designed to work WITHOUT a server once loaded.
 - STORAGE DEFINITIONS:
-    * Local Storage (Permanent): Sum of ALL records ever saved. This is the "Total Usage" of your device's capacity (~5MB limit).
+    * Browser Local Storage (Permanent): Sum of ALL records ever saved. This is the "Total Usage" of your device's capacity (~5MB limit).
+    * Mobile Memory vs Browser Storage: Even when 'Installed' on mobile, the app uses the browser's sandboxed storage engine.
     * Session Storage (Temporary): Clears when you close the tab. Used only for security (keeping you logged in).
 - NO CLOUD BILLING: 100% Free forever.
 - If the Firebase project is deleted, the app remains functional as long as the code is hosted anywhere or cached on a mobile device.

@@ -14,7 +14,8 @@ Professional rice mill management system optimized for zero-cost operation and t
 
 ## 🔒 Security & Privacy
 - **Automatic Logout**: For your security, the app will automatically log you out whenever you close the browser window or swipe the app closed on your mobile phone.
-- **Data Privacy**: No data leaves your device. This app DOES NOT use a cloud database. All records are stored in your device's `Local Storage`.
+- **Data Privacy**: No data leaves your device. This app DOES NOT use a cloud database. 
+- **Storage Box**: All records are stored in your device's `Local Storage`. Even when "Installed" on your phone, the app uses the browser's sandboxed storage engine (limited to 5MB).
 
 ## 📦 Total Independence (No Server Required)
 This app is designed to work even if the original Firebase account or hosting is deleted:

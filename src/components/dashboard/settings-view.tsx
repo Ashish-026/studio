@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, FileJson, Database, Info, History } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, FileJson, Database, Info, History, Smartphone } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRef, useState, useEffect } from 'react';
@@ -181,20 +181,20 @@ export default function SettingsPage() {
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold text-primary/60 uppercase">
                     <span className="flex items-center gap-1">
-                      <Database className="h-3 w-3" /> Device Capacity
+                      <Database className="h-3 w-3" /> App Storage Limit
                     </span>
                     <span>{storageUsage.used.toFixed(2)} MB / 5 MB</span>
                   </div>
                   <Progress value={storageUsage.percent} className="h-2 bg-primary/10" />
                   <p className="text-[10px] text-muted-foreground italic text-center flex items-center justify-center gap-1">
-                    <Info className="h-2.5 w-2.5" /> Total persistent data on this device.
+                    <Info className="h-2.5 w-2.5" /> Sandboxed browser memory usage.
                   </p>
                 </CardContent>
               </Card>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs text-xs p-3">
-              <p className="font-bold mb-1">What is Local Storage?</p>
-              <p>It is your browser's permanent memory. The 5MB limit is set by the browser. If you hit the limit, download a <strong>Backup</strong>, then wipe the records to start a new season.</p>
+              <p className="font-bold mb-1">PWA / Installed App Storage</p>
+              <p>Even when "Installed", the app uses your phone's <strong>Browser Storage engine</strong>. This engine is limited to 5MB for safety. When you get close to the limit, save a Backup and Wipe records to start fresh.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -204,20 +204,21 @@ export default function SettingsPage() {
         <Card className="border-primary/10 shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <FileJson className="h-5 w-5 text-primary" />
-              <CardTitle>Data Portability</CardTitle>
+              <Smartphone className="h-5 w-5 text-primary" />
+              <CardTitle>Installed Storage Logic</CardTitle>
             </div>
-            <CardDescription>Move your mill data between devices or archive old seasons.</CardDescription>
+            <CardDescription>How data lives on your mobile device.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-2">
-              <div className="flex items-center gap-2">
-                <History className="h-4 w-4 text-primary" />
-                <p className="text-sm font-bold">Archive & Rotation Strategy</p>
-              </div>
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-3">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                To handle thousands of farmers across multiple years, download a backup file periodically. This file acts as your "Hard Drive" copy, while the device stays fast by only holding the current season.
+                This app does <strong>not</strong> use your general mobile memory (where photos live). It uses a "Locked Box" inside your browser. 
               </p>
+              <ul className="text-[11px] space-y-1 list-disc pl-4 text-muted-foreground">
+                <li>Works perfectly offline without a server.</li>
+                <li>Limited to 5MB total usage per device.</li>
+                <li><strong>Important:</strong> Data on your phone will NOT appear on your laptop unless you transfer a Backup file.</li>
+              </ul>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
@@ -251,7 +252,7 @@ export default function SettingsPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
+              <CardTitle>Danger Zone</CardTitle>
             </div>
             <CardDescription>Permanent actions that cannot be undone.</CardDescription>
           </CardHeader>
