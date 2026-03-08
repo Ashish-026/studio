@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 type MandiSummaryData = {
   mandiName: string;
+  mandiId: string;
   totalTarget: number;
   totalLifted: number;
   balance: number;
@@ -16,18 +17,20 @@ export function MandiSummary() {
   const { targetAllocations, paddyLiftedItems } = useMandiData();
 
   const mandiSummary = useMemo(() => {
-    const summaryMap = new Map<string, { totalTarget: number; totalLifted: number }>();
+    const summaryMap = new Map<string, { totalTarget: number; totalLifted: number; mandiId: string }>();
 
     // Aggregate targets
     targetAllocations.forEach(allocation => {
-      const entry = summaryMap.get(allocation.mandiName) || { totalTarget: 0, totalLifted: 0 };
+      const entry = summaryMap.get(allocation.mandiName) || { totalTarget: 0, totalLifted: 0, mandiId: allocation.mandiIdNumber || 'N/A' };
       entry.totalTarget += allocation.target;
+      // Ensure we keep an ID if one exists
+      if (!entry.mandiId || entry.mandiId === 'N/A') entry.mandiId = allocation.mandiIdNumber || 'N/A';
       summaryMap.set(allocation.mandiName, entry);
     });
 
     // Aggregate lifted paddy
     paddyLiftedItems.forEach(item => {
-      const entry = summaryMap.get(item.mandiName) || { totalTarget: 0, totalLifted: 0 };
+      const entry = summaryMap.get(item.mandiName) || { totalTarget: 0, totalLifted: 0, mandiId: 'N/A' };
       entry.totalLifted += item.totalPaddyReceived;
       summaryMap.set(item.mandiName, entry);
     });
@@ -36,6 +39,7 @@ export function MandiSummary() {
     summaryMap.forEach((value, key) => {
       summaryArray.push({
         mandiName: key,
+        mandiId: value.mandiId,
         totalTarget: value.totalTarget,
         totalLifted: value.totalLifted,
         balance: value.totalTarget - value.totalLifted,
@@ -61,6 +65,7 @@ export function MandiSummary() {
             <TableHeader>
                 <TableRow>
                     <TableHead>Mandi Name</TableHead>
+                    <TableHead>Mandi ID</TableHead>
                     <TableHead className="text-right">Target Allotted (Qtl)</TableHead>
                     <TableHead className="text-right">Paddy Lifted (Qtl)</TableHead>
                     <TableHead className="text-right">Balance (Qtl)</TableHead>
@@ -68,11 +73,12 @@ export function MandiSummary() {
             </TableHeader>
             <TableBody>
                 {mandiSummary.length === 0 && (
-                    <TableRow><TableCell colSpan={4} className="text-center">No mandi data available.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center">No mandi data available.</TableCell></TableRow>
                 )}
                 {mandiSummary.map((item) => (
                     <TableRow key={item.mandiName}>
                         <TableCell className="font-medium">{item.mandiName}</TableCell>
+                        <TableCell>{item.mandiId}</TableCell>
                         <TableCell className="text-right">{item.totalTarget.toLocaleString('en-IN')}</TableCell>
                         <TableCell className="text-right">{item.totalLifted.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
                         <TableCell className={`text-right font-semibold ${item.balance < 0 ? 'text-destructive' : ''}`}>{item.balance.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>

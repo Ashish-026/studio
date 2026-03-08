@@ -13,6 +13,7 @@ export type Mill = {
 export type TargetAllocation = {
   id:string;
   mandiName: string;
+  mandiIdNumber?: string;
   date: Date;
   target: number;
 };

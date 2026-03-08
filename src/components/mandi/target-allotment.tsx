@@ -26,6 +26,7 @@ import { Label } from '../ui/label';
 
 const formSchema = z.object({
   mandiName: z.string().min(1, 'Mandi name is required'),
+  mandiIdNumber: z.string().optional(),
   date: z.date({ required_error: 'A date is required.' }),
   target: z.coerce.number().min(1, 'Target must be at least 1'),
 });
@@ -57,18 +58,19 @@ export function TargetAllotment() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { mandiName: '', target: 0, date: new Date() },
+    defaultValues: { mandiName: '', mandiIdNumber: '', target: 0, date: new Date() },
   });
 
   useEffect(() => {
     if (editingTarget) {
       form.reset({
         mandiName: editingTarget.mandiName,
+        mandiIdNumber: editingTarget.mandiIdNumber || '',
         date: new Date(editingTarget.date),
         target: editingTarget.target,
       });
     } else {
-      form.reset({ mandiName: '', target: 0, date: new Date() });
+      form.reset({ mandiName: '', mandiIdNumber: '', target: 0, date: new Date() });
     }
   }, [editingTarget, form]);
 
@@ -140,11 +142,18 @@ export function TargetAllotment() {
             </CardHeader>
             <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                 <FormField control={form.control} name="mandiName" render={({ field }) => (
-                  <FormItem className="md:col-span-2">
+                  <FormItem className="md:col-span-1">
                     <FormLabel>Mandi Name</FormLabel>
                     <FormControl><Input placeholder="e.g., Bargarh Main" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="mandiIdNumber" render={({ field }) => (
+                  <FormItem className="md:col-span-1">
+                    <FormLabel>Mandi ID Number</FormLabel>
+                    <FormControl><Input placeholder="e.g., M-12345" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -174,7 +183,7 @@ export function TargetAllotment() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <Button type="submit" className="w-full md:w-auto md:col-start-4 bg-accent hover:bg-accent/90">Add Allocation</Button>
+                <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90">Add Allocation</Button>
               </form>
             </Form>
             </CardContent>
@@ -187,6 +196,7 @@ export function TargetAllotment() {
                     <TableHeader>
                         <TableRow>
                         <TableHead>Mandi Name</TableHead>
+                        <TableHead>Mandi ID</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead className="text-right">Target (Quintals)</TableHead>
                         {isAdmin && <TableHead className="text-right">Actions</TableHead>}
@@ -194,11 +204,12 @@ export function TargetAllotment() {
                     </TableHeader>
                     <TableBody>
                         {filteredAllocations.length === 0 && (
-                            <TableRow><TableCell colSpan={isAdmin ? 4 : 3} className="text-center">No targets allotted for this selection.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={isAdmin ? 5 : 4} className="text-center">No targets allotted for this selection.</TableCell></TableRow>
                         )}
                         {filteredAllocations.map((item) => (
                         <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.mandiName}</TableCell>
+                            <TableCell>{item.mandiIdNumber || 'N/A'}</TableCell>
                             <TableCell>{format(item.date, 'dd MMM yyyy')}</TableCell>
                             <TableCell className="text-right">{item.target.toLocaleString('en-IN')}</TableCell>
                             {isAdmin && (
@@ -229,6 +240,13 @@ export function TargetAllotment() {
                 <FormField control={form.control} name="mandiName" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mandi Name</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="mandiIdNumber" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mandi ID Number</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>

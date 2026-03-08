@@ -25,7 +25,7 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
   const { targetAllocations, paddyLiftedItems } = useMandiData();
   const { labourers } = useLabourData();
   const { vehicles } = useVehicleData();
-  const { totalStock, purchases, sales } = useStockData();
+  const { totalStock } = useStockData();
 
   const reportDate = new Date();
 
@@ -49,6 +49,7 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
           <TableHeader>
             <TableRow>
               <TableHead>Mandi Name</TableHead>
+              <TableHead>Mandi ID</TableHead>
               <TableHead className="text-right">Target (Qtl)</TableHead>
               <TableHead className="text-right">Lifted (Qtl)</TableHead>
               <TableHead className="text-right">Balance (Qtl)</TableHead>
@@ -56,7 +57,7 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
           </TableHeader>
           <TableBody>
             {targetAllocations.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center">No Mandi records found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center">No Mandi records found.</TableCell></TableRow>
             ) : (
               targetAllocations.map(t => {
                 const lifted = paddyLiftedItems
@@ -65,6 +66,7 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
                 return (
                   <TableRow key={t.id}>
                     <TableCell className="font-medium">{t.mandiName}</TableCell>
+                    <TableCell>{t.mandiIdNumber || 'N/A'}</TableCell>
                     <TableCell className="text-right">{formatNumber(t.target)}</TableCell>
                     <TableCell className="text-right">{formatNumber(lifted)}</TableCell>
                     <TableCell className="text-right font-bold">{formatNumber(t.target - lifted)}</TableCell>
