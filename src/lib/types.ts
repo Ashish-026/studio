@@ -28,6 +28,7 @@ export type PaddyLifted = {
   moneyReceived?: number;
   ratePerQuintal?: number;
   entryType?: 'physical' | 'monetary';
+  calculationMethod?: 'uniform' | 'bag-by-bag' | 'weighbridge';
   vehicleType?: 'farmer' | 'own' | 'hired';
   vehicleNumber?: string;
   driverName?: string;

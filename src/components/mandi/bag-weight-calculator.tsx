@@ -36,7 +36,7 @@ const weighbridgeSchema = z.object({
 });
 
 interface BagWeightCalculatorProps {
-    onConfirm: (values: { grossQuintals: number; netQuintals: number; netWeightKg: number; bagWeights: number[] }) => void;
+    onConfirm: (values: { grossQuintals: number; netQuintals: number; netWeightKg: number; bagWeights: number[]; method: 'uniform' | 'bag-by-bag' | 'weighbridge' }) => void;
     onCancel: () => void;
 }
 
@@ -91,7 +91,7 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
             grossWeightKg = parseFloat(String(grossWeightTotal || 0));
             deductionKg = parseFloat(String(deduction || 0));
             mandiWeightKg = (grossWeightKg / (weightPerBag || 78)) * (consideredWeight || 75);
-            bagWeights = []; // Bulk weight has no individual bag records
+            bagWeights = [];
         }
 
         const netWeightKg = grossWeightKg - deductionKg;
@@ -120,7 +120,8 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
             grossQuintals: summary.grossQuintals, 
             netQuintals: summary.netQuintals, 
             netWeightKg: summary.netWeightKg,
-            bagWeights: summary.bagWeights
+            bagWeights: summary.bagWeights,
+            method: activeTab as any
         });
     }
 
@@ -129,15 +130,16 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
     };
 
     return (
-        <DialogContent className="max-w-4xl rounded-3xl overflow-hidden p-0 border-none shadow-2xl">
-            <DialogHeader className="bg-primary p-6 text-white">
+        <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col rounded-3xl overflow-hidden p-0 border-none shadow-2xl">
+            <DialogHeader className="bg-primary p-6 text-white shrink-0">
                 <DialogTitle className="text-2xl flex items-center gap-2">
                     <Scale className="h-7 w-7" />
                     Paddy Weight Calculator
                 </DialogTitle>
-                <DialogDescription className="text-white/70">Select your calculation method for standardized Mandi weights.</DialogDescription>
+                <DialogDescription className="text-white/70 font-medium">Select your calculation method for standardized Mandi weights.</DialogDescription>
             </DialogHeader>
-            <div className="p-6">
+            
+            <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                     <TabsList className="grid w-full grid-cols-3 bg-muted/50 p-1 rounded-xl h-12">
                         <TabsTrigger value="uniform" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Average (Uniform)</TabsTrigger>
@@ -145,7 +147,7 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
                         <TabsTrigger value="weighbridge" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Weighbridge</TabsTrigger>
                     </TabsList>
                     
-                    <TabsContent value="uniform" className="mt-0">
+                    <TabsContent value="uniform" className="mt-0 outline-none">
                         <Form {...uniformForm}>
                             <form className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
@@ -169,16 +171,16 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
                         </Form>
                     </TabsContent>
 
-                    <TabsContent value="bag-by-bag" className="mt-0">
+                    <TabsContent value="bag-by-bag" className="mt-0 outline-none">
                         <Form {...bagByBagForm}>
                             <form className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <FormLabel className="text-primary font-bold">List of Bag Weights (kg)</FormLabel>
-                                        <Badge variant="outline" className="rounded-md border-primary/20 text-primary">{fields.length} Bags Added</Badge>
+                                        <Badge variant="secondary" className="rounded-md bg-primary/10 text-primary">{fields.length} Bags Added</Badge>
                                     </div>
                                     
-                                    <ScrollArea className="h-[280px] w-full rounded-xl border border-primary/10 bg-muted/20 p-4" ref={scrollRef}>
+                                    <ScrollArea className="h-[320px] w-full rounded-xl border border-primary/10 bg-muted/20 p-4" ref={scrollRef}>
                                         <div className="grid grid-cols-2 gap-3">
                                             {fields.map((field, index) => (
                                                 <div key={field.id} className="flex items-center gap-2 group">
@@ -222,16 +224,16 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
                                             className="w-full mt-4 border-dashed border-primary/30 text-primary hover:bg-primary/5 h-12 rounded-xl"
                                             onClick={addNewBag}
                                         >
-                                            <Plus className="mr-2 h-4 w-4" /> Add Next Bag
+                                            <Plus className="mr-2 h-4 w-4" /> Add Next Bag (Enter)
                                         </Button>
                                     </ScrollArea>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <FormField control={bagByBagForm.control} name="weightPerBag" render={({ field }) => (
-                                            <FormItem><FormLabel>Ref (78kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                            <FormItem><FormLabel>Ref (78kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl h-10" /></FormControl></FormItem>
                                         )} />
                                         <FormField control={bagByBagForm.control} name="consideredWeight" render={({ field }) => (
-                                            <FormItem><FormLabel>Target (75kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                            <FormItem><FormLabel>Target (75kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} className="rounded-xl h-10" /></FormControl></FormItem>
                                         )} />
                                     </div>
                                 </div>
@@ -240,17 +242,17 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
                         </Form>
                     </TabsContent>
 
-                    <TabsContent value="weighbridge" className="mt-0">
+                    <TabsContent value="weighbridge" className="mt-0 outline-none">
                         <Form {...weighbridgeForm}>
                             <form className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-6">
                                     <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center gap-4">
                                         <Truck className="h-8 w-8 text-primary opacity-40" />
-                                        <p className="text-xs text-muted-foreground italic">Use this mode for direct weighbridge readings. Standardization is applied automatically based on the Reference/Target ratio.</p>
+                                        <p className="text-xs text-muted-foreground italic leading-relaxed">Use this mode for direct weighbridge readings. Standardization applies automatically based on the Reference/Target ratio.</p>
                                     </div>
                                     
                                     <FormField control={weighbridgeForm.control} name="grossWeightTotal" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-lg font-bold">Total Gross Bridge Weight (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="e.g., 15600" {...field} className="rounded-2xl h-16 text-2xl font-black text-primary border-primary/20" /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel className="text-lg font-bold text-primary">Total Gross Bridge Weight (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="e.g., 15600" {...field} className="rounded-2xl h-16 text-2xl font-black text-primary border-primary/20 bg-white" /></FormControl><FormMessage /></FormItem>
                                     )} />
 
                                     <div className="grid grid-cols-2 gap-4">
@@ -273,11 +275,19 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
                 </Tabs>
             </div>
            
-            <DialogFooter className="bg-muted/30 p-6 flex flex-col md:flex-row gap-4">
-                <p className="text-[10px] text-muted-foreground italic max-w-xs">Formula: (Total Actual / Reference) * Target Standard. All decimals are preserved for mill accuracy.</p>
-                <div className="flex-1" />
-                <Button type="button" variant="ghost" onClick={onCancel} className="rounded-xl">Cancel</Button>
-                <Button type="button" onClick={handleConfirm} className="rounded-xl bg-primary text-white font-bold px-10 h-14 shadow-xl shadow-primary/20 hover:scale-105 transition-transform">Apply to Record</Button>
+            <DialogFooter className="bg-muted/30 p-6 border-t flex flex-col md:flex-row items-center gap-4 shrink-0">
+                <p className="text-[10px] text-muted-foreground italic max-w-xs text-center md:text-left">Formula: (Total Actual / Reference) * Target. All decimals preserved for mill accuracy.</p>
+                <div className="hidden md:flex flex-1" />
+                <div className="flex w-full md:w-auto gap-3">
+                    <Button type="button" variant="outline" onClick={onCancel} className="flex-1 md:flex-none rounded-xl h-14 px-8 border-primary/20 font-semibold">Cancel</Button>
+                    <Button 
+                        type="button" 
+                        onClick={handleConfirm} 
+                        className="flex-1 md:flex-none rounded-xl bg-primary text-white font-black px-12 h-14 shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all"
+                    >
+                        Apply to Record
+                    </Button>
+                </div>
             </DialogFooter>
         </DialogContent>
     );
@@ -285,7 +295,7 @@ export function BagWeightCalculator({ onConfirm, onCancel }: BagWeightCalculator
 
 function CalculationResult({ summary }: { summary: any }) {
     return (
-        <div className="space-y-4 rounded-3xl border border-primary/10 bg-primary/5 p-6 h-fit shadow-inner">
+        <div className="space-y-4 rounded-3xl border border-primary/10 bg-primary/5 p-6 h-fit shadow-inner sticky top-0">
             <h3 className="text-lg font-bold text-primary flex items-center gap-2">
                 <Scale className="h-5 w-5" />
                 Live Summary
