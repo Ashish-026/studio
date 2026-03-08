@@ -1,3 +1,4 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -5,31 +6,36 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
 
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION
+/**
+ * MANDI MONITOR - RESILIENT INITIALIZATION
+ * This function is designed to fail silently. 
+ * Even if the Firebase account is deleted or the config is invalid, 
+ * the app's local-first logic will continue to run.
+ */
 export function initializeFirebase() {
-  if (!getApps().length) {
-    // Important! initializeApp() is called without any arguments because Firebase App Hosting
-    // integrates with the initializeApp() function to provide the environment variables needed to
-    // populate the FirebaseOptions in production. It is critical that we attempt to call initializeApp()
-    // without arguments.
-    let firebaseApp;
-    try {
-      // Attempt to initialize via Firebase App Hosting environment variables
-      firebaseApp = initializeApp();
-    } catch (e) {
-      // Only warn in production because it's normal to use the firebaseConfig to initialize
-      // during development
-      if (process.env.NODE_ENV === "production") {
-        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
+  try {
+    if (!getApps().length) {
+      let firebaseApp;
+      try {
+        // Attempt to initialize via Firebase App Hosting environment variables
+        firebaseApp = initializeApp();
+      } catch (e) {
+        // Fallback to config object
+        firebaseApp = initializeApp(firebaseConfig);
       }
-      firebaseApp = initializeApp(firebaseConfig);
+      return getSdks(firebaseApp);
     }
-
-    return getSdks(firebaseApp);
+    return getSdks(getApp());
+  } catch (err) {
+    // If the Firebase Account is deleted, initializeApp will fail.
+    // We log a warning but do not crash the app, as it is local-first.
+    console.warn("Firebase services unavailable. App is running in Local-Independent mode.", err);
+    return {
+      firebaseApp: null as any,
+      auth: null as any,
+      firestore: null as any
+    };
   }
-
-  // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {

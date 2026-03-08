@@ -6,18 +6,20 @@ MANDI MONITOR - SEAMLESS SETUP & FIXES
 - The app now uses a 'Single-Page Controller' architecture.
 - All routing happens internally on the Root URL (/).
 - 404 errors are now IMPOSSIBLE because the app never navigates to sub-folders.
+- If a user enters a sub-path, the app automatically resets the URL to / without a reload.
 
-2. SERVER-INDEPENDENT MODE
+2. SERVER-INDEPENDENT MODE (TRUE ZERO-COST)
 ---------------------------------------------------------
 - This app is designed to work WITHOUT a server once loaded.
 - All data is saved to 'Local Storage' (long-term) and 'Session Storage' (temporary).
 - NO CLOUD BILLING: 100% Free forever.
+- If the Firebase project is deleted, the app remains functional as long as the code is hosted anywhere or cached on a mobile device.
 
 3. PERFORMANCE (FAST RESPONSE)
 ---------------------------------------------------------
-- All internal registers (Mandi, Stock, Labour) are now instant.
-- Switching between tabs happens in milliseconds.
-- PDF generation is handled in the background.
+- Context Memoization: All data providers (Mandi, Labour, Stock) are memoized to prevent lag.
+- Calculations: Heavy stock and yield percentages are calculated only when data changes.
+- Rendering: Tables use hardware-accelerated CSS for smooth scrolling on mobile.
 
 4. MOBILE INSTALLATION
 ---------------------------------------------------------

@@ -1,7 +1,7 @@
 
 # Mandi Monitor - Operation Manual (Zero-Cost Version)
 
-Professional rice mill management system optimized for zero-cost operation.
+Professional rice mill management system optimized for zero-cost operation and total data ownership.
 
 ## 🚀 How to Start
 1. Click the **"Preview"** button in the top-right of this editor.
@@ -9,21 +9,20 @@ Professional rice mill management system optimized for zero-cost operation.
 
 ## 🔑 Your Credentials
 - **Default Administrator**: `admin@mill.com` / `password123`
+- **Staff User**: `user@mill.com` / `staffpassword`
 - **Customization**: You can change these in the **Settings** menu once logged in.
 
-## 🔒 Security: Automatic Logout
-For your security, the app will automatically log you out whenever you close the browser window or swipe the app closed on your mobile phone.
+## 🔒 Security & Privacy
+- **Automatic Logout**: For your security, the app will automatically log you out whenever you close the browser window or swipe the app closed on your mobile phone.
+- **Data Privacy**: No data leaves your device. This app DOES NOT use a cloud database. All records are stored in your device's `Local Storage`.
 
-## 🔄 Automatic Updates
-You **do not** need to reinstall the app to get new features or fixes. The app updates itself automatically every time it is opened.
-
-## 💰 No Cost, No Billing
-This app stores all data locally in your web browser memory.
-- **Privacy**: No data leaves your device.
-- **Cost**: 100% Free.
-- **Reliability**: Works offline once loaded.
+## 📦 Total Independence (No Server Required)
+This app is designed to work even if the original Firebase account or hosting is deleted:
+1. **Local-First**: All logic runs in your browser.
+2. **Backups**: Go to **Settings** -> **Backup to Local File** to download your entire database.
+3. **Restoration**: You can load your backup file onto any new device to instantly recover your records.
 
 ## 📊 Mobile Installation
 Open the link on your phone and use **"Add to Home Screen"** to use it like a native mobile app.
 
-*Note: Data is device-specific. Entries made on a laptop will not appear on your mobile phone.*
+*Note: Data is device-specific. Entries made on a laptop will not appear on your mobile phone unless you move a Backup file.*
