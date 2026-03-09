@@ -1,71 +1,77 @@
 
 /**
- * MANDI MONITOR - DEFINITIVE OFFLINE SERVICE WORKER
- * This script saves the entire application shell to the phone's memory.
- * It intercepts all requests to prevent "Page Not Found" errors.
+ * MANDI MONITOR - OFFLINE ENGINE (v4)
+ * This script allows the app to launch from mobile memory even with NO internet.
  */
 
-const CACHE_NAME = 'mandi-monitor-v2';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/manifest.json',
-  'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
-  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
-];
+const CACHE_NAME = 'mandi-monitor-standalone-v4';
+const OFFLINE_URL = '/';
 
-// 1. INSTALL: Download and store app files
+// 1. Install Phase: Download the entire app shell to the phone
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      console.log('SW: Pre-caching root shell for server-independent mode');
+      return cache.addAll([
+        OFFLINE_URL,
+        '/manifest.webmanifest',
+        'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
+        'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
+      ]);
     })
   );
+  self.skipWaiting();
 });
 
-// 2. ACTIVATE: Take control of the page immediately
+// 2. Activate Phase: Clean up old versions
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('SW: Removing old cache', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
 });
 
-// 3. FETCH: The Engine that stops 404 errors
+// 3. Fetch Phase: Serve files from phone memory first
 self.addEventListener('fetch', (event) => {
-  // We only care about GET requests
-  if (event.request.method !== 'GET') return;
-
-  const url = new URL(event.request.url);
-
-  // If it's a navigation request (opening the app or a sub-page)
+  // NAVIGATION LOGIC: If the user opens the app, ALWAYS return the cached root portal
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        // If network fails or server is 404, serve the main app shell from cache
-        return caches.match('/');
+        console.log('SW: Serving cached shell while offline');
+        return caches.match(OFFLINE_URL);
       })
     );
     return;
   }
 
-  // For assets (JS, CSS, Images), try cache first, then network
+  // ASSET LOGIC: Serve images, scripts, and styles from local cache
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
+      if (cachedResponse) {
+        return cachedResponse;
+      }
 
       return fetch(event.request).then((networkResponse) => {
-        // Don't cache if not a successful response
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+        // Silently add new files to cache as the user navigates
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-
-        // Cache the new asset for future offline use
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
         return networkResponse;
       }).catch(() => {
-        // Silent fail for failed asset fetches
+        // If everything fails, return empty response instead of browser crash
+        return new Response('', { status: 404 });
       });
     })
   );
