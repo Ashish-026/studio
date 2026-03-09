@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -13,7 +14,6 @@ import {
   Tooltip as RechartsTooltip, 
   ResponsiveContainer, 
   Legend,
-  Cell,
   LabelList
 } from 'recharts';
 import { Badge } from '../ui/badge';
@@ -75,14 +75,14 @@ export function MandiSummary() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="grid grid-cols-1 gap-6">
-        {/* MERGED PERFORMANCE & EFFICIENCY CHART */}
+        {/* UNIFIED PERFORMANCE & EFFICIENCY CHART */}
         <Card className="shadow-xl border-primary/5 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Procurement Performance & Efficiency
+              Unified Procurement Analytics
             </CardTitle>
-            <CardDescription>Consolidated view of Target Allotment vs Actual Procurement with completion rates.</CardDescription>
+            <CardDescription>Target vs. Actual procurement with completion rates.</CardDescription>
           </CardHeader>
           <CardContent className="h-[450px] pt-4">
             {chartData.length > 0 ? (
@@ -114,21 +114,16 @@ export function MandiSummary() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center italic text-muted-foreground text-sm">Add Mandi targets to see unified performance analytics.</div>
+              <div className="h-full flex items-center justify-center italic text-muted-foreground text-sm">Add Mandi targets to see unified analytics.</div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* DETAILED LEDGER TABLE */}
       <Card className="shadow-xl border-primary/5 rounded-3xl overflow-hidden">
         <CardHeader className="bg-primary/5 border-b border-primary/5">
-          <div className="flex justify-between items-center">
-              <div>
-                  <CardTitle className="text-lg font-bold text-primary uppercase tracking-widest">Consolidated Mandi Ledger</CardTitle>
-                  <CardDescription>Detailed numeric summary of all official records.</CardDescription>
-              </div>
-          </div>
+          <CardTitle className="text-lg font-bold text-primary uppercase tracking-widest">Mandi Ledger Summary</CardTitle>
+          <CardDescription>Numeric breakdown of official procurement records.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -143,7 +138,7 @@ export function MandiSummary() {
             </TableHeader>
             <TableBody>
                 {mandiSummary.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center h-32 opacity-50">No mandi data available.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center h-32 opacity-50">No data available.</TableCell></TableRow>
                 )}
                 {mandiSummary.map((item) => (
                     <TableRow key={item.mandiName} className="hover:bg-primary/5 transition-colors border-primary/5">
