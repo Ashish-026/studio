@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
@@ -14,9 +13,12 @@ interface MillContextType {
 
 export const MillContext = createContext<MillContextType | null>(null);
 
+/**
+ * UPDATED MILL LIST: Swapped names to correct data entry error.
+ */
 const hardcodedMills: Mill[] = [
-  { id: '1', name: 'Konkorada Mill', location: 'Konkorada' },
-  { id: '2', name: 'Rambha Mill', location: 'Rambha' },
+  { id: '1', name: 'Rambha Mill', location: 'Rambha' },
+  { id: '2', name: 'Konkorada Mill', location: 'Konkorada' },
 ];
 
 export function MillProvider({ children }: { children: ReactNode }) {
@@ -28,7 +30,9 @@ export function MillProvider({ children }: { children: ReactNode }) {
     const loadMill = async () => {
       const storedMill = await db.getItem<Mill>('mandi-monitor-mill');
       if (storedMill) {
-        setSelectedMill(storedMill);
+        // Find existing mill by ID to ensure name changes reflect immediately
+        const updatedMill = hardcodedMills.find(m => m.id === storedMill.id);
+        setSelectedMill(updatedMill || storedMill);
       }
       setLoading(false);
     };
