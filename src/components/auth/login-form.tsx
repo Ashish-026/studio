@@ -70,7 +70,7 @@ export function LoginForm() {
                 <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} className="bg-muted/30 h-12 rounded-xl" />
+                    <Input type="password" placeholder="password123" {...field} className="bg-muted/30 h-12 rounded-xl" />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -81,6 +81,11 @@ export function LoginForm() {
             </Button>
         </form>
         </Form>
+        <div className="mt-6 text-center">
+          <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest opacity-50">
+            Standalone Local Access Only
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
