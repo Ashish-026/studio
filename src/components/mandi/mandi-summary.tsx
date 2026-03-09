@@ -13,11 +13,11 @@ import {
   Tooltip as RechartsTooltip, 
   ResponsiveContainer, 
   Legend,
-  Cell
+  Cell,
+  LabelList
 } from 'recharts';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '../ui/badge';
-import { TrendingUp, BarChart3 } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 type MandiSummaryData = {
   mandiName: string;
@@ -69,76 +69,58 @@ export function MandiSummary() {
     name: item.mandiName,
     Target: Math.round(item.totalTarget),
     Lifted: Math.round(item.totalLifted),
+    Efficiency: `${item.percent.toFixed(0)}%`
   })), [mandiSummary]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* GRAPHICAL CHART */}
-        <Card className="lg:col-span-2 shadow-xl border-primary/5 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
+      <div className="grid grid-cols-1 gap-6">
+        {/* MERGED PERFORMANCE & EFFICIENCY CHART */}
+        <Card className="shadow-xl border-primary/5 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Lifting Progress Chart
+              Procurement Performance & Efficiency
             </CardTitle>
-            <CardDescription>Comparison of Target Allotment vs Actual Procurement</CardDescription>
+            <CardDescription>Consolidated view of Target Allotment vs Actual Procurement with completion rates.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[350px] pt-4">
+          <CardContent className="h-[450px] pt-4">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                  <XAxis 
+                <BarChart 
+                  data={chartData} 
+                  layout="vertical" 
+                  margin={{ top: 20, right: 60, left: 40, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
+                  <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                  <YAxis 
                     dataKey="name" 
+                    type="category" 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fontSize: 11, fontWeight: 600, fill: 'hsl(var(--primary))' }} 
+                    tick={{ fontSize: 11, fontWeight: 700, fill: 'hsl(var(--primary))' }} 
+                    width={100}
                   />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
                   <RechartsTooltip 
                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                     cursor={{ fill: 'rgba(0,0,0,0.02)' }}
                   />
                   <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '12px', paddingBottom: '20px' }} />
-                  <Bar dataKey="Target" fill="rgba(0,0,0,0.05)" radius={[6, 6, 0, 0]} barSize={35} />
-                  <Bar dataKey="Lifted" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} barSize={35} />
+                  <Bar dataKey="Target" name="Total Allotted" fill="rgba(0,0,0,0.05)" radius={[0, 6, 6, 0]} barSize={25} />
+                  <Bar dataKey="Lifted" name="Actual Lifted" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} barSize={25}>
+                    <LabelList dataKey="Efficiency" position="right" style={{ fontSize: '10px', fontWeight: 'bold', fill: 'hsl(var(--primary))' }} />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center italic text-muted-foreground text-sm">Add Mandi targets to see visual progress.</div>
+              <div className="h-full flex items-center justify-center italic text-muted-foreground text-sm">Add Mandi targets to see unified performance analytics.</div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* QUICK STATS LIST */}
-        <Card className="shadow-xl border-primary/5 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              Efficiency List
-            </CardTitle>
-            <CardDescription>Completion status by Mandi</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6 pt-2">
-            {mandiSummary.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground text-sm italic">No data available.</div>
-            ) : mandiSummary.map((item) => (
-              <div key={item.mandiName} className="space-y-2">
-                <div className="flex justify-between items-end">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-bold text-primary">{item.mandiName}</span>
-                    <span className="text-[10px] uppercase opacity-50 font-bold">{item.mandiId}</span>
-                  </div>
-                  <span className="text-sm font-black text-primary">{item.percent.toFixed(1)}%</span>
-                </div>
-                <Progress value={item.percent} className="h-2 bg-primary/10" />
-              </div>
-            ))}
           </CardContent>
         </Card>
       </div>
 
-      {/* DETAILED TABLE */}
+      {/* DETAILED LEDGER TABLE */}
       <Card className="shadow-xl border-primary/5 rounded-3xl overflow-hidden">
         <CardHeader className="bg-primary/5 border-b border-primary/5">
           <div className="flex justify-between items-center">

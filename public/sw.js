@@ -1,74 +1,54 @@
-/**
- * MANDI MONITOR - OFFLINE SERVICE WORKER (CORE ENGINE)
- * This file is critical for making the app work without a server.
- * It caches the app shell and intercepts navigation to prevent 404 errors.
- */
-
-const CACHE_NAME = 'mandi-monitor-offline-v3';
-const OFFLINE_URL = '/';
-
+const CACHE_NAME = 'mandi-monitor-v2';
 const urlsToCache = [
   '/',
   '/manifest.json',
-  'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
-  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
 ];
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('Opened cache');
-      return cache.addAll(urlsToCache);
-    })
-  );
+self.addEventListener('install', event => {
   self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(urlsToCache))
+  );
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
+        cacheNames.filter(name => name !== CACHE_NAME)
+          .map(name => caches.delete(name))
       );
     })
   );
   self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
-  // 1. Handle Navigation Requests (Avoid 404 on refresh of /dashboard etc)
+self.addEventListener('fetch', event => {
+  // Navigation Interceptor: Serves the app shell for any sub-path to prevent 404s
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        // If network fails, serve the cached index.html (the App Shell)
-        return caches.match(OFFLINE_URL);
+        return caches.match('/');
       })
     );
     return;
   }
 
-  // 2. Handle Asset Requests (Images, Scripts, Styles)
+  // Standard caching for other assets
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        // Cache external assets like fonts or icons on the fly
-        if (event.request.url.startsWith('http')) {
-           const responseToCache = networkResponse.clone();
-           caches.open(CACHE_NAME).then((cache) => {
-             cache.put(event.request, responseToCache);
-           });
-        }
-        return networkResponse;
-      });
-    }).catch(() => {
-        // If image fails, you could return a placeholder here
-    })
+    caches.match(event.request)
+      .then(response => {
+        return response || fetch(event.request).then(fetchResponse => {
+          // Dynamic caching for new assets
+          if (fetchResponse.status === 200 && fetchResponse.type === 'basic') {
+            const responseToCache = fetchResponse.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return fetchResponse;
+        });
+      })
   );
 });

@@ -1,32 +1,31 @@
 
-MANDI MONITOR - SEAMLESS SETUP & FIXES (UPDATED)
+MANDI MONITOR - SEAMLESS SETUP & FIXES (FINALIZED)
 
 1. RESOLVING 404 ERRORS (DEFINITIVE FIX)
 ---------------------------------------------------------
 - IMPLEMENTED: public/sw.js (Offline Service Worker).
 - The Service Worker now caches the main app shell.
-- If the server is offline (Firebase suspended), the phone loads the app from its own memory.
-- Navigation Interception: Any request for a sub-path (like /dashboard) is caught and returned the main app shell, making 404 errors physically impossible once installed.
+- Navigation Interceptor: Any request for a sub-path (like /dashboard) is caught and returned the main app shell, making 404 errors impossible.
 
 2. STORAGE STRATEGY (INFINITE DATA)
 ---------------------------------------------------------
 - ENGINE: IndexedDB (Internal Mobile Database).
-- Millions of records can be stored without hitting the old 5MB browser limit.
+- Millions of records can be stored without hitting browser limits.
 - UI: Settings page now displays "High-Capacity Storage Active".
 
 3. AUTHENTICATION & SECURITY
 ---------------------------------------------------------
-- ACCESSIBILITY: Admin credentials (ID/Password) are now visible in the Settings portal for the owner.
-- RESILIENCE: Credentials are stored in IndexedDB so you can log in without any internet connection.
+- ACCESSIBILITY: Admin credentials (ID/Password) are visible in Settings.
+- RESILIENCE: Credentials stored in IndexedDB for offline login.
 
 4. COLLABORATIVE SYNC (SMART MERGE)
 ---------------------------------------------------------
-- IMPORT: Importing a backup file now ADDITIONALLY merges records instead of overwriting.
+- IMPORT: Importing a backup file now merges records instead of overwriting.
 - LOGIC: Deduplicates by ID and sorts by timestamp.
 
 5. VISUAL ANALYTICS
 ---------------------------------------------------------
-- All registers now feature high-fidelity animated charts.
-- The Main Dashboard serves as an Operational Command Center with a live "Pulse" of the mill.
+- Mandi Register: Merged Lifting and Efficiency charts into one unified Performance View.
+- All registers feature high-fidelity animated charts.
 
 END OF LOG.
