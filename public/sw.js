@@ -1,30 +1,41 @@
-/**
- * MANDI MONITOR - STANDALONE OFFLINE ENGINE
- * This Service Worker ensures the app works 100% offline and is 
- * independent of the Firebase hosting server once installed.
- */
 
-const CACHE_NAME = 'mandi-monitor-v2';
-
-// We use a "Cache with Network Fallback" strategy for assets
-// and a "Local-First" strategy for data (handled via IndexedDB in the app)
+const CACHE_NAME = 'mandi-monitor-v1';
+const ASSETS_TO_CACHE = [
+  '/',
+  '/manifest.json',
+  'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
+  'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
+];
 
 self.addEventListener('install', (event) => {
-  console.log('Mandi Monitor: Service Worker Installing...');
   self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS_TO_CACHE);
+    })
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('Mandi Monitor: Service Worker Activated. App is now Server-Independent.');
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))
+      );
+    })
+  );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Strategy: Try network, if it fails (offline or server suspended), use cache.
-  // This allows the app to load instantly from the device memory.
+  // Offline-first strategy
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request).catch(() => {
+        // Fallback for navigation requests
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
+      });
     })
   );
 });
