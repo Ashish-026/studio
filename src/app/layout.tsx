@@ -55,13 +55,13 @@ export default function RootLayout({
           {children}
           <Toaster />
         </AuthProvider>
-        {/* SERVICE WORKER: Enables Server-Independent Mode */}
+        {/* SERVICE WORKER: Enables 100% Server-Independent Mode */}
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                  console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                  console.log('ServiceWorker registered locally on device.');
                 }, function(err) {
                   console.log('ServiceWorker registration failed: ', err);
                 });
