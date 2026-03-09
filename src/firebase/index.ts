@@ -1,4 +1,3 @@
-
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -21,9 +20,14 @@ export function initializeFirebase() {
       let firebaseApp;
       try {
         // Attempt to connect. If the server is offline or project closed, this will throw.
-        firebaseApp = initializeApp(firebaseConfig);
+        // We ensure we only initialize if the config looks valid.
+        if (firebaseConfig && firebaseConfig.apiKey) {
+          firebaseApp = initializeApp(firebaseConfig);
+        } else {
+          throw new Error("No config available");
+        }
       } catch (e) {
-        // SILENT FALLBACK: No console warnings to prevent "Error while launching" screens
+        // SILENT FALLBACK: Returns empty SDKs to allow local storage usage only
         return {
           firebaseApp: null as any,
           auth: null as any,

@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import { AuthProvider } from '@/context/auth-context';
@@ -55,15 +54,15 @@ export default function RootLayout({
           {children}
           <Toaster />
         </AuthProvider>
-        {/* OFFLINE ENGINE ACTIVATION: Ensures the app is saved to the phone */}
+        {/* OFFLINE ENGINE ACTIVATION: Ensures the app code is saved to the mobile storage */}
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                  console.log('Standalone Offline Engine active.');
-                }, function(err) {
-                  console.log('Offline Engine activation failed:', err);
+                  console.log('Mandi Monitor: Standalone Engine Active.');
+                }).catch(function(err) {
+                  console.log('Mandi Monitor: Engine setup pending:', err);
                 });
               });
             }

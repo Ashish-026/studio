@@ -1,35 +1,34 @@
-
-/*
- * MANDI MONITOR - STANDALONE OFFLINE ENGINE
- * This script caches the entire app shell on the device.
- * Once loaded, the app loads from phone memory, not the server.
+/**
+ * MANDI MONITOR - STANDALONE OFFLINE ENGINE (v5)
+ * This file saves the app code to the phone's memory to allow
+ * startup without internet or when the server is offline.
  */
 
-const CACHE_NAME = 'mandi-monitor-standalone-v1';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/manifest.webmanifest',
-  'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
-  'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
-];
+const CACHE_NAME = 'mandi-monitor-shell-v5';
+const OFFLINE_URL = '/';
 
+// 1. PRE-CACHE: Save essential files on installation
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll([
+        '/',
+        '/manifest.json',
+        'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
+        'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL'
+      ]);
     })
   );
   self.skipWaiting();
 });
 
+// 2. CLEANUP: Remove old versions of the app
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.map((name) => {
-          if (name !== CACHE_NAME) {
-            return caches.delete(name);
-          }
+        keys.map((key) => {
+          if (key !== CACHE_NAME) return caches.delete(key);
         })
       );
     })
@@ -37,19 +36,23 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// 3. OFFLINE INTERCEPTOR: Serve the app from phone memory if server fails
 self.addEventListener('fetch', (event) => {
-  // Strategy: Cache-First for static assets, Network-Fallback for dynamic
+  // Navigation requests (launching the app)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match(OFFLINE_URL);
+      })
+    );
+    return;
+  }
+
+  // General assets (scripts, images)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).catch(() => {
-        // If offline and navigating to a page, serve the main portal
-        if (event.request.mode === 'navigate') {
-          return caches.match('/');
-        }
-      });
+      if (cachedResponse) return cachedResponse;
+      return fetch(event.request);
     })
   );
 });
