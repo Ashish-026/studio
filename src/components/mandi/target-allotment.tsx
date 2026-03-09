@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -50,10 +49,10 @@ export function TargetAllotment() {
   // Detects multiple entries for the same Mandi name and combines their totals.
   const consolidatedTargets = useMemo(() => {
     const map = new Map<string, { total: number; idNumber: string }>();
-    targetAllocations.forEach(t => {
+    (targetAllocations || []).forEach(t => {
       const mandiKey = t.mandiName.trim();
       const existing = map.get(mandiKey) || { total: 0, idNumber: t.mandiIdNumber || 'N/A' };
-      existing.total += t.target;
+      existing.total += Number(t.target) || 0;
       if (t.mandiIdNumber && (existing.idNumber === 'N/A' || !existing.idNumber)) {
         existing.idNumber = t.mandiIdNumber;
       }
@@ -71,12 +70,12 @@ export function TargetAllotment() {
   }, [consolidatedTargets]);
 
   const filteredAllocations = useMemo(() => {
-    const sortedAllocations = [...targetAllocations].sort((a, b) => b.date.getTime() - a.date.getTime());
+    const sortedAllocations = [...(targetAllocations || [])].sort((a, b) => b.date.getTime() - a.date.getTime());
     if (!selectedMandi) return [];
     return sortedAllocations.filter(item => item.mandiName.trim() === selectedMandi.trim());
   }, [targetAllocations, selectedMandi]);
 
-  const totalTargetForSelection = filteredAllocations.reduce((sum, item) => sum + item.target, 0);
+  const totalTargetForSelection = filteredAllocations.reduce((sum, item) => sum + (Number(item.target) || 0), 0);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

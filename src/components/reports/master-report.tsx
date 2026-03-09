@@ -29,14 +29,14 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
 
   const reportDate = new Date();
 
-  // CONSOLIDATION LOGIC for Mandi Section
+  // CONSOLIDATION LOGIC for Mandi Section: Prevents repeated entries in PDF
   const consolidatedMandis = useMemo(() => {
     const summaryMap = new Map<string, { totalTarget: number; totalLifted: number; mandiId: string }>();
 
     // Aggregate targets
-    targetAllocations.forEach(allocation => {
+    (targetAllocations || []).forEach(allocation => {
       const entry = summaryMap.get(allocation.mandiName) || { totalTarget: 0, totalLifted: 0, mandiId: allocation.mandiIdNumber || 'N/A' };
-      entry.totalTarget += allocation.target;
+      entry.totalTarget += (Number(allocation.target) || 0);
       if (allocation.mandiIdNumber && (entry.mandiId === 'N/A' || !entry.mandiId)) {
         entry.mandiId = allocation.mandiIdNumber;
       }
@@ -44,9 +44,9 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
     });
 
     // Aggregate lifted paddy
-    paddyLiftedItems.forEach(item => {
+    (paddyLiftedItems || []).forEach(item => {
       const entry = summaryMap.get(item.mandiName) || { totalTarget: 0, totalLifted: 0, mandiId: 'N/A' };
-      entry.totalLifted += item.totalPaddyReceived;
+      entry.totalLifted += (Number(item.totalPaddyReceived) || 0);
       summaryMap.set(item.mandiName, entry);
     });
 
@@ -85,7 +85,7 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
           </TableHeader>
           <TableBody>
             {consolidatedMandis.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center">No Mandi records found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center h-20">No Mandi records found.</TableCell></TableRow>
             ) : (
               consolidatedMandis.map(m => (
                 <TableRow key={m.mandiName}>
@@ -138,7 +138,7 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
           </TableHeader>
           <TableBody>
             {labourers.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center">No Labour records found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center h-20">No Labour records found.</TableCell></TableRow>
             ) : (
               labourers.map(l => (
                 <TableRow key={l.id}>
@@ -170,7 +170,7 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
           </TableHeader>
           <TableBody>
             {vehicles.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center">No Vehicle records found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center h-20">No Vehicle records found.</TableCell></TableRow>
             ) : (
               vehicles.map(v => (
                 <TableRow key={v.id}>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
@@ -15,27 +14,33 @@ interface MillContextType {
 export const MillContext = createContext<MillContextType | null>(null);
 
 /**
- * UPDATED MILL LIST: Swapped names to correct data entry error.
+ * UPDATED MILL LIST: Swapped names to align data entries.
+ * ID 1 is now Konkorada and ID 2 is now Rambha.
  */
 const hardcodedMills: Mill[] = [
-  { id: '1', name: 'Rambha Mill', location: 'Rambha' },
-  { id: '2', name: 'Konkorada Mill', location: 'Konkorada' },
+  { id: '1', name: 'Konkorada Mill', location: 'Konkorada' },
+  { id: '2', name: 'Rambha Mill', location: 'Rambha' },
 ];
 
 export function MillProvider({ children }: { children: ReactNode }) {
-  const [mills, setMills] = useState<Mill[]>(hardcodedMills);
+  const [mills] = useState<Mill[]>(hardcodedMills);
   const [selectedMill, setSelectedMill] = useState<Mill | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadMill = async () => {
-      const storedMill = await db.getItem<Mill>('mandi-monitor-mill');
-      if (storedMill) {
-        // Find existing mill by ID to ensure name changes reflect immediately
-        const updatedMill = hardcodedMills.find(m => m.id === storedMill.id);
-        setSelectedMill(updatedMill || storedMill);
+      try {
+        const storedMill = await db.getItem<Mill>('mandi-monitor-mill');
+        if (storedMill) {
+          // Find existing mill by ID to ensure name changes reflect immediately
+          const updatedMill = hardcodedMills.find(m => m.id === storedMill.id);
+          setSelectedMill(updatedMill || storedMill);
+        }
+      } catch (err) {
+        console.error("Mill context load error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     loadMill();
   }, []);

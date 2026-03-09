@@ -19,7 +19,7 @@ MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG
 
 4. BRANDING & DATA INTEGRITY
 ---------------------------------------------------------
-- ACTION: Corrected Mill Names (Rambha vs Konkorada).
+- ACTION: Corrected Mill Names (Swapped Rambha vs Konkorada to align with entered data).
 - ACTION: Implemented Smart Merge for multi-device backups.
 
 LOG FINALIZED. THE APP IS NOW FULLY SERVER-INDEPENDENT.
