@@ -15,7 +15,38 @@ import { useRef, useState, useEffect } from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import * as db from '@/lib/db';
-import { Badge } from '../ui/badge';
+import { Badge } from '@/components/ui/badge';
+
+/**
+ * SMART MERGE LOGIC
+ * Deduplicates records by ID and merges nested arrays for Labour/Vehicles.
+ */
+const mergeArraysById = (oldArr: any[], newArr: any[]): any[] => {
+  const map = new Map();
+  // 1. Index existing items
+  (oldArr || []).forEach(item => { if(item && item.id) map.set(item.id, item); });
+  
+  // 2. Merge incoming items
+  (newArr || []).forEach(newItem => {
+    if (!newItem || !newItem.id) return;
+    
+    if (!map.has(newItem.id)) {
+      map.set(newItem.id, newItem);
+    } else {
+      const existingItem = map.get(newItem.id);
+      const mergedItem = { ...existingItem, ...newItem };
+      
+      // Deep merge specific keys if they are arrays (WorkEntries, Payments, Trips)
+      ['workEntries', 'payments', 'trips', 'purchases', 'sales'].forEach(subKey => {
+        if (Array.isArray(existingItem[subKey]) && Array.isArray(newItem[subKey])) {
+          mergedItem[subKey] = mergeArraysById(existingItem[subKey], newItem[subKey]);
+        }
+      });
+      map.set(newItem.id, mergedItem);
+    }
+  });
+  return Array.from(map.values());
+};
 
 const settingsSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -26,7 +57,7 @@ const settingsSchema = z.object({
   path: ["confirmPassword"],
 });
 
-export default function SettingsPage() {
+export default function SettingsView() {
   const { user, updateCredentials, credentials } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -104,37 +135,6 @@ export default function SettingsPage() {
     toast({ title: "Master Backup Created", description: "All database records have been exported." });
   };
 
-  /**
-   * SMART MERGE LOGIC
-   * Deduplicates records by ID and merges nested arrays for Labour/Vehicles.
-   */
-  const mergeArraysById = (oldArr: any[], newArr: any[]): any[] => {
-    const map = new Map();
-    // 1. Index existing items
-    (oldArr || []).forEach(item => { if(item && item.id) map.set(item.id, item); });
-    
-    // 2. Merge incoming items
-    (newArr || []).forEach(newItem => {
-      if (!newItem || !newItem.id) return;
-      
-      if (!map.has(newItem.id)) {
-        map.set(newItem.id, newItem);
-      } else {
-        const existingItem = map.get(newItem.id);
-        const mergedItem = { ...existingItem, ...newItem };
-        
-        // Deep merge specific keys if they are arrays (WorkEntries, Payments, Trips)
-        ['workEntries', 'payments', 'trips', 'purchases', 'sales'].forEach(subKey => {
-          if (Array.isArray(existingItem[subKey]) && Array.isArray(newItem[subKey])) {
-            mergedItem[subKey] = mergeArraysById(existingItem[subKey], newItem[subKey]);
-          }
-        });
-        map.set(newItem.id, mergedItem);
-      }
-    });
-    return Array.from(map.values());
-  };
-
   const handleRestoreData = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -145,35 +145,29 @@ export default function SettingsPage() {
         const content = e.target?.result as string;
         const importedData = JSON.parse(content);
         
-        // System preference keys that should NOT be merged (overwritten or ignored)
-        const systemKeys = ['mandi-monitor-credentials-v2', 'mandi-monitor-mill', 'mandi-monitor-kms-year'];
-
         for (const [key, newValue] of Object.entries(importedData)) {
-          // Skip sensitive system credentials to prevent lockouts during data transfer
           if (key === 'mandi-monitor-credentials-v2') continue;
 
           const existingValue = await db.getItem<any>(key);
 
           if (Array.isArray(newValue) && (!existingValue || Array.isArray(existingValue))) {
-            // SMART MERGE for records
             const merged = mergeArraysById(existingValue || [], newValue);
             await db.setItem(key, merged);
           } else {
-            // Overwrite simple settings (Mill name, etc.)
             await db.setItem(key, newValue);
           }
         }
 
         toast({ 
           title: "Import Successful", 
-          description: "New records have been merged into your localized database.",
+          description: "New records have been merged into your database.",
           className: "bg-green-50 border-green-200" 
         });
         
         setTimeout(() => window.location.reload(), 1500);
       } catch (err) {
         console.error("Merge error:", err);
-        toast({ variant: "destructive", title: "Merge Failed", description: "The backup file is corrupted or invalid." });
+        toast({ variant: "destructive", title: "Merge Failed", description: "The backup file is invalid." });
       }
     };
     reader.readAsText(file);
@@ -195,7 +189,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-headline mb-2 text-primary">System Settings</h1>
@@ -210,7 +204,7 @@ export default function SettingsPage() {
               <Smartphone className="h-3 w-3 mr-1" /> High-Capacity Database
             </Badge>
           </div>
-          <p className="text-muted-foreground">Manage your localized mill environment, authentication, and master backups.</p>
+          <p className="text-muted-foreground">Manage your localized mill environment, authentication, and backups.</p>
         </div>
         <TooltipProvider>
           <Tooltip>
@@ -232,13 +226,12 @@ export default function SettingsPage() {
             </TooltipTrigger>
             <TooltipContent className="max-w-xs text-xs p-3">
               <p className="font-bold mb-1">Unlimited Storage Engine</p>
-              <p>The app is now utilizing your phone's <strong>Internal Database (IndexedDB)</strong> instead of temporary browser memory. This allows for millions of bag weight entries without capacity errors.</p>
+              <p>The app uses <strong>IndexedDB</strong> for practically unlimited local data capacity.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>
 
-      {/* CREDENTIAL VISIBILITY PANEL */}
       <Card className="border-accent/30 bg-accent/5 shadow-md">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -348,7 +341,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Wiping the database will remove all Mandi, Private, and Labour history from this device permanently.
+              Wiping the database will remove all records from this device permanently.
             </p>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -361,7 +354,7 @@ export default function SettingsPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete All Local Data?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will clear every single record from this phone. Ensure you have a backup if you need this data later.
+                    This will clear every single record from this phone. Ensure you have a backup.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
