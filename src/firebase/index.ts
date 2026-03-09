@@ -18,10 +18,15 @@ export function initializeFirebase() {
       let firebaseApp;
       try {
         // Attempt to initialize via Firebase App Hosting environment variables
-        firebaseApp = initializeApp();
-      } catch (e) {
-        // Fallback to config object
+        // If the project is closed, this will throw.
         firebaseApp = initializeApp(firebaseConfig);
+      } catch (e) {
+        console.warn("Firebase config rejected. Entering Offline-Only mode.");
+        return {
+          firebaseApp: null as any,
+          auth: null as any,
+          firestore: null as any
+        };
       }
       return getSdks(firebaseApp);
     }
@@ -39,6 +44,9 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  if (!firebaseApp) {
+    return { firebaseApp: null as any, auth: null as any, firestore: null as any };
+  }
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),

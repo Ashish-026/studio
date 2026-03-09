@@ -11,21 +11,22 @@ MANDI MONITOR - SEAMLESS SETUP & FIXES
 2. SERVER-INDEPENDENT MODE (TRUE ZERO-COST)
 ---------------------------------------------------------
 - This app is designed to work WITHOUT a server once loaded.
+- SERVICE WORKER: The app caches all assets locally on the phone (public/sw.js).
 - STORAGE DEFINITIONS:
-    * Browser Local Storage (Permanent): Sum of ALL records ever saved. This is the "Total Usage" of your device's capacity (~5MB limit).
-    * Mobile Memory vs Browser Storage: Even when 'Installed' on mobile, the app uses the browser's sandboxed storage engine.
+    * Browser IndexedDB (High-Capacity): Sum of ALL records ever saved. This uses the device's actual storage capacity.
+    * Mobile Memory vs Browser Storage: The app uses the device's internal database system, bypassing the old 5MB limit.
     * Session Storage (Temporary): Clears when you close the tab. Used only for security (keeping you logged in).
 - NO CLOUD BILLING: 100% Free forever.
-- If the Firebase project is deleted, the app remains functional as long as the code is hosted anywhere or cached on a mobile device.
+- If the Firebase project is deleted, the app remains functional because it is cached locally on your device.
 
 3. STORAGE STRATEGY (INFINITE DATA)
 ---------------------------------------------------------
-- The 5MB Browser Limit: All modern browsers limit Local Storage to 5MB per website.
-- Archiving: To handle multiple seasons or years of data (e.g., 5000+ farmers), users should follow the "Rotation Strategy":
+- High-Capacity Mode: Store millions of bags without errors.
+- Archiving: To handle multiple seasons or years of data, users should follow the "Rotation Strategy":
     1. At the end of a season, go to Settings -> Backup to Local File.
     2. Save this file (e.g., "Season_2024_Final.json") to a safe place.
     3. Wipe the device storage using "Wipe System Database".
-    4. Start the next season with a clean 5MB capacity.
+    4. Start the next season with a clean capacity.
 - Restoration: Any historical season can be viewed instantly by "Restoring" the old backup file.
 
 4. PERFORMANCE (FAST RESPONSE)
@@ -38,11 +39,11 @@ MANDI MONITOR - SEAMLESS SETUP & FIXES
 ---------------------------------------------------------
 - Open the main link on your phone.
 - Tap 'Share' or '3 Dots' -> 'Add to Home Screen'.
-- The app will now work like a native app without 404 issues.
+- The app will now work like a native app without 404 issues or server dependency.
 
 6. LOGOUT LOGIC
 ---------------------------------------------------------
 - For your security, closing the browser tab or swiping the mobile app closed will log you out automatically (clearing Session Storage).
-- Your actual data (records) remains safe in Local Storage.
+- Your actual data (records) remains safe in IndexedDB.
 
 END OF LOG.

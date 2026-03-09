@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -8,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, Database, Info, Smartphone, HardDrive, Cpu } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, Info, Smartphone, HardDrive, Cpu, CloudOff } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRef, useState, useEffect } from 'react';
@@ -146,15 +147,18 @@ export default function SettingsPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-headline mb-2 text-primary">System Settings</h1>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex flex-wrap gap-2 mb-2">
             <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-200">
-              <Cpu className="h-3 w-3 mr-1" /> Standalone Native Mode
+              <Cpu className="h-3 w-3 mr-1" /> Standalone Native Active
+            </Badge>
+            <Badge variant="outline" className="bg-blue-500/10 text-blue-700 border-blue-200">
+              <CloudOff className="h-3 w-3 mr-1" /> 100% Server Independent
             </Badge>
             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-              <Smartphone className="h-3 w-3 mr-1" /> High-Capacity Active
+              <Smartphone className="h-3 w-3 mr-1" /> High-Capacity Database
             </Badge>
           </div>
-          <p className="text-muted-foreground">Manage authentication, high-capacity mobile storage, and master backups.</p>
+          <p className="text-muted-foreground">Manage your localized mill environment, authentication, and master backups.</p>
         </div>
         <TooltipProvider>
           <Tooltip>
@@ -187,19 +191,19 @@ export default function SettingsPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Smartphone className="h-5 w-5 text-primary" />
-              <CardTitle>Device Storage Management</CardTitle>
+              <CardTitle>Local Asset Management</CardTitle>
             </div>
-            <CardDescription>Industrial-grade storage tools for large-scale mill operations.</CardDescription>
+            <CardDescription>The app is currently cached on your device for permanent access.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-3">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Your data is stored in a <strong>Standalone Sandbox</strong>. It uses your device's actual storage capacity, ensuring 100% offline access and speed.
+            <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-200/50 space-y-3">
+              <p className="text-xs text-blue-800 leading-relaxed font-medium">
+                <strong>Server-Independent Active:</strong> This app uses a "Service Worker" to stay alive on your phone even if your original hosting provider or Firebase project is deleted.
               </p>
               <ul className="text-[11px] space-y-1 list-disc pl-4 text-muted-foreground">
-                <li><strong>No Limits:</strong> Store thousands of farmers and millions of weights.</li>
-                <li><strong>Safe Mode:</strong> Data is device-specific. Use backups to move data to new phones.</li>
-                <li><strong>Total Privacy:</strong> No data ever leaves this phone unless you export it.</li>
+                <li><strong>Always Open:</strong> No "Page Not Found" errors when offline.</li>
+                <li><strong>Local Safety:</strong> Your credentials and data never leave this device.</li>
+                <li><strong>Master Portability:</strong> Use "Download Backup" to move your mill to a new phone.</li>
               </ul>
             </div>
 
