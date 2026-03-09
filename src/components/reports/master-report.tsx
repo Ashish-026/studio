@@ -1,6 +1,6 @@
 'use client';
 
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useMemo } from 'react';
 import { useMandiData } from '@/context/mandi-context';
 import { useLabourData } from '@/context/labour-context';
 import { useVehicleData } from '@/context/vehicle-context';
@@ -29,6 +29,34 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
 
   const reportDate = new Date();
 
+  // CONSOLIDATION LOGIC for Mandi Section
+  const consolidatedMandis = useMemo(() => {
+    const summaryMap = new Map<string, { totalTarget: number; totalLifted: number; mandiId: string }>();
+
+    // Aggregate targets
+    targetAllocations.forEach(allocation => {
+      const entry = summaryMap.get(allocation.mandiName) || { totalTarget: 0, totalLifted: 0, mandiId: allocation.mandiIdNumber || 'N/A' };
+      entry.totalTarget += allocation.target;
+      if (allocation.mandiIdNumber && (entry.mandiId === 'N/A' || !entry.mandiId)) {
+        entry.mandiId = allocation.mandiIdNumber;
+      }
+      summaryMap.set(allocation.mandiName, entry);
+    });
+
+    // Aggregate lifted paddy
+    paddyLiftedItems.forEach(item => {
+      const entry = summaryMap.get(item.mandiName) || { totalTarget: 0, totalLifted: 0, mandiId: 'N/A' };
+      entry.totalLifted += item.totalPaddyReceived;
+      summaryMap.set(item.mandiName, entry);
+    });
+
+    return Array.from(summaryMap.entries()).map(([name, data]) => ({
+      mandiName: name,
+      ...data,
+      balance: data.totalTarget - data.totalLifted
+    })).sort((a, b) => a.mandiName.localeCompare(b.mandiName));
+  }, [targetAllocations, paddyLiftedItems]);
+
   return (
     <div ref={ref} className="p-8 bg-white text-black w-[1000px] mx-auto min-h-screen">
       {/* Header */}
@@ -44,35 +72,30 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
 
       {/* 1. Mandi Register Summary */}
       <section className="mb-10">
-        <h2 className="text-xl font-bold mb-4 border-l-4 border-primary pl-2 bg-muted/30 py-1">1. Mandi Register Summary</h2>
+        <h2 className="text-xl font-bold mb-4 border-l-4 border-primary pl-2 bg-muted/30 py-1">1. Mandi Register Summary (Consolidated)</h2>
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Mandi Name</TableHead>
               <TableHead>Mandi ID</TableHead>
-              <TableHead className="text-right">Target (Qtl)</TableHead>
-              <TableHead className="text-right">Lifted (Qtl)</TableHead>
+              <TableHead className="text-right">Total Target (Qtl)</TableHead>
+              <TableHead className="text-right">Total Lifted (Qtl)</TableHead>
               <TableHead className="text-right">Balance (Qtl)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {targetAllocations.length === 0 ? (
+            {consolidatedMandis.length === 0 ? (
               <TableRow><TableCell colSpan={5} className="text-center">No Mandi records found.</TableCell></TableRow>
             ) : (
-              targetAllocations.map(t => {
-                const lifted = paddyLiftedItems
-                  .filter(l => l.mandiName === t.mandiName)
-                  .reduce((sum, l) => sum + l.totalPaddyReceived, 0);
-                return (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-medium">{t.mandiName}</TableCell>
-                    <TableCell>{t.mandiIdNumber || 'N/A'}</TableCell>
-                    <TableCell className="text-right">{formatNumber(t.target)}</TableCell>
-                    <TableCell className="text-right">{formatNumber(lifted)}</TableCell>
-                    <TableCell className="text-right font-bold">{formatNumber(t.target - lifted)}</TableCell>
-                  </TableRow>
-                );
-              })
+              consolidatedMandis.map(m => (
+                <TableRow key={m.mandiName}>
+                  <TableCell className="font-medium">{m.mandiName}</TableCell>
+                  <TableCell>{m.mandiId}</TableCell>
+                  <TableCell className="text-right">{formatNumber(m.totalTarget)}</TableCell>
+                  <TableCell className="text-right">{formatNumber(m.totalLifted)}</TableCell>
+                  <TableCell className="text-right font-bold">{formatNumber(m.balance)}</TableCell>
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>
