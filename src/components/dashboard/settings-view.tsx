@@ -8,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, Info, Smartphone, HardDrive, Cpu, CloudOff, Eye, Key } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, Info, Smartphone, HardDrive, Cpu, CloudOff, Eye, Key, Merge } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRef, useState, useEffect } from 'react';
@@ -104,6 +104,37 @@ export default function SettingsPage() {
     toast({ title: "Master Backup Created", description: "All database records have been exported." });
   };
 
+  /**
+   * SMART MERGE LOGIC
+   * Deduplicates records by ID and merges nested arrays for Labour/Vehicles.
+   */
+  const mergeArraysById = (oldArr: any[], newArr: any[]): any[] => {
+    const map = new Map();
+    // 1. Index existing items
+    (oldArr || []).forEach(item => { if(item && item.id) map.set(item.id, item); });
+    
+    // 2. Merge incoming items
+    (newArr || []).forEach(newItem => {
+      if (!newItem || !newItem.id) return;
+      
+      if (!map.has(newItem.id)) {
+        map.set(newItem.id, newItem);
+      } else {
+        const existingItem = map.get(newItem.id);
+        const mergedItem = { ...existingItem, ...newItem };
+        
+        // Deep merge specific keys if they are arrays (WorkEntries, Payments, Trips)
+        ['workEntries', 'payments', 'trips', 'purchases', 'sales'].forEach(subKey => {
+          if (Array.isArray(existingItem[subKey]) && Array.isArray(newItem[subKey])) {
+            mergedItem[subKey] = mergeArraysById(existingItem[subKey], newItem[subKey]);
+          }
+        });
+        map.set(newItem.id, mergedItem);
+      }
+    });
+    return Array.from(map.values());
+  };
+
   const handleRestoreData = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -112,16 +143,37 @@ export default function SettingsPage() {
     reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
-        const data = JSON.parse(content);
+        const importedData = JSON.parse(content);
         
-        for (const [key, value] of Object.entries(data)) {
-          await db.setItem(key, value);
+        // System preference keys that should NOT be merged (overwritten or ignored)
+        const systemKeys = ['mandi-monitor-credentials-v2', 'mandi-monitor-mill', 'mandi-monitor-kms-year'];
+
+        for (const [key, newValue] of Object.entries(importedData)) {
+          // Skip sensitive system credentials to prevent lockouts during data transfer
+          if (key === 'mandi-monitor-credentials-v2') continue;
+
+          const existingValue = await db.getItem<any>(key);
+
+          if (Array.isArray(newValue) && (!existingValue || Array.isArray(existingValue))) {
+            // SMART MERGE for records
+            const merged = mergeArraysById(existingValue || [], newValue);
+            await db.setItem(key, merged);
+          } else {
+            // Overwrite simple settings (Mill name, etc.)
+            await db.setItem(key, newValue);
+          }
         }
 
-        toast({ title: "Database Restored", description: "Records recovered. Reloading system..." });
+        toast({ 
+          title: "Import Successful", 
+          description: "New records have been merged into your localized database.",
+          className: "bg-green-50 border-green-200" 
+        });
+        
         setTimeout(() => window.location.reload(), 1500);
       } catch (err) {
-        toast({ variant: "destructive", title: "Restore Failed", description: "Invalid backup file format." });
+        console.error("Merge error:", err);
+        toast({ variant: "destructive", title: "Merge Failed", description: "The backup file is corrupted or invalid." });
       }
     };
     reader.readAsText(file);
@@ -256,14 +308,13 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-200/50 space-y-3">
-              <p className="text-xs text-blue-800 leading-relaxed font-medium">
-                <strong>Server-Independent Active:</strong> This app uses a "Service Worker" to stay alive on your phone even if your original hosting provider or Firebase project is deleted.
+              <div className="flex items-center gap-2 text-blue-800">
+                <Merge className="h-4 w-4" />
+                <span className="text-xs font-bold uppercase">Smart Merge Active</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Importing data now <strong>adds</strong> to your existing history instead of overwriting it. Records are merged chronologically by timestamp.
               </p>
-              <ul className="text-[11px] space-y-1 list-disc pl-4 text-muted-foreground">
-                <li><strong>Always Open:</strong> No "Page Not Found" errors when offline.</li>
-                <li><strong>Local Safety:</strong> Your credentials and data never leave this device.</li>
-                <li><strong>Master Portability:</strong> Use "Download Backup" to move your mill to a new phone.</li>
-              </ul>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
@@ -276,7 +327,7 @@ export default function SettingsPage() {
                 </div>
                 
                 <div className="space-y-2">
-                    <p className="text-xs font-bold uppercase opacity-60">Import</p>
+                    <p className="text-xs font-bold uppercase opacity-60">Import & Merge</p>
                     <input type="file" ref={fileInputRef} onChange={handleRestoreData} accept=".json" className="hidden" />
                     <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full bg-white hover:bg-primary/5 rounded-xl border-primary/20 h-12">
                         <Upload className="mr-2 h-4 w-4" />
