@@ -14,12 +14,12 @@ interface MillContextType {
 export const MillContext = createContext<MillContextType | null>(null);
 
 /**
- * UPDATED MILL LIST: Swapped names to align data entries.
- * ID 1 is now Rambha Mill and ID 2 is now Konkorada Mill.
+ * UPDATED MILL REGISTRY: Corrected name-data alignment.
+ * ID 1 is now Konkorada Mill and ID 2 is now Rambha Mill.
  */
 const hardcodedMills: Mill[] = [
-  { id: '1', name: 'Rambha Mill', location: 'Rambha' },
-  { id: '2', name: 'Konkorada Mill', location: 'Konkorada' },
+  { id: '1', name: 'Konkorada Mill', location: 'Konkorada' },
+  { id: '2', name: 'Rambha Mill', location: 'Rambha' },
 ];
 
 export function MillProvider({ children }: { children: ReactNode }) {
@@ -32,7 +32,7 @@ export function MillProvider({ children }: { children: ReactNode }) {
       try {
         const storedMill = await db.getItem<Mill>('mandi-monitor-mill');
         if (storedMill) {
-          // Find existing mill by ID to ensure name changes reflect immediately
+          // Sync existing mill by ID to ensure name updates reflect immediately
           const updatedMill = hardcodedMills.find(m => m.id === storedMill.id);
           setSelectedMill(updatedMill || storedMill);
         }

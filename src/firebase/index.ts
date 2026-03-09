@@ -6,9 +6,9 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
 
 /**
- * MANDI MONITOR - RESILIENT INITIALIZATION
- * Completely detached from server status. If Firebase project is suspended,
- * the app continues in "Local-Independent" mode without crashing.
+ * MANDI MONITOR - DETACHED INITIALIZATION
+ * This logic ensures the app never crashes if the Firebase URL is suspended.
+ * If server is offline, the app silently switches to "Local-First" mode.
  */
 export function initializeFirebase() {
   try {
@@ -19,15 +19,14 @@ export function initializeFirebase() {
     if (!getApps().length) {
       let firebaseApp;
       try {
-        // Attempt to connect. If the server is offline or project closed, this will throw.
-        // We ensure we only initialize if the config looks valid.
-        if (firebaseConfig && firebaseConfig.apiKey) {
+        // Only attempt connection if config is valid and network might be present
+        if (firebaseConfig && firebaseConfig.apiKey && navigator.onLine) {
           firebaseApp = initializeApp(firebaseConfig);
         } else {
-          throw new Error("No config available");
+          throw new Error("Working in Standalone Offline Mode");
         }
       } catch (e) {
-        // SILENT FALLBACK: Returns empty SDKs to allow local storage usage only
+        // SILENT FALLBACK: Proceed using internal mobile database (IndexedDB) only
         return {
           firebaseApp: null as any,
           auth: null as any,
@@ -38,7 +37,7 @@ export function initializeFirebase() {
     }
     return getSdks(getApp());
   } catch (err) {
-    // If the Firebase Account is deleted or URL is 404, we load locally.
+    // Total detachment: ensure app starts even if Firebase account is deleted
     return {
       firebaseApp: null as any,
       auth: null as any,
