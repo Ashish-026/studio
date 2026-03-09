@@ -54,15 +54,15 @@ export default function RootLayout({
           {children}
           <Toaster />
         </AuthProvider>
-        {/* OFFLINE ENGINE ACTIVATION: Ensures the app code is saved to the mobile storage */}
+        {/* STANDALONE ENGINE ACTIVATION: Ensures the app code is saved to the phone's memory */}
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                  console.log('Mandi Monitor: Standalone Engine Active.');
+                  console.log('Mandi Monitor Engine: DETACHED & ACTIVE.');
                 }).catch(function(err) {
-                  console.log('Mandi Monitor: Engine setup pending:', err);
+                  console.error('Mandi Monitor Engine: Pending Setup.', err);
                 });
               });
             }

@@ -7,8 +7,8 @@ import { getFirestore } from 'firebase/firestore'
 
 /**
  * MANDI MONITOR - DETACHED INITIALIZATION
- * This logic ensures the app never crashes if the Firebase URL is suspended.
- * If server is offline, the app silently switches to "Local-First" mode.
+ * This logic ensures the app never crashes if the Firebase URL is suspended or offline.
+ * It favors local IndexedDB storage over network connectivity for launch stability.
  */
 export function initializeFirebase() {
   try {
@@ -16,17 +16,20 @@ export function initializeFirebase() {
         return { firebaseApp: null as any, auth: null as any, firestore: null as any };
     }
 
+    // Force Standalone Detachment
     if (!getApps().length) {
       let firebaseApp;
       try {
-        // Only attempt connection if config is valid and network might be present
+        // Detect connectivity and config validity
         if (firebaseConfig && firebaseConfig.apiKey && navigator.onLine) {
           firebaseApp = initializeApp(firebaseConfig);
+          console.log("Mandi Monitor: Cloud Sync Active.");
         } else {
-          throw new Error("Working in Standalone Offline Mode");
+          console.log("Mandi Monitor: 100% Local-Only Mode Active.");
+          return { firebaseApp: null as any, auth: null as any, firestore: null as any };
         }
       } catch (e) {
-        // SILENT FALLBACK: Proceed using internal mobile database (IndexedDB) only
+        // SILENT FALLBACK: If URL is suspended, proceed using internal database only
         return {
           firebaseApp: null as any,
           auth: null as any,
@@ -37,7 +40,7 @@ export function initializeFirebase() {
     }
     return getSdks(getApp());
   } catch (err) {
-    // Total detachment: ensure app starts even if Firebase account is deleted
+    // Total detachment: ensure app starts even if server is deleted
     return {
       firebaseApp: null as any,
       auth: null as any,

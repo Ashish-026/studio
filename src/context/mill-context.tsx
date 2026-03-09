@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useState, useEffect, useCallback, ReactNode } from 'react';
@@ -15,13 +14,13 @@ interface MillContextType {
 export const MillContext = createContext<MillContextType | null>(null);
 
 /**
- * UPDATED MILL REGISTRY: Corrected name-data alignment based on user entry history.
- * ID 1: Rambha Mill
- * ID 2: Konkorada Mill
+ * UPDATED MILL REGISTRY: Swapped IDs to match data entry history.
+ * ID 1: Konkorada Mill
+ * ID 2: Rambha Mill
  */
 const hardcodedMills: Mill[] = [
-  { id: '1', name: 'Rambha Mill', location: 'Rambha' },
-  { id: '2', name: 'Konkorada Mill', location: 'Konkorada' },
+  { id: '1', name: 'Konkorada Mill', location: 'Konkorada' },
+  { id: '2', name: 'Rambha Mill', location: 'Rambha' },
 ];
 
 export function MillProvider({ children }: { children: ReactNode }) {
