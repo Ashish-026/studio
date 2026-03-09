@@ -1,3 +1,4 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -7,8 +8,8 @@ import { getFirestore } from 'firebase/firestore'
 
 /**
  * MANDI MONITOR - RESILIENT INITIALIZATION
- * This function is designed to fail silently if the server is unreachable.
- * If the Firebase project is suspended, the app switches to "Local-Only" mode automatically.
+ * Completely detached from server status. If Firebase project is suspended,
+ * the app continues in "Local-Independent" mode without crashing.
  */
 export function initializeFirebase() {
   try {
@@ -22,7 +23,7 @@ export function initializeFirebase() {
         // Attempt to connect. If the server is offline or project closed, this will throw.
         firebaseApp = initializeApp(firebaseConfig);
       } catch (e) {
-        console.warn("Firebase Server Offline. Entering Local-Independent Mode.");
+        // SILENT FALLBACK: No console warnings to prevent "Error while launching" screens
         return {
           firebaseApp: null as any,
           auth: null as any,
@@ -33,9 +34,7 @@ export function initializeFirebase() {
     }
     return getSdks(getApp());
   } catch (err) {
-    // If the Firebase Account is deleted or URL is 404, we do not crash.
-    // The app loads from the Service Worker cache and IndexedDB instead.
-    console.warn("Project URL unreachable. Using Local-Only instance.", err);
+    // If the Firebase Account is deleted or URL is 404, we load locally.
     return {
       firebaseApp: null as any,
       auth: null as any,
