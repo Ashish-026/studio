@@ -1,52 +1,50 @@
-/**
- * MANDI MONITOR - OFFLINE ENGINE (Service Worker)
- * This script allows the app to function 100% independently of the server.
- */
 
-const CACHE_NAME = 'mandi-monitor-offline-v3';
-const OFFLINE_URL = '/';
-
-// Files to cache immediately on installation
-const urlsToCache = [
+const CACHE_NAME = 'mandi-monitor-v4';
+const ASSETS_TO_CACHE = [
   '/',
-  '/manifest.webmanifest',
+  '/manifest.json',
   'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
   'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache);
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  // 1. NAVIGATION REQUESTS (e.g. user opens /dashboard)
-  // If the server is offline, we return the cached Root Page (/)
+  // NAVIGATION INTERCEPTOR: Prevents 404 errors by serving the main shell for all routes
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match(OFFLINE_URL);
+        return caches.match('/');
       })
     );
     return;
   }
 
-  // 2. ASSET REQUESTS (scripts, images, styles)
-  // We try the cache first, then the network.
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch(() => {
-        // Fallback for failed network requests
-        return null;
-      });
+      return response || fetch(event.request);
     })
   );
 });

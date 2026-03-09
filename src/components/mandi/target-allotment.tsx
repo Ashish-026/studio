@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -7,7 +8,7 @@ import * as z from 'zod';
 import { useAuth } from '@/hooks/use-auth';
 import { useMandiData } from '@/context/mandi-context';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, PlusCircle, Download, Edit, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Download, Edit, MapPin, LayoutGrid, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import type { TargetAllocation as TargetAllocationType } from '@/lib/types';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 const formSchema = z.object({
@@ -45,10 +47,25 @@ export function TargetAllotment() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isEditCalendarOpen, setIsEditCalendarOpen] = useState(false);
 
-  const uniqueMandis = useMemo(() => {
-    const mandiNames = targetAllocations.map((allocation) => allocation.mandiName);
-    return [...new Set(mandiNames)].sort((a,b) => a.localeCompare(b));
+  // CONSOLIDATION LOGIC: Sums all targets for the same Mandi
+  const consolidatedTargets = useMemo(() => {
+    const map = new Map<string, { total: number; idNumber: string }>();
+    targetAllocations.forEach(t => {
+      const existing = map.get(t.mandiName) || { total: 0, idNumber: t.mandiIdNumber || 'N/A' };
+      existing.total += t.target;
+      if (t.mandiIdNumber && existing.idNumber === 'N/A') existing.idNumber = t.mandiIdNumber;
+      map.set(t.mandiName, existing);
+    });
+    return Array.from(map.entries()).map(([name, data]) => ({
+      name,
+      total: data.total,
+      idNumber: data.idNumber
+    })).sort((a, b) => a.name.localeCompare(b.name));
   }, [targetAllocations]);
+
+  const uniqueMandis = useMemo(() => {
+    return consolidatedTargets.map(t => t.name);
+  }, [consolidatedTargets]);
 
   const filteredAllocations = useMemo(() => {
     const sortedAllocations = [...targetAllocations].sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -56,7 +73,7 @@ export function TargetAllotment() {
     return sortedAllocations.filter(item => item.mandiName === selectedMandi);
   }, [targetAllocations, selectedMandi]);
 
-  const totalTarget = filteredAllocations.reduce((sum, item) => sum + item.target, 0);
+  const totalTargetForSelection = filteredAllocations.reduce((sum, item) => sum + item.target, 0);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -102,52 +119,23 @@ export function TargetAllotment() {
       <CardHeader className="px-0 pt-0">
         <div className="flex justify-between items-start mb-6">
             <div>
-                <CardTitle className="text-2xl font-bold font-headline text-primary">Target Allotment</CardTitle>
-                <CardDescription>Select a Mandi to view targets or add a new allocation.</CardDescription>
+                <CardTitle className="text-2xl font-bold font-headline text-primary">Target Management</CardTitle>
+                <CardDescription>Manage official allocations. System automatically sums entries for the same Mandi.</CardDescription>
             </div>
             <div className="flex gap-2">
                 {isAdmin && (
                     <Button onClick={() => { setEditingTarget(null); setShowForm(!showForm); }} size="sm" className="rounded-xl shadow-md">
                         <PlusCircle className="mr-2 h-4 w-4" />
-                        {showForm ? 'Cancel' : 'Add New Target'}
+                        {showForm ? 'Cancel' : 'New Allotment'}
                     </Button>
                 )}
             </div>
         </div>
 
-        <div className="space-y-4">
-            <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Select Mandi to View Details</Label>
-            <div className="flex flex-wrap gap-3">
-                {uniqueMandis.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">No mandis registered yet. Add a target to begin.</p>
-                ) : (
-                    uniqueMandis.map((mandi) => (
-                        <Button
-                            key={mandi}
-                            variant={selectedMandi === mandi ? "default" : "outline"}
-                            className={cn(
-                                "h-14 px-6 rounded-2xl transition-all border-primary/10 shadow-sm hover:shadow-md",
-                                selectedMandi === mandi ? "bg-primary text-white scale-105" : "bg-white hover:bg-primary/5 hover:border-primary/30"
-                            )}
-                            onClick={() => setSelectedMandi(selectedMandi === mandi ? null : mandi)}
-                        >
-                            <MapPin className={cn("mr-2 h-4 w-4", selectedMandi === mandi ? "text-white" : "text-primary/40")} />
-                            <div className="flex flex-col items-start">
-                                <span className="font-bold">{mandi}</span>
-                                <span className="text-[10px] uppercase opacity-70">View History</span>
-                            </div>
-                        </Button>
-                    ))
-                )}
-            </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="px-0 space-y-8">
         {isAdmin && showForm && (
-          <Card className="bg-white border-primary/10 shadow-xl rounded-3xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+          <Card className="bg-white border-primary/10 shadow-xl rounded-3xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 mb-8">
             <CardHeader className="bg-primary/5 border-b border-primary/10">
-                <CardTitle className="text-lg">New Target Allocation</CardTitle>
+                <CardTitle className="text-lg">Add New Allotment Record</CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
             <Form {...form}>
@@ -184,7 +172,7 @@ export function TargetAllotment() {
                                 selected={field.value} 
                                 onSelect={(date) => {
                                     field.onChange(date);
-                                    setIsCalendarOpen(false); // AUTO-CLOSE ON SELECT
+                                    setIsCalendarOpen(false);
                                 }} 
                                 disabled={(date) => date > new Date() || date < new Date("1900-01-01")} 
                                 initialFocus 
@@ -201,72 +189,134 @@ export function TargetAllotment() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <Button type="submit" className="lg:col-span-4 bg-primary hover:bg-primary/90 h-12 rounded-xl font-bold shadow-lg shadow-primary/20">Add Allocation</Button>
+                <Button type="submit" className="lg:col-span-4 bg-primary hover:bg-primary/90 h-12 rounded-xl font-bold shadow-lg shadow-primary/20">Record Allotment</Button>
               </form>
             </Form>
             </CardContent>
           </Card>
         )}
 
-        {selectedMandi && (
-            <div id="target-allotment-table" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                    <h3 className="text-xl font-bold font-headline flex items-center gap-2 text-primary">
-                        <Badge variant="secondary" className="px-3 py-1 rounded-lg text-lg bg-primary/10 text-primary border-none">{selectedMandi}</Badge>
-                        Allocation History
-                    </h3>
-                    <Button variant="outline" size="sm" onClick={() => downloadPdf('target-allotment-table-content', `targets-${selectedMandi.toLowerCase()}`)} className="rounded-xl border-primary/20 hover:bg-primary/5">
-                        <Download className="mr-2 h-4 w-4" />
-                        Export to PDF
-                    </Button>
-                </div>
-                
-                <div id="target-allotment-table-content" className="bg-white border border-primary/5 rounded-3xl overflow-hidden shadow-sm">
+        <Tabs defaultValue="consolidated" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6 rounded-xl bg-primary/5 p-1 h-12">
+                <TabsTrigger value="consolidated" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
+                    <LayoutGrid className="mr-2 h-4 w-4" /> Mandi-Wise Total
+                </TabsTrigger>
+                <TabsTrigger value="history" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
+                    <List className="mr-2 h-4 w-4" /> Allotment Log
+                </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="consolidated">
+                <div id="consolidated-targets-table" className="bg-white border border-primary/5 rounded-3xl overflow-hidden shadow-sm">
                     <Table>
                         <TableHeader className="bg-muted/30">
                             <TableRow className="border-none">
-                                <TableHead className="font-bold py-4">Mandi ID</TableHead>
-                                <TableHead className="font-bold py-4">Date</TableHead>
-                                <TableHead className="text-right font-bold py-4">Target (Quintals)</TableHead>
-                                {isAdmin && <TableHead className="text-right font-bold py-4">Actions</TableHead>}
+                                <TableHead className="font-bold py-4 pl-6">Mandi Name</TableHead>
+                                <TableHead className="font-bold py-4">Official ID</TableHead>
+                                <TableHead className="text-right font-bold py-4 pr-6">Total Allotted (Qtl)</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredAllocations.map((item) => (
-                            <TableRow key={item.id} className="hover:bg-primary/5 transition-colors">
-                                <TableCell className="font-medium">{item.mandiIdNumber || 'N/A'}</TableCell>
-                                <TableCell>{format(item.date, 'dd MMM yyyy')}</TableCell>
-                                <TableCell className="text-right font-bold text-primary">{item.target.toLocaleString('en-IN')}</TableCell>
-                                {isAdmin && (
-                                <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)} className="rounded-lg hover:text-primary hover:bg-primary/10">
-                                    <Edit className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
-                                )}
-                            </TableRow>
+                            {consolidatedTargets.length === 0 ? (
+                                <TableRow><TableCell colSpan={3} className="text-center h-32 opacity-50 italic">No targets recorded yet.</TableCell></TableRow>
+                            ) : consolidatedTargets.map((item) => (
+                                <TableRow key={item.name} className="hover:bg-primary/5 transition-colors border-primary/5">
+                                    <TableCell className="font-bold text-primary pl-6">{item.name}</TableCell>
+                                    <TableCell className="text-xs font-medium opacity-60">{item.idNumber}</TableCell>
+                                    <TableCell className="text-right pr-6 font-black text-primary text-lg">
+                                        {item.total.toLocaleString('en-IN')}
+                                    </TableCell>
+                                </TableRow>
                             ))}
                         </TableBody>
-                        <tfoot className="bg-primary/5 border-t border-primary/10">
-                            <TableRow>
-                                <TableCell colSpan={2} className="font-bold text-primary py-4">TOTAL ALLOTTED TARGET</TableCell>
-                                <TableCell className="text-right font-black text-primary text-lg py-4">
-                                    {totalTarget.toLocaleString('en-IN')} Qtl
-                                </TableCell>
-                                {isAdmin && <TableCell />}
-                            </TableRow>
-                        </tfoot>
                     </Table>
                 </div>
-            </div>
-        )}
-      </CardContent>
+            </TabsContent>
+
+            <TabsContent value="history">
+                <div className="space-y-6">
+                    <div className="flex flex-wrap gap-3">
+                        {uniqueMandis.map((mandi) => (
+                            <Button
+                                key={mandi}
+                                variant={selectedMandi === mandi ? "default" : "outline"}
+                                className={cn(
+                                    "h-14 px-6 rounded-2xl transition-all border-primary/10 shadow-sm",
+                                    selectedMandi === mandi ? "bg-primary text-white scale-105" : "bg-white hover:bg-primary/5"
+                                )}
+                                onClick={() => setSelectedMandi(selectedMandi === mandi ? null : mandi)}
+                            >
+                                <MapPin className={cn("mr-2 h-4 w-4", selectedMandi === mandi ? "text-white" : "text-primary/40")} />
+                                <div className="flex flex-col items-start">
+                                    <span className="font-bold">{mandi}</span>
+                                    <span className="text-[10px] uppercase opacity-70">View Entries</span>
+                                </div>
+                            </Button>
+                        ))}
+                    </div>
+
+                    {selectedMandi && (
+                        <div id="target-allotment-table" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                                <h3 className="text-xl font-bold font-headline flex items-center gap-2 text-primary">
+                                    <Badge variant="secondary" className="px-3 py-1 rounded-lg text-lg bg-primary/10 text-primary border-none">{selectedMandi}</Badge>
+                                    Allotment History
+                                </h3>
+                                <Button variant="outline" size="sm" onClick={() => downloadPdf('target-allotment-table-content', `targets-${selectedMandi.toLowerCase()}`)} className="rounded-xl border-primary/20 hover:bg-primary/5">
+                                    <Download className="mr-2 h-4 w-4" />
+                                    Export History PDF
+                                </Button>
+                            </div>
+                            
+                            <div id="target-allotment-table-content" className="bg-white border border-primary/5 rounded-3xl overflow-hidden shadow-sm">
+                                <Table>
+                                    <TableHeader className="bg-muted/30">
+                                        <TableRow className="border-none">
+                                            <TableHead className="font-bold py-4 pl-6">Allotment Date</TableHead>
+                                            <TableHead className="font-bold py-4">Mandi ID</TableHead>
+                                            <TableHead className="text-right font-bold py-4">Quantity (Qtl)</TableHead>
+                                            {isAdmin && <TableHead className="text-right font-bold py-4 pr-6">Actions</TableHead>}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredAllocations.map((item) => (
+                                        <TableRow key={item.id} className="hover:bg-primary/5 transition-colors border-primary/5">
+                                            <TableCell className="pl-6">{format(item.date, 'dd MMM yyyy')}</TableCell>
+                                            <TableCell className="text-xs font-medium opacity-60">{item.mandiIdNumber || 'N/A'}</TableCell>
+                                            <TableCell className="text-right font-bold text-primary">{item.target.toLocaleString('en-IN')}</TableCell>
+                                            {isAdmin && (
+                                            <TableCell className="text-right pr-6">
+                                                <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)} className="rounded-lg hover:text-primary hover:bg-primary/10">
+                                                <Edit className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                            )}
+                                        </TableRow>
+                                        ))}
+                                    </TableBody>
+                                    <tfoot className="bg-primary/5 border-t border-primary/10">
+                                        <TableRow>
+                                            <TableCell colSpan={2} className="font-bold text-primary py-4 pl-6">TOTAL FOR {selectedMandi.toUpperCase()}</TableCell>
+                                            <TableCell className="text-right font-black text-primary text-lg py-4">
+                                                {totalTargetForSelection.toLocaleString('en-IN')} Qtl
+                                            </TableCell>
+                                            {isAdmin && <TableCell className="pr-6" />}
+                                        </TableRow>
+                                    </tfoot>
+                                </Table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </TabsContent>
+        </Tabs>
+      </CardHeader>
     </Card>
 
     <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="rounded-3xl border-none p-0 overflow-hidden shadow-2xl">
             <DialogHeader className="p-6 bg-primary text-white">
-                <DialogTitle className="text-xl">Edit Target Allocation</DialogTitle>
+                <DialogTitle className="text-xl">Edit Allotment Entry</DialogTitle>
             </DialogHeader>
             <div className="p-6">
                 <Form {...form}>
@@ -303,7 +353,7 @@ export function TargetAllotment() {
                                     selected={field.value} 
                                     onSelect={(date) => {
                                         field.onChange(date);
-                                        setIsEditCalendarOpen(false); // AUTO-CLOSE ON SELECT
+                                        setIsEditCalendarOpen(false);
                                     }} 
                                     initialFocus 
                                 />
