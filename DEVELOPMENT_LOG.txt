@@ -10,40 +10,26 @@ MANDI MONITOR - SEAMLESS SETUP & FIXES
 
 2. SERVER-INDEPENDENT MODE (TRUE ZERO-COST)
 ---------------------------------------------------------
-- This app is designed to work WITHOUT a server once loaded.
-- SERVICE WORKER: The app caches all assets locally on the phone (public/sw.js).
-- STORAGE DEFINITIONS:
-    * Browser IndexedDB (High-Capacity): Sum of ALL records ever saved. This uses the device's actual storage capacity.
-    * Mobile Memory vs Browser Storage: The app uses the device's internal database system, bypassing the old 5MB limit.
-    * Session Storage (Temporary): Clears when you close the tab. Used only for security (keeping you logged in).
-- NO CLOUD BILLING: 100% Free forever.
-- If the Firebase project is deleted, the app remains functional because it is cached locally on your device.
+- SERVICE WORKER: The file `public/sw.js` is now implemented.
+- This script caches the entire application shell on the mobile device.
+- Once loaded, the app DOES NOT need to reach the server to open.
+- This prevents the "No web page found" error when the Firebase project is suspended.
 
 3. STORAGE STRATEGY (INFINITE DATA)
 ---------------------------------------------------------
-- High-Capacity Mode: Store millions of bags without errors.
-- Archiving: To handle multiple seasons or years of data, users should follow the "Rotation Strategy":
-    1. At the end of a season, go to Settings -> Backup to Local File.
-    2. Save this file (e.g., "Season_2024_Final.json") to a safe place.
-    3. Wipe the device storage using "Wipe System Database".
-    4. Start the next season with a clean capacity.
-- Restoration: Any historical season can be viewed instantly by "Restoring" the old backup file.
+- HIGH-CAPACITY ENGINE: The app uses IndexedDB (Internal Mobile Database).
+- Millions of records can be stored without hitting the old 5MB browser limit.
+- SMART MERGE: Importing backups now adds new data to your history instead of overwriting it.
 
 4. PERFORMANCE (FAST RESPONSE)
 ---------------------------------------------------------
 - Context Memoization: All data providers (Mandi, Labour, Stock) are memoized to prevent lag.
-- Calculations: Heavy stock and yield percentages are calculated only when data changes.
-- Rendering: Tables use hardware-accelerated CSS for smooth scrolling on mobile.
+- Visual Analytics: High-fidelity charts provide a pulse of the mill in real-time.
 
 5. MOBILE INSTALLATION
 ---------------------------------------------------------
 - Open the main link on your phone.
 - Tap 'Share' or '3 Dots' -> 'Add to Home Screen'.
 - The app will now work like a native app without 404 issues or server dependency.
-
-6. LOGOUT LOGIC
----------------------------------------------------------
-- For your security, closing the browser tab or swiping the mobile app closed will log you out automatically (clearing Session Storage).
-- Your actual data (records) remains safe in IndexedDB.
 
 END OF LOG.

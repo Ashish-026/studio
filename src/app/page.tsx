@@ -44,7 +44,7 @@ function AppController() {
     setIsClient(true);
     // FORCE ROOT URL: If the user lands on a sub-path, we push them to / 
     // to prevent 404 errors when the server is idle.
-    if (window.location.pathname !== '/') {
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
       window.history.replaceState({}, '', '/');
     }
   }, []);
