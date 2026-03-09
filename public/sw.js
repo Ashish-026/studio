@@ -1,35 +1,33 @@
 
-/**
- * MANDI MONITOR - OFFLINE STANDALONE ENGINE
- * Version: 1.0.4 (Definitive)
- */
+const CACHE_NAME = 'mandi-monitor-engine-v1';
+const OFFLINE_URL = '/';
 
-const CACHE_NAME = 'mandi-monitor-v4';
-const ASSETS_TO_CACHE = [
+// Core assets to cache for instant offline launch
+const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
-  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL',
-  'https://images.unsplash.com/photo-1595024600400-2a49b9fce270?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx3aGVhdCUyMGZpZWxkfGVufDB8fHx8MTc2MjQ0NzQwNnww&ixlib=rb-4.1.0&q=80&w=1080'
+  'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
+  'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
 ];
 
-// 1. INSTALL: Save the core app files
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      console.log('Mandi Monitor: Engine Installed. Pre-caching assets...');
+      return cache.addAll(STATIC_ASSETS);
     })
   );
   self.skipWaiting();
 });
 
-// 2. ACTIVATE: Clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames.map((name) => {
-          if (name !== CACHE_NAME) return caches.delete(name);
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
         })
       );
     })
@@ -37,34 +35,34 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 3. FETCH: The "Detachment" Engine
 self.addEventListener('fetch', (event) => {
-  // Navigation request strategy: Serve index for any sub-path to prevent 404s
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('/');
-      })
-    );
-    return;
-  }
+  // We only handle GET requests
+  if (event.request.method !== 'GET') return;
 
-  // General request strategy: Cache-First for assets, Network-Fallback
+  const url = new URL(event.request.url);
+
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).then((fetchResponse) => {
-        // Cache new assets dynamically
-        if (fetchResponse.status === 200 && event.request.url.startsWith('http')) {
-          const responseClone = fetchResponse.clone();
+    caches.match(event.request).then((cachedResponse) => {
+      // 1. Return from cache if found (Cache-First)
+      if (cachedResponse) return cachedResponse;
+
+      // 2. Otherwise try network
+      return fetch(event.request).then((networkResponse) => {
+        // Cache successful internal asset requests
+        if (networkResponse && networkResponse.status === 200 && 
+           (url.pathname.startsWith('/_next/') || url.pathname.endsWith('.png') || url.pathname.endsWith('.json'))) {
+          const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
+            cache.put(event.request, responseToCache);
           });
         }
-        return fetchResponse;
+        return networkResponse;
+      }).catch(() => {
+        // 3. OFFLINE FALLBACK: If navigation fails (e.g. 404 or zero net), serve the root
+        if (event.request.mode === 'navigate') {
+          return caches.match(OFFLINE_URL);
+        }
       });
-    }).catch(() => {
-      // Return local fallback if everything fails
-      return caches.match('/');
     })
   );
 });

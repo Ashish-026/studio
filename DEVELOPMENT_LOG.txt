@@ -1,17 +1,17 @@
 
-MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v4)
+MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v5)
 
 1. RESOLVING "OFFLINE" LAUNCH ERRORS (PERMANENT FIX)
 ---------------------------------------------------------
 - PROBLEM: App failed to start from scratch without internet (Browser default "Offline" page).
 - ACTION: Physically implemented /public/sw.js (Service Worker).
-- STRATEGY: Implemented a "Cache-First" shell strategy. The SW now pre-caches the root portal.
+- STRATEGY: Implemented a "Cache-First" shell strategy. The SW now pre-caches the root portal and intercepts navigate requests.
 - RESULT: Your phone now opens the app shell from local memory instantly, even with zero network.
 
 2. MANDI TARGET CONSOLIDATION
 ---------------------------------------------------------
-- ACTION: Upgraded TargetAllotment component with automated Map-based aggregation.
-- RESULT: Multiple entries for the same Mandi are now automatically summed in the display and summary tables.
+- ACTION: Upgraded TargetAllotment and MasterReport components with automated Map-based aggregation.
+- RESULT: Multiple entries for the same Mandi are now automatically summed in the display, analytics, and PDF tables.
 
 3. AUTHENTICATION PERSISTENCE
 ---------------------------------------------------------
@@ -20,7 +20,7 @@ MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v4)
 
 4. BRANDING & DATA INTEGRITY
 ---------------------------------------------------------
-- ACTION: Corrected Mill Names (ID 1: Konkorada Mill, ID 2: Rambha Mill).
-- ACTION: Implemented Smart Merge for multi-device backups in Settings.
+- ACTION: Corrected Mill Names (ID 1: Rambha Mill, ID 2: Konkorada Mill).
+- ACTION: Merged charts into a single Unified Performance Chart in Mandi Summary.
 
 LOG FINALIZED. THE APP IS NOW 100% SERVER-INDEPENDENT AND DETACHED FROM FIREBASE URL STATUS.
