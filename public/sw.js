@@ -1,12 +1,13 @@
+
 /**
- * MANDI MONITOR - OFFLINE ENGINE (Service Worker)
- * This script ensures the app works 100% offline without a server.
+ * MANDI MONITOR - OFFLINE ENGINE
+ * This Service Worker caches the app on the user's device.
  */
 
-const CACHE_NAME = 'mandi-monitor-v2';
+const CACHE_NAME = 'mandi-monitor-cache-v1';
 const OFFLINE_URL = '/';
 
-// 1. INSTALL: Cache essential assets immediately
+// 1. Install Event: Cache the main portal
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -21,7 +22,7 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// 2. ACTIVATE: Clean up old caches
+// 2. Activate Event: Clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -37,34 +38,32 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 3. FETCH: Network-First with Cache Fallback
+// 3. Fetch Event: Cache-First Strategy for static assets, Network-First for others
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
-  // For Firebase or external APIs, we don't force cache if network is available
-  // But for the main app bundle, we ensure it works offline.
   event.respondWith(
-    fetch(event.request)
-      .then((response) => {
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      return fetch(event.request).then((networkResponse) => {
         // Cache successful responses for future offline use
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseClone);
-        });
-        return response;
-      })
-      .catch(() => {
-        // If network fails (Server Offline / Airplane Mode), check cache
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // If the request is for a page navigation, return the cached root
-          if (event.request.mode === 'navigate') {
-            return caches.match(OFFLINE_URL);
-          }
-        });
-      })
+        if (networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      }).catch(() => {
+        // If both network and cache fail, and it's a navigation request, return index
+        if (event.request.mode === 'navigate') {
+          return caches.match(OFFLINE_URL);
+        }
+      });
+    })
   );
 });

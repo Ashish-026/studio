@@ -1,8 +1,8 @@
 'use client';
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Tractor, Users, Car, Warehouse, FileText, Download, Briefcase, TrendingUp, Wallet, Package, Scale } from 'lucide-react';
+import { Tractor, Users, Car, Warehouse, FileText, Download, Briefcase, TrendingUp, Wallet, Package, Scale } from 'lucide-react';
 import { downloadPdf } from '@/lib/pdf-utils';
 import { useMill } from '@/hooks/use-mill';
 import { useKmsYear } from '@/hooks/use-kms-year';
@@ -25,7 +25,6 @@ import {
   Pie,
   Legend
 } from 'recharts';
-import { Badge } from '../ui/badge';
 
 interface DashboardPageProps {
   onNavigate: (view: ViewState) => void;
@@ -73,7 +72,6 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const { selectedMill } = useMill();
   const { selectedKmsYear } = useKmsYear();
   
-  // Data for Charts
   const { targetAllocations, paddyLiftedItems } = useMandiData();
   const { totalStock, purchases, sales } = useStockData();
   const { labourers } = useLabourData();
@@ -84,7 +82,6 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     downloadPdf('master-report-pdf', fileName);
   };
 
-  // Logic: Mandi Progress Chart Data
   const mandiChartData = useMemo(() => {
     const map = new Map<string, { target: number; lifted: number }>();
     targetAllocations.forEach(t => {
@@ -101,17 +98,15 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
       name,
       target: Math.round(data.target),
       lifted: Math.round(data.lifted)
-    })).slice(0, 5); // Only show top 5 for clarity
+    })).slice(0, 5);
   }, [targetAllocations, paddyLiftedItems]);
 
-  // Logic: Stock Pie Data
   const stockChartData = useMemo(() => [
     { name: 'Paddy', value: Math.max(0, totalStock.paddy), color: 'hsl(var(--primary))' },
     { name: 'Rice', value: Math.max(0, totalStock.rice), color: 'hsl(var(--accent))' },
-    { name: 'Byproducts', value: Math.max(0, totalStock.bran + totalStock.brokenRice), color: 'hsl(var(--muted-foreground))' },
+    { name: 'Others', value: Math.max(0, totalStock.bran + totalStock.brokenRice), color: 'hsl(var(--muted-foreground))' },
   ], [totalStock]);
 
-  // Logic: Financial Pulse
   const financialData = useMemo(() => {
     const farmerPayable = purchases.reduce((acc, p) => acc + p.balance, 0);
     const labourPayable = labourers.reduce((acc, l) => acc + l.balance, 0);
@@ -127,7 +122,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const formatCurrency = (num: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(num);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight font-headline mb-1 text-primary">Operational Command</h1>
@@ -145,21 +140,20 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         </Button>
       </div>
 
-      {/* GRAPHIC OVERALL VIEW */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        {/* Mandi Progress Bar Chart */}
-        <Card className="shadow-xl shadow-primary/5 border-primary/5 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
+        {/* Mandi Progress */}
+        <Card className="shadow-xl shadow-primary/5 border-primary/5 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm transition-all hover:shadow-2xl">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
-              Mandi Targets vs Lifting
+              Mandi Targets (Qtl)
             </CardTitle>
-            <CardDescription>Performance across active mandis (Qtl)</CardDescription>
+            <CardDescription>Target Allotment vs Actual Lifting</CardDescription>
           </CardHeader>
           <CardContent className="h-[240px] pt-4">
             {mandiChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={mandiChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={mandiChartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 600 }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
@@ -177,14 +171,14 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           </CardContent>
         </Card>
 
-        {/* Stock Distribution Donut */}
-        <Card className="shadow-xl shadow-primary/5 border-primary/5 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
+        {/* Stock Mix */}
+        <Card className="shadow-xl shadow-primary/5 border-primary/5 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm transition-all hover:shadow-2xl">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Package className="h-5 w-5 text-primary" />
               Inventory Mix
             </CardTitle>
-            <CardDescription>Current commodity distribution</CardDescription>
+            <CardDescription>Paddy vs Rice vs Byproducts</CardDescription>
           </CardHeader>
           <CardContent className="h-[240px] flex items-center justify-center">
             {totalStock.paddy + totalStock.rice > 0 ? (
@@ -198,13 +192,15 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
                     outerRadius={80}
                     paddingAngle={5}
                     dataKey="value"
+                    animationBegin={200}
+                    animationDuration={1500}
                   >
                     {stockChartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <RechartsTooltip />
-                  <Legend verticalAlign="bottom" height={36}/>
+                  <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -213,14 +209,14 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           </CardContent>
         </Card>
 
-        {/* Financial Pulse */}
-        <Card className="shadow-xl shadow-primary/5 border-primary/5 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
+        {/* Financial Health */}
+        <Card className="shadow-xl shadow-primary/5 border-primary/5 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm transition-all hover:shadow-2xl">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Wallet className="h-5 w-5 text-primary" />
               Financial Pulse
             </CardTitle>
-            <CardDescription>Balance status summary</CardDescription>
+            <CardDescription>Current balance status</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-4">
             {financialData.map((item) => (
@@ -244,7 +240,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
               <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Scale className="h-4 w-4 text-primary opacity-40" />
-                  <span className="text-xs font-bold opacity-60">NET POSITION</span>
+                  <span className="text-xs font-bold opacity-60 uppercase">Net Position</span>
                 </div>
                 <span className="font-black text-primary">
                   {formatCurrency(financialData[1].amount - financialData[0].amount)}
@@ -255,7 +251,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         </Card>
       </div>
 
-      {/* QUICK NAVIGATION ICONS */}
+      {/* Navigation */}
       <div className="space-y-4">
         <h2 className="text-xs font-black uppercase tracking-[0.2em] text-primary/40 px-1">Navigation Registers</h2>
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
