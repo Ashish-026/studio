@@ -43,18 +43,21 @@ export function TargetAllotment() {
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedMandi, setSelectedMandi] = useState<string | null>(null);
   
-  // State for auto-closing date pickers
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isEditCalendarOpen, setIsEditCalendarOpen] = useState(false);
 
-  // CONSOLIDATION LOGIC: Sums all targets for the same Mandi
+  // AUTOMATIC SUMMATION LOGIC:
+  // Detects multiple entries for the same Mandi name and combines their totals.
   const consolidatedTargets = useMemo(() => {
     const map = new Map<string, { total: number; idNumber: string }>();
     targetAllocations.forEach(t => {
-      const existing = map.get(t.mandiName) || { total: 0, idNumber: t.mandiIdNumber || 'N/A' };
+      const mandiKey = t.mandiName.trim();
+      const existing = map.get(mandiKey) || { total: 0, idNumber: t.mandiIdNumber || 'N/A' };
       existing.total += t.target;
-      if (t.mandiIdNumber && existing.idNumber === 'N/A') existing.idNumber = t.mandiIdNumber;
-      map.set(t.mandiName, existing);
+      if (t.mandiIdNumber && (existing.idNumber === 'N/A' || !existing.idNumber)) {
+        existing.idNumber = t.mandiIdNumber;
+      }
+      map.set(mandiKey, existing);
     });
     return Array.from(map.entries()).map(([name, data]) => ({
       name,
@@ -70,7 +73,7 @@ export function TargetAllotment() {
   const filteredAllocations = useMemo(() => {
     const sortedAllocations = [...targetAllocations].sort((a, b) => b.date.getTime() - a.date.getTime());
     if (!selectedMandi) return [];
-    return sortedAllocations.filter(item => item.mandiName === selectedMandi);
+    return sortedAllocations.filter(item => item.mandiName.trim() === selectedMandi.trim());
   }, [targetAllocations, selectedMandi]);
 
   const totalTargetForSelection = filteredAllocations.reduce((sum, item) => sum + item.target, 0);
@@ -96,10 +99,10 @@ export function TargetAllotment() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (editingTarget) {
       updateTarget(editingTarget.id, values);
-      toast({ title: 'Success!', description: 'Target has been updated.' });
+      toast({ title: 'Success!', description: 'Target record updated.' });
     } else {
       addTarget(values);
-      toast({ title: 'Success!', description: 'New target has been allotted.' });
+      toast({ title: 'Target Added', description: `Target for ${values.mandiName} has been recorded.` });
     }
     
     form.reset();
@@ -120,7 +123,7 @@ export function TargetAllotment() {
         <div className="flex justify-between items-start mb-6">
             <div>
                 <CardTitle className="text-2xl font-bold font-headline text-primary">Target Management</CardTitle>
-                <CardDescription>Manage official allocations. System automatically sums entries for the same Mandi.</CardDescription>
+                <CardDescription>Manage official allocations. Entries for the same Mandi are summed automatically.</CardDescription>
             </div>
             <div className="flex gap-2">
                 {isAdmin && (
@@ -135,7 +138,7 @@ export function TargetAllotment() {
         {isAdmin && showForm && (
           <Card className="bg-white border-primary/10 shadow-xl rounded-3xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 mb-8">
             <CardHeader className="bg-primary/5 border-b border-primary/10">
-                <CardTitle className="text-lg">Add New Allotment Record</CardTitle>
+                <CardTitle className="text-lg">New Allotment Entry</CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
             <Form {...form}>
@@ -189,7 +192,7 @@ export function TargetAllotment() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <Button type="submit" className="lg:col-span-4 bg-primary hover:bg-primary/90 h-12 rounded-xl font-bold shadow-lg shadow-primary/20">Record Allotment</Button>
+                <Button type="submit" className="lg:col-span-4 bg-primary hover:bg-primary/90 h-12 rounded-xl font-bold shadow-lg shadow-primary/20">Add Record</Button>
               </form>
             </Form>
             </CardContent>
@@ -199,10 +202,10 @@ export function TargetAllotment() {
         <Tabs defaultValue="consolidated" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6 rounded-xl bg-primary/5 p-1 h-12">
                 <TabsTrigger value="consolidated" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
-                    <LayoutGrid className="mr-2 h-4 w-4" /> Mandi-Wise Total
+                    <LayoutGrid className="mr-2 h-4 w-4" /> Consolidated Ledger
                 </TabsTrigger>
                 <TabsTrigger value="history" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-sm">
-                    <List className="mr-2 h-4 w-4" /> Allotment Log
+                    <List className="mr-2 h-4 w-4" /> Individual Log
                 </TabsTrigger>
             </TabsList>
 
@@ -213,7 +216,7 @@ export function TargetAllotment() {
                             <TableRow className="border-none">
                                 <TableHead className="font-bold py-4 pl-6">Mandi Name</TableHead>
                                 <TableHead className="font-bold py-4">Official ID</TableHead>
-                                <TableHead className="text-right font-bold py-4 pr-6">Total Allotted (Qtl)</TableHead>
+                                <TableHead className="text-right font-bold py-4 pr-6">Total Summed Target (Qtl)</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -249,7 +252,7 @@ export function TargetAllotment() {
                                 <MapPin className={cn("mr-2 h-4 w-4", selectedMandi === mandi ? "text-white" : "text-primary/40")} />
                                 <div className="flex flex-col items-start">
                                     <span className="font-bold">{mandi}</span>
-                                    <span className="text-[10px] uppercase opacity-70">View Entries</span>
+                                    <span className="text-[10px] uppercase opacity-70">Details</span>
                                 </div>
                             </Button>
                         ))}
@@ -260,7 +263,7 @@ export function TargetAllotment() {
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                                 <h3 className="text-xl font-bold font-headline flex items-center gap-2 text-primary">
                                     <Badge variant="secondary" className="px-3 py-1 rounded-lg text-lg bg-primary/10 text-primary border-none">{selectedMandi}</Badge>
-                                    Allotment History
+                                    Entry Log
                                 </h3>
                                 <Button variant="outline" size="sm" onClick={() => downloadPdf('target-allotment-table-content', `targets-${selectedMandi.toLowerCase()}`)} className="rounded-xl border-primary/20 hover:bg-primary/5">
                                     <Download className="mr-2 h-4 w-4" />
@@ -272,9 +275,9 @@ export function TargetAllotment() {
                                 <Table>
                                     <TableHeader className="bg-muted/30">
                                         <TableRow className="border-none">
-                                            <TableHead className="font-bold py-4 pl-6">Allotment Date</TableHead>
-                                            <TableHead className="font-bold py-4">Mandi ID</TableHead>
-                                            <TableHead className="text-right font-bold py-4">Quantity (Qtl)</TableHead>
+                                            <TableHead className="font-bold py-4 pl-6">Date</TableHead>
+                                            <TableHead className="font-bold py-4">ID Number</TableHead>
+                                            <TableHead className="text-right font-bold py-4">Individual Target (Qtl)</TableHead>
                                             {isAdmin && <TableHead className="text-right font-bold py-4 pr-6">Actions</TableHead>}
                                         </TableRow>
                                     </TableHeader>
@@ -337,12 +340,12 @@ export function TargetAllotment() {
                     )} />
                     <FormField control={form.control} name="date" render={({ field }) => (
                     <FormItem className="flex flex-col">
-                        <FormLabel>Allocation Date</FormLabel>
+                        <FormLabel>Date</FormLabel>
                         <Popover open={isEditCalendarOpen} onOpenChange={setIsEditCalendarOpen}>
                             <PopoverTrigger asChild>
                             <FormControl>
                                 <Button variant={"outline"} className={cn("w-full h-12 rounded-xl pl-3 text-left font-normal border-input", !field.value && "text-muted-foreground")}>
-                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                {field.value ? format(field.value, "PPP") : <span>Pick date</span>}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
                             </FormControl>

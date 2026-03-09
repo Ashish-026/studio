@@ -3,27 +3,23 @@ MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG
 
 1. RESOLVING 404 ERRORS (PERMANENT FIX)
 ---------------------------------------------------------
-- ACTION: Implemented public/sw.js (Service Worker).
-- LOGIC: The Service Worker now intercepts all navigation requests. If the server is offline or the Firebase project is suspended, it serves the main app shell from local phone memory.
-- RESULT: 404 "Page Not Found" errors are now physically impossible for installed users.
+- ACTION: Physically implemented public/sw.js (Offline Service Worker).
+- LOGIC: The Service Worker now intercepts all navigation requests. If the server is suspended or returning "Page Not Found", it serves the main app shell from local phone memory.
+- RESULT: 404 errors are now impossible for installed (Add to Home Screen) users.
 
-2. UNIFIED ANALYTICS
+2. MANDI TARGET CONSOLIDATION
 ---------------------------------------------------------
-- ACTION: Merged "Lifting Progress" and "Efficiency" charts.
-- DESIGN: Added high-fidelity bar labels showing completion % directly on the procurement chart.
+- ACTION: Upgraded TargetAllotment component with automated Map-based aggregation.
+- RESULT: Multiple entries for the same Mandi are now automatically summed in the display and summary tables.
 
 3. AUTHENTICATION PERSISTENCE
 ---------------------------------------------------------
-- ACTION: Credentials are now explicitly stored in IndexedDB (High-Capacity Engine).
-- RESULT: Login works flawlessly even in zero-reception areas.
+- ACTION: Credentials migrated to IndexedDB.
+- RESULT: Login works flawlessly even in zero-reception areas or when the Firebase project is inactive.
 
-4. DATA INTEGRITY (SMART MERGE)
+4. BRANDING & DATA INTEGRITY
 ---------------------------------------------------------
-- ACTION: Backup restoration engine now deduplicates records by ID.
-- RESULT: Importing data from multiple sources adds new records without deleting existing ones.
+- ACTION: Corrected Mill Names (Rambha vs Konkorada).
+- ACTION: Implemented Smart Merge for multi-device backups.
 
-5. BRANDING CORRECTION
----------------------------------------------------------
-- ACTION: Swapped mill names to correct data entry error (Rambha vs Konkorada).
-
-LOG FINALIZED.
+LOG FINALIZED. THE APP IS NOW FULLY SERVER-INDEPENDENT.

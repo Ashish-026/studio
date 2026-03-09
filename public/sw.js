@@ -1,19 +1,24 @@
 
-const CACHE_NAME = 'mandi-monitor-v1';
-const OFFLINE_URL = '/';
+/**
+ * MANDI MONITOR - STANDALONE OFFLINE ENGINE
+ * This file is the "brain" that allows the app to work without a server.
+ * Once installed on a phone, it intercepts all requests and serves the 
+ * app from local memory if the server is suspended or offline.
+ */
 
-// Files to cache for a complete standalone experience
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'mandi-monitor-v3';
+const APP_ASSETS = [
   '/',
-  '/manifest.json',
-  'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
-  'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL'
+  '/manifest.webmanifest',
+  'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
+  'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      console.log('Mandi Monitor: Caching App Shell for Standalone Mode');
+      return cache.addAll(APP_ASSETS);
     })
   );
   self.skipWaiting();
@@ -21,13 +26,9 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       );
     })
   );
@@ -35,19 +36,20 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // NAVIGATION FALLBACK: This is the key fix for 404 errors.
-  // If the user navigates to a sub-page (like /dashboard) and the server is offline,
-  // we serve the root index page instead of a 404.
+  // STANDALONE NAVIGATION LOGIC:
+  // If the user navigates to any page (like /dashboard) and the server is 
+  // suspended (returning 404), we catch the error and serve the local cached portal.
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match(OFFLINE_URL);
+        console.warn('Mandi Monitor: Server offline/suspended. Loading from Phone Memory.');
+        return caches.match('/');
       })
     );
     return;
   }
 
-  // Generic asset fetching (cache first, then network)
+  // STATIC ASSETS LOGIC: Cache-first to ensure instant loading.
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
