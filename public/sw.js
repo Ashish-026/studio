@@ -1,28 +1,26 @@
-
 /**
- * MANDI MONITOR - OFFLINE SERVICE WORKER
- * This worker caches the application locally so it works even if the 
- * Firebase project is closed or the server is offline.
+ * MANDI MONITOR - SERVICE WORKER
+ * Enables True Server-Independent Mode.
+ * Caches all application assets locally on the device.
  */
 
-const CACHE_NAME = 'mandi-monitor-cache-v1';
-const OFFLINE_URL = '/';
+const CACHE_NAME = 'mandi-monitor-v1';
+const ASSETS_TO_CACHE = [
+  '/',
+  '/manifest.webmanifest',
+  'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
+  'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL',
+];
 
-// 1. Install & Cache Essential Shell
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([
-        OFFLINE_URL,
-        '/manifest.webmanifest',
-        'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL'
-      ]);
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
   self.skipWaiting();
 });
 
-// 2. Activate & Clear Old Caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -35,28 +33,27 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  self.clients.claim();
 });
 
-// 3. Fetch Strategy: Stale-While-Revalidate
-// Try to serve from cache first for instant speed, then update cache from network in background.
 self.addEventListener('fetch', (event) => {
-  // Skip cross-origin requests (like firestore APIs) if they fail, don't break the app
-  if (!event.request.url.startsWith(self.location.origin)) {
-    return;
-  }
+  // Only handle GET requests
+  if (event.request.method !== 'GET') return;
 
+  // Stale-while-revalidate strategy
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Update cache if we got a valid response
-        if (networkResponse && networkResponse.status === 200) {
+        // Cache the new response if it's a valid internal asset
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, networkResponse.clone());
+            cache.put(event.request, responseToCache);
           });
         }
         return networkResponse;
       }).catch(() => {
-        // If network fails (Server closed), we already returned cachedResponse or it's null
+        // If fetch fails (offline), return cached version if exists
         return cachedResponse;
       });
 

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -14,14 +13,17 @@ import { getFirestore } from 'firebase/firestore'
  */
 export function initializeFirebase() {
   try {
+    if (typeof window === 'undefined') {
+        return { firebaseApp: null as any, auth: null as any, firestore: null as any };
+    }
+
     if (!getApps().length) {
       let firebaseApp;
       try {
-        // Attempt to initialize via Firebase App Hosting environment variables
-        // If the project is closed, this will throw.
+        // Attempt to initialize. If the project is closed, this might throw.
         firebaseApp = initializeApp(firebaseConfig);
       } catch (e) {
-        console.warn("Firebase config rejected. Entering Offline-Only mode.");
+        console.warn("Firebase config rejected or project offline. Entering Local-Only mode.");
         return {
           firebaseApp: null as any,
           auth: null as any,

@@ -1,8 +1,9 @@
 'use client';
 
-import { createContext, useState, useEffect, useCallback, ReactNode, useMemo, useContext } from 'react';
+import { createContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
 import type { User as AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import * as db from '@/lib/db';
 
 const DEFAULT_CREDENTIALS = {
   admin: {
@@ -38,29 +39,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    const storedCreds = localStorage.getItem(CREDENTIALS_KEY);
-    if (storedCreds) {
+    const loadAuth = async () => {
       try {
-        setCredentials(JSON.parse(storedCreds));
-      } catch (e) {
-        console.error("Failed to load custom credentials", e);
-      }
-    }
+        // Use IndexedDB for more reliable storage in Standalone mode
+        const storedCreds = await db.getItem<any>(CREDENTIALS_KEY);
+        if (storedCreds && storedCreds.admin && storedCreds.user) {
+          setCredentials(storedCreds);
+        }
 
-    const sessionUser = sessionStorage.getItem(SESSION_KEY);
-    if (sessionUser) {
-      try {
-        setUser(JSON.parse(sessionUser));
-      } catch (e) {
-        sessionStorage.removeItem(SESSION_KEY);
+        const sessionUser = sessionStorage.getItem(SESSION_KEY);
+        if (sessionUser) {
+          try {
+            setUser(JSON.parse(sessionUser));
+          } catch (e) {
+            sessionStorage.removeItem(SESSION_KEY);
+          }
+        }
+      } catch (err) {
+        console.error("Auth initialization failed:", err);
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+    loadAuth();
   }, []);
 
   const login = useCallback((email: string, password?: string) => {
-    const isAdmin = credentials.admin.email === email && credentials.admin.password === password;
-    const isUser = credentials.user.email === email && credentials.user.password === password;
+    if (!email || !password) {
+        toast({ title: 'Missing Info', description: 'Please enter both email and password.', variant: 'destructive' });
+        return;
+    }
+
+    // CASE-INSENSITIVE & ROBUST CHECKS
+    const inputEmail = email.toLowerCase().trim();
+    const inputPassword = password.trim();
+
+    const isAdmin = credentials.admin.email.toLowerCase() === inputEmail && credentials.admin.password === inputPassword;
+    const isUser = credentials.user.email.toLowerCase() === inputEmail && credentials.user.password === inputPassword;
     
     if (isAdmin) {
       const u = credentials.admin.user;
@@ -75,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       toast({
         title: 'Login Failed',
-        description: 'Incorrect email or password.',
+        description: 'Incorrect email or password. Please check the Access Keys in Settings.',
         variant: 'destructive',
       });
     }
@@ -87,21 +102,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Logged Out', description: 'Session closed successfully.' });
   }, [toast]);
 
-  const updateCredentials = useCallback((role: 'admin' | 'user', newEmail: string, newPassword?: string) => {
-    setCredentials(prev => {
-      const updated = {
-        ...prev,
-        [role]: {
-          ...prev[role],
-          email: newEmail,
-          password: newPassword || prev[role].password
-        }
-      };
-      localStorage.setItem(CREDENTIALS_KEY, JSON.stringify(updated));
-      return updated;
-    });
+  const updateCredentials = useCallback(async (role: 'admin' | 'user', newEmail: string, newPassword?: string) => {
+    const updated = {
+      ...credentials,
+      [role]: {
+        ...credentials[role],
+        email: newEmail.toLowerCase().trim(),
+        password: newPassword || credentials[role].password
+      }
+    };
+    setCredentials(updated);
+    await db.setItem(CREDENTIALS_KEY, updated);
     toast({ title: 'Success', description: `${role.toUpperCase()} credentials updated successfully.` });
-  }, [toast]);
+  }, [credentials, toast]);
 
   const contextValue = useMemo(() => ({
     user,
