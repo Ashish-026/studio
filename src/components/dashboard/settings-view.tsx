@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -9,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, Info, Smartphone, HardDrive, Cpu, CloudOff } from 'lucide-react';
+import { ShieldCheck, User as UserIcon, AlertTriangle, RefreshCcw, Download, Upload, Info, Smartphone, HardDrive, Cpu, CloudOff, Eye, Key } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRef, useState, useEffect } from 'react';
@@ -28,10 +27,11 @@ const settingsSchema = z.object({
 });
 
 export default function SettingsPage() {
-  const { user, updateCredentials } = useAuth();
+  const { user, updateCredentials, credentials } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [storageUsage, setStorageUsage] = useState({ used: 0, percent: 0 });
+  const [showPasswords, setShowPasswords] = useState(false);
   
   useEffect(() => {
     const calculateUsage = async () => {
@@ -186,6 +186,65 @@ export default function SettingsPage() {
         </TooltipProvider>
       </div>
 
+      {/* CREDENTIAL VISIBILITY PANEL */}
+      <Card className="border-accent/30 bg-accent/5 shadow-md">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-accent-foreground" />
+              <CardTitle>Access Keys Summary</CardTitle>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-lg h-8 border-accent/20 bg-white"
+              onClick={() => setShowPasswords(!showPasswords)}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              {showPasswords ? 'Hide Passwords' : 'Show Passwords'}
+            </Button>
+          </div>
+          <CardDescription className="text-accent-foreground/70">Current active credentials for this device.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-4 rounded-2xl bg-white border border-accent/10 space-y-3">
+              <div className="flex items-center gap-2 mb-1">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <span className="text-sm font-black uppercase tracking-wider text-primary">Administrator</span>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold opacity-50 uppercase">Login ID (Email)</p>
+                <p className="text-sm font-mono font-bold">{credentials.admin.email}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold opacity-50 uppercase">Current Password</p>
+                <p className="text-sm font-mono font-bold text-accent-foreground">
+                  {showPasswords ? credentials.admin.password : '••••••••'}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-accent/10 space-y-3">
+              <div className="flex items-center gap-2 mb-1">
+                <UserIcon className="h-4 w-4 text-primary" />
+                <span className="text-sm font-black uppercase tracking-wider text-primary">Staff Member</span>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold opacity-50 uppercase">Login ID (Email)</p>
+                <p className="text-sm font-mono font-bold">{credentials.user.email}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold opacity-50 uppercase">Current Password</p>
+                <p className="text-sm font-mono font-bold text-accent-foreground">
+                  {showPasswords ? credentials.user.password : '••••••••'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-8 md:grid-cols-2">
         <Card className="border-primary/10 shadow-sm">
           <CardHeader>
@@ -271,7 +330,7 @@ export default function SettingsPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary" />
-              <CardTitle>Admin Credentials</CardTitle>
+              <CardTitle>Update Admin Credentials</CardTitle>
             </div>
             <CardDescription>Update the master administrator login details.</CardDescription>
           </CardHeader>
@@ -297,7 +356,7 @@ export default function SettingsPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <UserIcon className="h-5 w-5 text-primary" />
-              <CardTitle>Staff Credentials</CardTitle>
+              <CardTitle>Update Staff Credentials</CardTitle>
             </div>
             <CardDescription>Update the login for regular staff users.</CardDescription>
           </CardHeader>

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
+import { createContext, useState, useEffect, useCallback, ReactNode, useMemo, useContext } from 'react';
 import type { User as AppUser } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,6 +19,7 @@ const DEFAULT_CREDENTIALS = {
 
 interface AuthContextType {
   user: AppUser | null;
+  credentials: typeof DEFAULT_CREDENTIALS;
   login: (email: string, password?: string) => void;
   logout: () => void;
   updateCredentials: (role: 'admin' | 'user', newEmail: string, newPassword?: string) => void;
@@ -104,11 +105,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const contextValue = useMemo(() => ({
     user,
+    credentials,
     login,
     logout,
     updateCredentials,
     loading
-  }), [user, login, logout, updateCredentials, loading]);
+  }), [user, credentials, login, logout, updateCredentials, loading]);
 
   return (
     <AuthContext.Provider value={contextValue}>
