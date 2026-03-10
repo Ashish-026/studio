@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -396,7 +397,7 @@ export function PaddyLifted() {
                         <FormItem>
                           <FormLabel>Total Weight (Actual Qtl)</FormLabel>
                             <div className="flex items-center gap-2">
-                              <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} className="rounded-xl h-12" /></FormControl>
+                              <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl>
                               <Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)} className="h-12 w-12 rounded-xl border-primary/20 hover:bg-primary/5"><Calculator className="h-5 w-5 text-primary" /></Button>
                             </div>
                           <FormMessage />
@@ -406,7 +407,7 @@ export function PaddyLifted() {
                         <FormItem>
                           <FormLabel>Considered Mandi Qtl (FAQ)</FormLabel>
                           <FormControl>
-                            <Input type="number" step="0.01" placeholder="0.00" {...field} className="rounded-xl h-12 bg-primary/5 border-primary/20 font-bold text-primary" />
+                            <Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12 bg-primary/5 border-primary/20 font-bold text-primary" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -428,7 +429,7 @@ export function PaddyLifted() {
                                 <FormItem><FormLabel>Token Number</FormLabel><FormControl><Input placeholder="Token ID" {...field} className="rounded-xl" /></FormControl></FormItem>
                             )} />
                             <FormField control={physicalForm.control} name="mandiTokenLimit" render={({ field }) => (
-                                <FormItem><FormLabel>Mandi Token Limit (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Limit" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                <FormItem><FormLabel>Mandi Token Limit (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Limit" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
                             )} />
                             {isOverflowEnabled && (
                                 <>
@@ -439,7 +440,7 @@ export function PaddyLifted() {
                                         </div>
                                     </FormItem>
                                     <FormField control={physicalForm.control} name="privateOverflowRate" render={({ field }) => (
-                                        <FormItem><FormLabel>Private Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Rate" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                        <FormItem><FormLabel>Private Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Rate" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
                                     )} />
                                 </>
                             )}
@@ -470,7 +471,7 @@ export function PaddyLifted() {
                                     <FormItem><FormLabel>Agency</FormLabel><FormControl><Input placeholder="Owner Name" {...field} className="rounded-xl" /></FormControl></FormItem>
                                 )} />
                                 <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (
-                                    <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="0" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="0" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
                                 )} />
                             </>
                            )}
@@ -561,7 +562,7 @@ export function PaddyLifted() {
             <Form {...(editingEntry?.entryType === 'monetary' ? monetaryForm : physicalForm)}>
                 <form onSubmit={(editingEntry?.entryType === 'monetary' ? monetaryForm : physicalForm).handleSubmit(editingEntry?.entryType === 'monetary' ? onMonetarySubmit as any : onPhysicalSubmit as any)} className="space-y-4">
                     <FormField control={(editingEntry?.entryType === 'monetary' ? monetaryForm : physicalForm).control} name="mandiWeight" render={({ field }) => (
-                        <FormItem><FormLabel>Mandi Weight (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Mandi Weight (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
                     )} />
                     <Button type="submit" className="w-full bg-primary text-white h-12 rounded-xl font-bold">Save Updates</Button>
                 </form>

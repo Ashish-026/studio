@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, forwardRef } from 'react';
@@ -417,16 +418,16 @@ export function PrivatePurchases() {
                         <FormItem>
                           <FormLabel>Net Quantity (Qtl)</FormLabel>
                             <FormControl>
-                              <Input type="number" step="0.01" placeholder="150" {...field} className="bg-primary/5 font-bold text-primary" />
+                              <Input type="number" step="0.01" placeholder="150" {...field} onFocus={(e) => e.target.select()} className="bg-primary/5 font-bold text-primary" />
                             </FormControl>
                           <FormMessage />
                         </FormItem>
                       )} />
                       <FormField control={purchaseForm.control} name="rate" render={({ field }) => (
-                        <FormItem><FormLabel>Rate (₹ per Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="2000" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Rate (₹ per Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="2000" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={purchaseForm.control} name="initialPayment" render={({ field }) => (
-                        <FormItem><FormLabel>Initial Amount Paid (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="50000" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Initial Amount Paid (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="50000" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
                     
@@ -478,7 +479,7 @@ export function PrivatePurchases() {
                                     <FormItem><FormLabel>Owner/Agency</FormLabel><FormControl><Input placeholder="Gupta Transports" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={purchaseForm.control} name="tripCharge" render={({ field }) => (
-                                    <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={purchaseForm.control} name="source" render={({ field }) => (
                                     <FormItem><FormLabel>Source</FormLabel><FormControl><Input placeholder="Source location" {...field} /></FormControl><FormMessage /></FormItem>
@@ -497,10 +498,10 @@ export function PrivatePurchases() {
                         <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField control={purchaseForm.control} name="numberOfLabours" render={({ field }) => (
-                                <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={purchaseForm.control} name="labourCharge" render={({ field }) => (
-                                <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 400" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 400" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                             )} />
                         </div>
                         {fields.map((field, index) => (
@@ -637,7 +638,7 @@ export function PrivatePurchases() {
               <Form {...paymentForm}>
                   <form onSubmit={paymentForm.handleSubmit(onPaymentSubmit)} className="space-y-4">
                       <FormField control={paymentForm.control} name="amount" render={({ field }) => (
-                          <FormItem><FormLabel>Payment Amount (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Enter amount" {...field} /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel>Payment Amount (₹)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Enter amount" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Record Payment</Button>
                   </form>

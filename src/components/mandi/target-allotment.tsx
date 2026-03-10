@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -187,7 +188,7 @@ export function TargetAllotment() {
                 <FormField control={form.control} name="target" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Target (Quintals)</FormLabel>
-                    <FormControl><Input type="number" placeholder="5000" {...field} className="rounded-xl h-12" /></FormControl>
+                    <FormControl><Input type="number" placeholder="5000" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -367,7 +368,7 @@ export function TargetAllotment() {
                     <FormField control={form.control} name="target" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Target (Quintals)</FormLabel>
-                        <FormControl><Input type="number" {...field} className="rounded-xl h-12" /></FormControl>
+                        <FormControl><Input type="number" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl>
                         <FormMessage />
                     </FormItem>
                     )} />

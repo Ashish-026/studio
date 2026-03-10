@@ -1,44 +1,43 @@
+
 /**
  * MANDI MONITOR - STANDALONE OFFLINE ENGINE
- * This file saves the app code to the phone's memory to allow
- * launching from the home screen with ZERO internet.
+ * Version: 8.0
+ * Strategy: Cache-First with Navigation Interceptor
  */
 
-const CACHE_NAME = 'mandi-monitor-v8';
+const CACHE_NAME = 'mandi-monitor-engine-v8';
 const OFFLINE_URL = '/';
 
-// 1. Install: Save core app files to memory
+const INITIAL_ASSETS = [
+  '/',
+  '/manifest.json',
+  'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
+  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
+];
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([
-        OFFLINE_URL,
-        '/manifest.json',
-        'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
-        'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
-      ]);
+      console.log('Mandi Monitor: Storing app shell in memory...');
+      return cache.addAll(INITIAL_ASSETS);
     })
   );
   self.skipWaiting();
 });
 
-// 2. Activate: Clean up old versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
       );
     })
   );
   self.clients.claim();
 });
 
-// 3. Fetch: Intercept launch requests and serve from memory
 self.addEventListener('fetch', (event) => {
-  // Catch navigation requests (opening the app)
+  // 1. NAVIGATION INTERCEPTOR: Prevents "You are offline" launch errors
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -48,20 +47,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Catch asset requests (scripts, styles, icons)
+  // 2. ASSET HANDLER: Serves images and code from local storage
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).then((fetchRes) => {
-        // Automatically save new assets to memory as they are loaded
-        if (fetchRes.status === 200 && fetchRes.type === 'basic') {
-          const resClone = fetchRes.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      return fetch(event.request).then((networkResponse) => {
+        // Store new code/assets as they are downloaded
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-        return fetchRes;
+        return networkResponse;
       }).catch(() => {
-        // Silent fallback for images
+        // Fallback for missing images
         if (event.request.destination === 'image') {
-          return caches.match('https://placehold.co/32x32/0b3d1e/ffffff.png?text=M');
+          return caches.match('https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL');
         }
       });
     })
