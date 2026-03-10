@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -15,14 +14,13 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
-import { PlusCircle, Calendar as CalendarIcon, Car, Users, Edit } from 'lucide-react';
+import { PlusCircle, Calendar as CalendarIcon, Car, Users, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Separator } from '../ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import type { MandiStockRelease } from '@/lib/types';
 
 const labourDetailsSchema = z.object({
@@ -50,18 +48,16 @@ const supplySchema = z.object({
     }
     return true;
 }, {
-    message: "Vehicle number, driver, owner, and a positive trip charge are required for hired vehicles.",
+    message: "Hired vehicle details are incomplete.",
     path: ['tripCharge'],
 });
 
 export function MandiSupply() {
-  const { availableRiceForSupply, stockReleases, addStockRelease, updateStockRelease } = useMandiData();
+  const { availableRiceForSupply, stockReleases, addStockRelease, deleteStockRelease } = useMandiData();
   const { addVehicle, addTrip } = useVehicleData();
   const { labourers, addGroupWorkEntry } = useLabourData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<MandiStockRelease | null>(null);
-  const [isEditDialogOpen, setEditDialogOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const supplyForm = useForm<z.infer<typeof supplySchema>>({
@@ -84,7 +80,7 @@ export function MandiSupply() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, replace } = useFieldArray({
     control: supplyForm.control,
     name: "labourerIds"
   });
@@ -92,46 +88,15 @@ export function MandiSupply() {
   const numberOfLabours = supplyForm.watch('numberOfLabours');
   const selectedLabourerIds = supplyForm.watch('labourerIds').map(l => l.value);
 
+  // Hardened worker selection logic using 'replace' to prevent recursive loops
   useEffect(() => {
-    if (editingEntry) {
-        supplyForm.reset({
-            date: new Date(editingEntry.date),
-            lotNumber: editingEntry.lotNumber,
-            godownDetails: editingEntry.godownDetails,
-            quantity: editingEntry.quantity,
-            vehicleType: editingEntry.vehicleType,
-            vehicleNumber: editingEntry.vehicleNumber,
-            driverName: editingEntry.driverName,
-            ownerName: editingEntry.ownerName,
-            tripCharge: editingEntry.tripCharge,
-            source: editingEntry.source,
-            destination: editingEntry.destination,
-            numberOfLabours: editingEntry.labourerIds?.length || 0,
-            labourerIds: editingEntry.labourerIds?.map(id => ({ value: id })) || [],
-            labourCharge: editingEntry.labourCharge || 0,
-        });
-    }
-  }, [editingEntry, supplyForm]);
+    const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
+    if (fields.length === targetCount) return;
 
-  // HARDENED FIELD MANAGEMENT: Uses a single processing step to prevent infinite loops
-  useEffect(() => {
-    const targetCount = parseInt(String(numberOfLabours || 0));
-    const currentCount = fields.length;
-    
-    if (targetCount === currentCount) return;
-
-    if (targetCount > currentCount) {
-      const diff = targetCount - currentCount;
-      for (let i = 0; i < diff; i++) {
-        append({ value: '' });
-      }
-    } else {
-      const diff = currentCount - targetCount;
-      for (let i = 0; i < diff; i++) {
-        remove(currentCount - 1 - i);
-      }
-    }
-  }, [numberOfLabours, fields.length, append, remove]);
+    const currentValues = supplyForm.getValues('labourerIds') || [];
+    const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
+    replace(nextFields);
+  }, [numberOfLabours, replace, supplyForm]);
 
 
   const vehicleType = supplyForm.watch('vehicleType');
@@ -146,10 +111,7 @@ export function MandiSupply() {
   const formatNumber = (num: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num);
 
   function onSupplySubmit(values: z.infer<typeof supplySchema>) {
-    const originalQuantity = editingEntry ? editingEntry.quantity : 0;
-    const stockAvailableForOperation = (availableRiceForSupply || 0) + originalQuantity;
-
-    if(values.quantity > stockAvailableForOperation) {
+    if(values.quantity > (availableRiceForSupply || 0)) {
         supplyForm.setError('quantity', { message: `Exceeds available rice stock of ${formatNumber(availableRiceForSupply)} Qtl` });
         return;
     }
@@ -157,50 +119,42 @@ export function MandiSupply() {
     const labourerIds = values.labourerIds.map(l => l.value).filter(Boolean);
     const submissionValues = { ...values, labourerIds };
 
-    if (editingEntry) {
-        updateStockRelease(editingEntry.id, submissionValues);
-        toast({ title: 'Success!', description: 'Supply record updated.' });
-    } else {
-        addStockRelease(submissionValues);
-        toast({ title: 'Success!', description: 'Rice supply recorded.' });
+    addStockRelease(submissionValues);
+    toast({ title: 'Success!', description: 'Rice supply recorded.' });
 
-        if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
-            const vehicleId = addVehicle({
-                vehicleNumber: submissionValues.vehicleNumber,
-                driverName: submissionValues.driverName || '',
-                ownerName: submissionValues.ownerName || '',
-                rentType: 'per_trip',
-                rentAmount: 0,
+    if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
+        const vehicleId = addVehicle({
+            vehicleNumber: submissionValues.vehicleNumber,
+            driverName: submissionValues.driverName || '',
+            ownerName: submissionValues.ownerName || '',
+            rentType: 'per_trip',
+            rentAmount: 0,
+        });
+
+        if (vehicleId) {
+            addTrip(vehicleId, {
+                source: submissionValues.source || 'Mill', 
+                destination: submissionValues.destination || submissionValues.godownDetails,
+                quantity: submissionValues.quantity,
+                tripCharge: submissionValues.tripCharge,
             });
-
-            if (vehicleId) {
-                addTrip(vehicleId, {
-                    source: submissionValues.source || 'Mill', 
-                    destination: submissionValues.destination || submissionValues.godownDetails,
-                    quantity: submissionValues.quantity,
-                    tripCharge: submissionValues.tripCharge,
-                });
-            }
         }
-        
-        if (labourerIds.length > 0 && values.labourCharge > 0) {
-            addGroupWorkEntry(labourerIds, values.labourCharge, `Rice supply to ${values.godownDetails}`, values.quantity);
-        }
+    }
+    
+    if (labourerIds.length > 0 && values.labourCharge > 0) {
+        addGroupWorkEntry(labourerIds, values.labourCharge, `Rice supply to ${values.godownDetails}`, values.quantity);
     }
 
     supplyForm.reset();
     setShowForm(false);
-    setEditDialogOpen(false);
-    setEditingEntry(null);
   }
 
-  const handleEditClick = (entry: MandiStockRelease) => {
-    setEditingEntry(entry);
-    setEditDialogOpen(true);
+  const handleDelete = (id: string) => {
+    deleteStockRelease(id);
+    toast({ title: 'Deleted', description: 'Supply record has been removed.' });
   };
 
   return (
-    <>
     <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
@@ -324,7 +278,7 @@ export function MandiSupply() {
                                     <TableCell>{s.godownDetails}</TableCell>
                                     <TableCell className="text-right font-medium">{formatNumber(s.quantity)}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="sm" onClick={() => handleEditClick(s)}><Edit className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleDelete(s.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -335,16 +289,5 @@ export function MandiSupply() {
         </div>
       </CardContent>
     </Card>
-
-    <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent><DialogHeader><DialogTitle>Edit Supply</DialogTitle></DialogHeader>
-            <Form {...supplyForm}><form onSubmit={supplyForm.handleSubmit(onSupplySubmit)} className="space-y-4">
-                <FormField control={supplyForm.control} name="quantity" render={({ field }) => (
-                    <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
-                )} /><Button type="submit" className="w-full bg-accent hover:bg-accent/90">Save</Button>
-            </form></Form>
-        </DialogContent>
-    </Dialog>
-    </>
   );
 }

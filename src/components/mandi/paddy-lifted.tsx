@@ -146,14 +146,15 @@ export function PaddyLifted() {
   const vehicleType = physicalForm.watch('vehicleType');
   const watchedBagWeights = physicalForm.watch('individualBagWeights');
 
-  // Hardened worker selection logic to prevent rendering loops
+  // Hardened worker selection logic using 'replace' to prevent recursive rendering loops
   useEffect(() => {
-    const target = Math.max(0, parseInt(String(numberOfLabours || 0)));
-    if (fields.length === target) return;
+    const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
+    if (fields.length === targetCount) return;
     
-    const nextFields = Array.from({ length: target }, (_, i) => fields[i] || { value: '' });
+    const currentValues = physicalForm.getValues('labourerIds') || [];
+    const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
     replace(nextFields);
-  }, [numberOfLabours, replace, fields]);
+  }, [numberOfLabours, replace, physicalForm]);
 
   const overflowQuantity = useMemo(() => {
     const mw = parseFloat(String(mandiWeight || 0));
@@ -489,7 +490,7 @@ export function PaddyLifted() {
                               <TableCell className="text-right">
                                 <div className="flex gap-2 justify-end">
                                     <Button variant="outline" size="sm" onClick={() => handleDownloadSlip(item)} className="rounded-lg h-8 px-2 border-primary/20 hover:bg-primary/5 hover:text-primary">
-                                        <FileText className="h-3.5 w-3.5 mr-1" /> Slip
+                                        <DownloadIcon className="h-3.5 w-3.5 mr-1" /> Slip
                                     </Button>
                                     <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(item.id)} className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10">
                                         <Trash2 className="h-4 w-4" />

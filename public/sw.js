@@ -1,25 +1,26 @@
 /**
- * MANDI MONITOR - STANDALONE OFFLINE ENGINE
- * Strategy: Cache-First with Network Fallback
+ * MANDI MONITOR - OFFLINE STANDALONE ENGINE (v12)
+ * Ensures the app loads from phone memory without a server connection.
  */
 
 const CACHE_NAME = 'mandi-monitor-v12';
-const OFFLINE_URL = '/';
+const APP_FILES = [
+  '/',
+  '/manifest.json',
+  '/favicon.ico',
+];
 
+// 1. INSTALLATION: Save the app code to local phone memory
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([
-        '/',
-        '/manifest.json',
-        'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
-        'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
-      ]);
+      return cache.addAll(APP_FILES);
     })
   );
   self.skipWaiting();
 });
 
+// 2. ACTIVATION: Clean up old versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -31,36 +32,22 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// 3. FETCH INTERCEPTOR: Serve from memory if offline
 self.addEventListener('fetch', (event) => {
-  // Navigation interceptor: Force everything to the root for single-page stability
+  // NAVIGATION FALLBACK: If user opens a sub-page while offline, serve the main app
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(OFFLINE_URL))
+      fetch(event.request).catch(() => {
+        return caches.match('/');
+      })
     );
     return;
   }
 
-  // Assets and Chunks: Cache-First
+  // STANDARD ASSET CACHING
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
-        }
-
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          if (event.request.method === 'GET') {
-            cache.put(event.request, responseToCache);
-          }
-        });
-
-        return networkResponse;
-      }).catch(() => {
-        // Silent fallback for missing assets while offline
-      });
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
     })
   );
 });

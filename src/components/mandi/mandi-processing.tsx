@@ -42,7 +42,7 @@ export function MandiProcessing() {
     defaultValues: { paddyUsed: 0, riceYield: 0, branYield: 0, brokenRiceYield: 0, numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount' }
   });
   
-  const { fields, append, remove } = useFieldArray({
+  const { fields, replace } = useFieldArray({
     control: processingForm.control,
     name: "labourerIds"
   });
@@ -50,22 +50,15 @@ export function MandiProcessing() {
   const numberOfLabours = processingForm.watch('numberOfLabours');
   const selectedLabourerIds = processingForm.watch('labourerIds').map(l => l.value);
 
+  // Use replace to avoid recursive state updates and loops
   useEffect(() => {
-    const target = Math.max(0, parseInt(String(numberOfLabours)) || 0);
-    const current = fields.length;
-    if (target === current) return;
+    const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
+    if (fields.length === targetCount) return;
 
-    if (target > current) {
-      const diff = target - current;
-      const newItems = Array(diff).fill({ value: '' });
-      append(newItems);
-    } else {
-      const diff = current - target;
-      for (let i = 0; i < diff; i++) {
-        remove(current - 1 - i);
-      }
-    }
-  }, [numberOfLabours, fields.length, append, remove]);
+    const currentValues = processingForm.getValues('labourerIds') || [];
+    const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
+    replace(nextFields);
+  }, [numberOfLabours, replace, processingForm]);
 
 
   const availablePaddy = useMemo(() => {

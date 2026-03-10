@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, forwardRef } from 'react';
@@ -115,19 +114,18 @@ export function PrivatePurchases() {
     },
   });
   
-  const { fields, append, remove } = useFieldArray({ control: purchaseForm.control, name: "labourerIds" });
+  const { fields, replace } = useFieldArray({ control: purchaseForm.control, name: "labourerIds" });
   const numberOfLabours = purchaseForm.watch('numberOfLabours');
 
+  // Hardened worker selection logic using 'replace' to prevent loops
   useEffect(() => {
-    const target = Math.max(0, parseInt(String(numberOfLabours || 0)));
-    const current = fields.length;
-    if (target === current) return;
-    if (target > current) {
-      append(Array(target - current).fill({ value: '' }));
-    } else {
-      for (let i = current; i > target; i--) remove(i - 1);
-    }
-  }, [numberOfLabours, fields.length, append, remove]);
+    const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
+    if (fields.length === targetCount) return;
+
+    const currentValues = purchaseForm.getValues('labourerIds') || [];
+    const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
+    replace(nextFields);
+  }, [numberOfLabours, replace, purchaseForm]);
 
   const vehicleType = purchaseForm.watch('vehicleType');
   const farmerNameValue = purchaseForm.watch('farmerName');
