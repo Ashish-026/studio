@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -94,7 +95,7 @@ export function MandiSupply() {
   useEffect(() => {
     if (editingEntry) {
         supplyForm.reset({
-            date: editingEntry.date,
+            date: new Date(editingEntry.date),
             lotNumber: editingEntry.lotNumber,
             godownDetails: editingEntry.godownDetails,
             quantity: editingEntry.quantity,
@@ -112,13 +113,23 @@ export function MandiSupply() {
     }
   }, [editingEntry, supplyForm]);
 
-  // FIXED: Field management moved from useMemo to useEffect to prevent Memory Glitch crash
+  // HARDENED FIELD MANAGEMENT: Uses a single processing step to prevent infinite loops
   useEffect(() => {
+    const targetCount = parseInt(String(numberOfLabours || 0));
     const currentCount = fields.length;
-    if (numberOfLabours > currentCount) {
-      append({ value: '' });
-    } else if (numberOfLabours < currentCount && currentCount > 0) {
-      remove(currentCount - 1);
+    
+    if (targetCount === currentCount) return;
+
+    if (targetCount > currentCount) {
+      const diff = targetCount - currentCount;
+      for (let i = 0; i < diff; i++) {
+        append({ value: '' });
+      }
+    } else {
+      const diff = currentCount - targetCount;
+      for (let i = 0; i < diff; i++) {
+        remove(currentCount - 1 - i);
+      }
     }
   }, [numberOfLabours, fields.length, append, remove]);
 
@@ -254,7 +265,7 @@ export function MandiSupply() {
                            {vehicleType === 'hired' && (
                             <>
                                 <FormField control={supplyForm.control} name="vehicleNumber" render={({ field }) => (
-                                    <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
+                                    <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
                                 )} />
                                 <FormField control={supplyForm.control} name="tripCharge" render={({ field }) => (
                                     <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
@@ -270,7 +281,7 @@ export function MandiSupply() {
                         <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField control={supplyForm.control} name="numberOfLabours" render={({ field }) => (
-                                <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
+                                <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
                             )} />
                             <FormField control={supplyForm.control} name="labourCharge" render={({ field }) => (
                                 <FormItem><FormLabel>Total Charge (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
@@ -306,9 +317,9 @@ export function MandiSupply() {
                         {(stockReleases || []).length === 0 ? (
                             <TableRow><TableCell colSpan={5} className="text-center h-24">No supply history.</TableCell></TableRow>
                         ) : (
-                            [...stockReleases].sort((a, b) => b.date.getTime() - a.date.getTime()).map(s => (
+                            [...stockReleases].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(s => (
                                 <TableRow key={s.id}>
-                                    <TableCell>{format(s.date, 'dd MMM yy')}</TableCell>
+                                    <TableCell>{format(new Date(s.date), 'dd MMM yy')}</TableCell>
                                     <TableCell>{s.lotNumber}</TableCell>
                                     <TableCell>{s.godownDetails}</TableCell>
                                     <TableCell className="text-right font-medium">{formatNumber(s.quantity)}</TableCell>

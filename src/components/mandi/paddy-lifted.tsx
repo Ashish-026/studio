@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -7,7 +8,6 @@ import * as z from 'zod';
 import { useMandiData } from '@/context/mandi-context';
 import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
-import { useStockData } from '@/context/stock-data-bridge'; // Use high-fidelity stock bridge if needed, else fallback
 import { useStockData as useMainStockData } from '@/context/stock-context';
 import { useMill } from '@/hooks/use-mill';
 import { PlusCircle, DollarSign, Download, Edit, Car, Users, Calculator, Calendar as CalendarIcon, Info, FileText, X } from 'lucide-react';
@@ -103,8 +103,8 @@ export function PaddyLifted() {
       .filter(item => selectedMandi === 'All' || item.mandiName === selectedMandi)
       .filter(item => item.entryType === 'physical' || !item.entryType)
       .sort((a,b) => {
-        const dateA = a.date instanceof Date ? a.date.getTime() : 0;
-        const dateB = b.date instanceof Date ? b.date.getTime() : 0;
+        const dateA = new Date(a.date).getTime() || 0;
+        const dateB = new Date(b.date).getTime() || 0;
         return dateB - dateA;
       }), 
   [paddyLiftedItems, selectedMandi]);
@@ -132,17 +132,27 @@ export function PaddyLifted() {
   const mandiWeight = physicalForm.watch('mandiWeight');
   const tokenLimit = physicalForm.watch('mandiTokenLimit');
   const isOverflowEnabled = physicalForm.watch('isPrivateOverflow');
+  const numberOfLabours = physicalForm.watch('numberOfLabours');
 
-  // FIXED: Field management moved from useMemo to useEffect to prevent Memory Glitch crash
+  // HARDENED FIELD MANAGEMENT: Uses a single processing step to prevent infinite loops
   useEffect(() => {
+    const targetCount = parseInt(String(numberOfLabours || 0));
     const currentCount = fields.length;
-    const targetCount = physicalForm.watch('numberOfLabours');
+    
+    if (targetCount === currentCount) return;
+
     if (targetCount > currentCount) {
-      append({ value: '' });
-    } else if (targetCount < currentCount && currentCount > 0) {
-      remove(currentCount - 1);
+      const diff = targetCount - currentCount;
+      for (let i = 0; i < diff; i++) {
+        append({ value: '' });
+      }
+    } else {
+      const diff = currentCount - targetCount;
+      for (let i = 0; i < diff; i++) {
+        remove(currentCount - 1 - i);
+      }
     }
-  }, [physicalForm.watch('numberOfLabours'), fields.length, append, remove]);
+  }, [numberOfLabours, fields.length, append, remove]);
 
   const overflowQuantity = useMemo(() => {
     const mw = parseFloat(String(mandiWeight || 0));
@@ -224,13 +234,14 @@ export function PaddyLifted() {
     if (entry.entryType === 'monetary') {
       monetaryForm.reset({
         mandiName: entry.mandiName, moneyReceived: entry.moneyReceived || 0,
-        ratePerQuintal: entry.ratePerQuintal || 0, date: entry.date
+        ratePerQuintal: entry.ratePerQuintal || 0, date: new Date(entry.date)
       });
       setShowMonetaryForm(true);
       setShowPhysicalForm(false);
     } else {
       physicalForm.reset({
         ...entry,
+        date: new Date(entry.date),
         mandiTokenLimit: entry.mandiTokenLimit || 0,
         privateOverflowRate: entry.privateOverflowRate || 0,
         labourerIds: entry.labourerIds?.map(id => ({ value: id })) || [],
@@ -251,7 +262,14 @@ export function PaddyLifted() {
     setShowPhysicalForm(false);
     setShowMonetaryForm(false);
     setEditingEntry(null);
-    physicalForm.reset();
+    physicalForm.reset({
+        mandiName: '', farmerName: '', vehicleType: 'farmer', destination: 'Mill',
+        totalPaddyReceived: 0, mandiWeight: 0, date: new Date(), calculationMethod: 'uniform',
+        isPrivateOverflow: false, privateOverflowRate: 0, mandiTokenLimit: 0,
+        tokenNumber: '', description: '', vehicleNumber: '', driverName: '',
+        ownerName: '', tripCharge: 0, source: '', numberOfLabours: 0,
+        labourerIds: [], labourCharge: 0, labourWageType: 'total_amount', individualBagWeights: [],
+    });
     monetaryForm.reset();
   };
 
@@ -411,6 +429,30 @@ export function PaddyLifted() {
                           </div>
                       </div>
 
+                      <div className="space-y-6">
+                          <h3 className="text-md font-bold flex items-center gap-2 text-primary opacity-80"><Users className="h-5 w-5" /> Labour Selection</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <FormField control={physicalForm.control} name="numberOfLabours" render={({ field }) => (
+                                  <FormItem><FormLabel>Number of Workers</FormLabel><FormControl><Input type="number" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                              )} />
+                              <FormField control={physicalForm.control} name="labourCharge" render={({ field }) => (
+                                  <FormItem><FormLabel>Total Loading Wage (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                              )} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {fields.map((field, index) => (
+                                  <FormField key={field.id} control={physicalForm.control} name={`labourerIds.${index}.value`} render={({ field }) => (
+                                      <FormItem>
+                                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                              <FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select worker..." /></SelectTrigger></FormControl>
+                                              <SelectContent>{(labourers || []).map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
+                                          </Select>
+                                      </FormItem>
+                                  )} />
+                              ))}
+                          </div>
+                      </div>
+
                       <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl font-bold text-lg shadow-xl shadow-primary/20">
                         {editingEntry ? 'Update Record' : 'Confirm Procurement Arrival'}
                       </Button>
@@ -459,14 +501,14 @@ export function PaddyLifted() {
                         physicalEntries.map((item) => (
                           <TableRow key={item.id} className="hover:bg-primary/5 transition-colors">
                               <TableCell className="font-mono text-[10px] text-muted-foreground">#{item.id.slice(-6)}</TableCell>
-                              <TableCell className="text-xs">{isValid(item.date) ? format(item.date, 'dd MMM yy') : 'N/A'}</TableCell>
+                              <TableCell className="text-xs">{isValid(new Date(item.date)) ? format(new Date(item.date), 'dd MMM yy') : 'N/A'}</TableCell>
                               <TableCell>
                                   <div className="flex flex-col">
                                       <span className="font-bold text-primary">{item.farmerName}</span>
                                       <span className="text-[10px] uppercase font-medium opacity-60">{item.mandiName} {item.tokenNumber && `| TOKEN: ${item.tokenNumber}`}</span>
                                   </div>
                               </TableCell>
-                              <TableCell className="text-right font-black text-primary">{item.mandiWeight.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
+                              <TableCell className="text-right font-black text-primary">{Number(item.mandiWeight).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
                               <TableCell className="text-right">
                                 <div className="flex gap-2 justify-end">
                                     <Button variant="outline" size="sm" onClick={() => handleDownloadSlip(item)} className="rounded-lg h-8 px-2 border-primary/20 hover:bg-primary/5 hover:text-primary">
@@ -495,7 +537,7 @@ export function PaddyLifted() {
         <BagWeightCalculator 
           onConfirm={handleCalculatorConfirm} 
           onCancel={() => setCalculatorOpen(false)} 
-          initialBagWeights={physicalForm.watch('individualBagWeights')}
+          initialBagWeights={physicalForm.getValues('individualBagWeights')}
         />
       </Dialog>
     </>

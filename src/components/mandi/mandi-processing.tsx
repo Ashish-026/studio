@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -50,20 +51,30 @@ export function MandiProcessing() {
   const numberOfLabours = processingForm.watch('numberOfLabours');
   const selectedLabourerIds = processingForm.watch('labourerIds').map(l => l.value);
 
-  // FIXED: Field management moved from useMemo to useEffect to prevent Memory Glitch crash
+  // HARDENED FIELD MANAGEMENT: Uses a single processing step to prevent infinite loops
   useEffect(() => {
+    const targetCount = parseInt(String(numberOfLabours || 0));
     const currentCount = fields.length;
-    if (numberOfLabours > currentCount) {
-      append({ value: '' });
-    } else if (numberOfLabours < currentCount && currentCount > 0) {
-      remove(currentCount - 1);
+    
+    if (targetCount === currentCount) return;
+
+    if (targetCount > currentCount) {
+      const diff = targetCount - currentCount;
+      for (let i = 0; i < diff; i++) {
+        append({ value: '' });
+      }
+    } else {
+      const diff = currentCount - targetCount;
+      for (let i = 0; i < diff; i++) {
+        remove(currentCount - 1 - i);
+      }
     }
   }, [numberOfLabours, fields.length, append, remove]);
 
 
   const availablePaddy = useMemo(() => {
-    const totalLifted = (paddyLiftedItems || []).reduce((sum, item) => sum + (item.totalPaddyReceived || 0), 0);
-    const totalUsed = (processingHistory || []).reduce((sum, item) => sum + (item.paddyUsed || 0), 0);
+    const totalLifted = (paddyLiftedItems || []).reduce((sum, item) => sum + (Number(item.totalPaddyReceived) || 0), 0);
+    const totalUsed = (processingHistory || []).reduce((sum, item) => sum + (Number(item.paddyUsed) || 0), 0);
     return totalLifted - totalUsed;
   }, [paddyLiftedItems, processingHistory]);
 
@@ -139,7 +150,7 @@ export function MandiProcessing() {
                         <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField control={processingForm.control} name="numberOfLabours" render={({ field }) => (
-                                <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={processingForm.control} name="labourCharge" render={({ field }) => (
                                 <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
@@ -192,9 +203,9 @@ export function MandiProcessing() {
                         {(processingHistory || []).length === 0 ? (
                             <TableRow><TableCell colSpan={4} className="text-center h-24">No processing history.</TableCell></TableRow>
                         ) : (
-                            [...processingHistory].sort((a, b) => b.date.getTime() - a.date.getTime()).map(p => (
+                            [...processingHistory].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
                                 <TableRow key={p.id}>
-                                    <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
+                                    <TableCell>{format(new Date(p.date), 'dd MMM yyyy')}</TableCell>
                                     <TableCell>{formatNumber(p.paddyUsed)}</TableCell>
                                     <TableCell>{formatNumber(p.riceYield)}</TableCell>
                                     <TableCell className="text-right font-medium">{formatNumber(p.yieldPercentage)}%</TableCell>

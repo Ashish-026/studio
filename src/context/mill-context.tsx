@@ -16,12 +16,12 @@ export const MillContext = createContext<MillContextType | null>(null);
 
 /**
  * UPDATED MILL REGISTRY: Swapped IDs to match data entry history.
- * ID 1: Konkorada Mill (Corrected to move data)
- * ID 2: Rambha Mill (Corrected to move data)
+ * ID 1: Rambha Mill
+ * ID 2: Konkorada Mill
  */
 const hardcodedMills: Mill[] = [
-  { id: '1', name: 'Konkorada Mill', location: 'Konkorada' },
-  { id: '2', name: 'Rambha Mill', location: 'Rambha' },
+  { id: '1', name: 'Rambha Mill', location: 'Rambha' },
+  { id: '2', name: 'Konkorada Mill', location: 'Konkorada' },
 ];
 
 export function MillProvider({ children }: { children: ReactNode }) {

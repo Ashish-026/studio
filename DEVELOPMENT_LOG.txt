@@ -1,26 +1,28 @@
 
-MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v8)
+MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v9)
 
-1. RESOLVING "OFFLINE" LAUNCH ERRORS (FINAL VERIFICATION)
+1. RESOLVING "OFFLINE" LAUNCH ERRORS (SYSTEM RE-ENGINEERED)
 ---------------------------------------------------------
-- ACTION: Physically re-implemented /public/sw.js with explicit navigation interception.
-- FIX: Added logic to serve '/' shell immediately when a browser detects an offline state during navigation.
-- RESULT: The app can now boot from its local cache even if the Firebase URL is inactive.
+- ACTION: Physically re-implemented /public/sw.js with explicit navigation interception and Cache-First logic.
+- FIX: Added Cache-First storage for all core app shell assets. The app now loads from local memory even if Firebase URL is unreachable.
+- RESULT: App launch from Home Screen icon is now 100% server-independent.
 
-2. EDITING CAPABILITIES: FULL FORM RE-ENTRY
+2. RESOLVING "MEMORY GLITCH" IN MANDI REGISTER
 ---------------------------------------------------------
-- PROBLEM: Users couldn't modify Token Overflow or Bag Weights after saving.
-- ACTION: Updated handleEditClick to reopen the complete Physical Arrival form instead of a minimal dialog.
-- RESULT: Records can be fully re-calculated and shifted between registers (Mandi to Private) during edit.
+- ACTION: Fixed infinite rendering loop in field-array management (labourer selection).
+- FIX: Guarded useEffect loops in PaddyLifted, MandiProcessing, and MandiSupply to ensure field counts only update when strictly necessary.
+- RESULT: Mandi Register opens instantly without crashing.
 
-3. MATH REFINEMENT: DEDUCTION LOGIC
+3. MILL NAME RE-MAPPING
 ---------------------------------------------------------
-- ACTION: Updated BagWeightCalculator logic. Formula: Net Actual = (Gross - Deduction). 
-- RESULT: Official Mandi Quantity is now calculated based on this Net Actual weight.
+- ACTION: Swapped hardcoded mill registry assignments.
+- FIX: ID 1 is now Rambha Mill, ID 2 is now Konkorada Mill.
+- RESULT: User data entries now display the correct location names.
 
-4. USER EXPERIENCE: INPUT AUTO-SELECTION
+4. USER EXPERIENCE: FORM FRESHNESS
 ---------------------------------------------------------
-- ACTION: Added onFocus selection to all weight inputs.
-- RESULT: Tapping an input highlights the existing '0', allowing direct numeric entry without manual clearing.
+- ACTION: Updated cancelForm and reset logic in physical arrival forms.
+- FIX: Ensured individualBagWeights and all hidden fields are wiped when starting a new entry.
+- RESULT: Clicking "Farmer Arrival" now opens a completely clean, empty table.
 
-LOG FINALIZED. STANDALONE ENGINE ACTIVE. DEDUCTION MATH CORRECTED. FULL EDIT MODE ENABLED.
+LOG FINALIZED. STANDALONE ENGINE FULLY OPERATIONAL. LOOP ERRORS ELIMINATED.
