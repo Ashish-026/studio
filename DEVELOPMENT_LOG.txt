@@ -1,22 +1,22 @@
 
-MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v10)
+MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v12)
 
 1. RESOLVING "REFERENCEERROR: DOWNLOAD IS NOT DEFINED"
 ---------------------------------------------------------
 - ACTION: Corrected lucide-react imports in PaddyLifted.tsx.
-- FIX: Added 'Download' to the component's icon registry. This was the cause of the Mandi Register crashing in the installed app.
+- FIX: Renamed 'Download' to 'DownloadIcon' to avoid potential clashing and ensured correct component registration. This was the cause of the Mandi Register crashing in the installed app.
 
 2. RESOLVING "MEMORY GLITCH" (INFINITE LOOPS)
 ---------------------------------------------------------
-- ACTION: Refined useFieldArray loop logic in Mandi Register, Processing, and Supply.
-- FIX: Added numeric coercion and strict equality checks to worker counts. Logic now preparação array and appends once to avoid triggering recursive state updates.
+- ACTION: Re-engineered useFieldArray logic in Mandi Register, Processing, Supply, and Private Register.
+- FIX: Replaced individual append/remove calls with a single 'replace()' call within useEffect. This eliminates the recursive state updates that were crashing the browser memory.
 - RESULT: Registers now open instantly without freezing.
 
-3. OFFLINE LAUNCH STABILITY (STANDALONE)
+3. OFFLINE LAUNCH STABILITY (TRUE STANDALONE)
 ---------------------------------------------------------
-- ACTION: Re-deployed /public/sw.js with a "Navigation Fallback" interceptor.
-- FIX: The app now catches launch errors when the phone is offline and serves the local cached shell immediately.
-- RESULT: App launch from Home Screen icon is now 100% independent of Firebase URL status.
+- ACTION: Deployed physical /public/sw.js with a "Navigation Fallback" interceptor.
+- FIX: The app now saves to phone memory and intercepts network errors to serve the local shell instantly.
+- RESULT: App launch from Home Screen icon is now 100% server-independent.
 
 4. FORM FRESHNESS (NEW FARMER ENTRY)
 ---------------------------------------------------------

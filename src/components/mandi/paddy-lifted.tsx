@@ -9,7 +9,19 @@ import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
 import { useStockData as useMainStockData } from '@/context/stock-context';
 import { useMill } from '@/hooks/use-mill';
-import { PlusCircle, DollarSign, Trash2, Car, Users, Calculator, Calendar as CalendarIcon, Info, FileText, X, Download } from 'lucide-react';
+import { 
+  PlusCircle, 
+  DollarSign, 
+  Trash2, 
+  Car, 
+  Users, 
+  Calculator, 
+  Calendar as CalendarIcon, 
+  Info, 
+  FileText, 
+  X, 
+  Download as DownloadIcon 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -85,6 +97,7 @@ export function PaddyLifted() {
   const { toast } = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  
   const [showPhysicalForm, setShowPhysicalForm] = useState(false);
   const [showMonetaryForm, setShowMonetaryForm] = useState(false);
   const [isCalculatorOpen, setCalculatorOpen] = useState(false);
@@ -119,7 +132,7 @@ export function PaddyLifted() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({ control: physicalForm.control, name: "labourerIds" });
+  const { fields, replace } = useFieldArray({ control: physicalForm.control, name: "labourerIds" });
 
   const monetaryForm = useForm<z.infer<typeof monetaryFormSchema>>({
     resolver: zodResolver(monetaryFormSchema),
@@ -133,22 +146,14 @@ export function PaddyLifted() {
   const vehicleType = physicalForm.watch('vehicleType');
   const watchedBagWeights = physicalForm.watch('individualBagWeights');
 
+  // Hardened worker selection logic to prevent rendering loops
   useEffect(() => {
-    const target = Math.max(0, parseInt(String(numberOfLabours)) || 0);
-    const current = fields.length;
-    if (target === current) return;
+    const target = Math.max(0, parseInt(String(numberOfLabours || 0)));
+    if (fields.length === target) return;
     
-    if (target > current) {
-      const diff = target - current;
-      const newItems = Array(diff).fill({ value: '' });
-      append(newItems);
-    } else {
-      const diff = current - target;
-      for (let i = 0; i < diff; i++) {
-        remove(current - 1 - i);
-      }
-    }
-  }, [numberOfLabours, fields.length, append, remove]);
+    const nextFields = Array.from({ length: target }, (_, i) => fields[i] || { value: '' });
+    replace(nextFields);
+  }, [numberOfLabours, replace, fields]);
 
   const overflowQuantity = useMemo(() => {
     const mw = parseFloat(String(mandiWeight || 0));
@@ -213,6 +218,7 @@ export function PaddyLifted() {
     };
     
     addPaddyLifted(newEntryData);
+    toast({ title: 'Success!', description: 'Monetary entry saved.' });
     cancelForm();
   }
 
@@ -259,10 +265,10 @@ export function PaddyLifted() {
           <div className="flex justify-between items-start mb-6">
             <div>
               <CardTitle className="text-2xl font-bold font-headline text-primary">Procurement Records</CardTitle>
-              <CardDescription>Fresh entries enabled. Deduction applies before standardization.</CardDescription>
+              <CardDescription>View arrivals and achieve targets. Fresh entries enabled.</CardDescription>
             </div>
              <Button variant="outline" size="sm" onClick={() => downloadPdf('paddy-lifted-table', 'paddy-lifted-summary')} className="rounded-xl border-primary/20">
-                <Download className="mr-2 h-4 w-4" /> Export Summary PDF
+                <DownloadIcon className="mr-2 h-4 w-4" /> Export Summary PDF
             </Button>
           </div>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
