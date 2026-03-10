@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/hooks/use-auth';
 import { useMandiData } from '@/context/mandi-context';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { Calendar as CalendarIcon, PlusCircle, Download, Edit, MapPin, LayoutGrid, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -47,10 +47,10 @@ export function TargetAllotment() {
   const [isEditCalendarOpen, setIsEditCalendarOpen] = useState(false);
 
   // AUTOMATIC SUMMATION LOGIC:
-  // Detects multiple entries for the same Mandi name and combines their totals.
   const consolidatedTargets = useMemo(() => {
     const map = new Map<string, { total: number; idNumber: string }>();
     (targetAllocations || []).forEach(t => {
+      if (!t.mandiName) return;
       const mandiKey = t.mandiName.trim();
       const existing = map.get(mandiKey) || { total: 0, idNumber: t.mandiIdNumber || 'N/A' };
       existing.total += Number(t.target) || 0;
@@ -71,9 +71,13 @@ export function TargetAllotment() {
   }, [consolidatedTargets]);
 
   const filteredAllocations = useMemo(() => {
-    const sortedAllocations = [...(targetAllocations || [])].sort((a, b) => b.date.getTime() - a.date.getTime());
+    const sortedAllocations = [...(targetAllocations || [])].sort((a, b) => {
+        const dateA = a.date instanceof Date ? a.date.getTime() : 0;
+        const dateB = b.date instanceof Date ? b.date.getTime() : 0;
+        return dateB - dateA;
+    });
     if (!selectedMandi) return [];
-    return sortedAllocations.filter(item => item.mandiName.trim() === selectedMandi.trim());
+    return sortedAllocations.filter(item => (item.mandiName || '').trim() === selectedMandi.trim());
   }, [targetAllocations, selectedMandi]);
 
   const totalTargetForSelection = filteredAllocations.reduce((sum, item) => sum + (Number(item.target) || 0), 0);
@@ -284,7 +288,7 @@ export function TargetAllotment() {
                                     <TableBody>
                                         {filteredAllocations.map((item) => (
                                         <TableRow key={item.id} className="hover:bg-primary/5 transition-colors border-primary/5">
-                                            <TableCell className="pl-6">{format(item.date, 'dd MMM yyyy')}</TableCell>
+                                            <TableCell className="pl-6">{isValid(item.date) ? format(item.date, 'dd MMM yyyy') : 'N/A'}</TableCell>
                                             <TableCell className="text-xs font-medium opacity-60">{item.mandiIdNumber || 'N/A'}</TableCell>
                                             <TableCell className="text-right font-bold text-primary">{item.target.toLocaleString('en-IN')}</TableCell>
                                             {isAdmin && (

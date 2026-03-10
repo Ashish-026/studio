@@ -1,11 +1,6 @@
 
-/**
- * MANDI MONITOR - DEFINITIVE OFFLINE ENGINE (v8)
- * Strategy: Cache-First for Assets, Network-First for Navigation with Offline Fallback.
- */
-
-const CACHE_NAME = 'mandi-monitor-v8';
-const ASSETS = [
+const CACHE_NAME = 'mandi-monitor-v9';
+const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
   'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
@@ -13,19 +8,19 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))
       );
     })
   );
@@ -33,7 +28,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // NAVIGATION REQUESTS: Always try to serve the root shell if offline
+  // Navigation interceptor for True Offline Mode
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -43,22 +38,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ASSET REQUESTS: Cache-First
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request).then((networkResponse) => {
-        // Don't cache firebase/analytics calls
-        if (event.request.url.includes('googleapis') || event.request.url.includes('firebase')) {
-          return networkResponse;
-        }
-        return caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, networkResponse.clone());
-          return networkResponse;
-        });
-      });
-    }).catch(() => {
-      // Return a blank response for failed assets if offline
-      return new Response('');
+      return response || fetch(event.request);
     })
   );
 });

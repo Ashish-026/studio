@@ -23,7 +23,7 @@ import { Separator } from '@/components/ui/separator';
 import { downloadPdf } from '@/lib/pdf-utils';
 import type { PaddyLifted as PaddyLiftedType } from '@/lib/types';
 import { Label } from '../ui/label';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { BagWeightCalculator } from './bag-weight-calculator';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
@@ -88,7 +88,7 @@ const monetaryFormSchema = z.object({
 export function PaddyLifted() {
   const { paddyLiftedItems, addPaddyLifted, updatePaddyLifted, targetAllocations } = useMandiData();
   const { addVehicle, addTrip } = useVehicleData();
-  const { addGroupWorkEntry, labourers } = useLabourData();
+  const { addGroupWorkEntry } = useLabourData();
   const { addPurchase } = useStockData();
   const { selectedMill } = useMill();
   const { toast } = useToast();
@@ -103,14 +103,18 @@ export function PaddyLifted() {
 
   const uniqueMandis = useMemo(() => {
     const mandiNames = (targetAllocations || []).map((allocation) => allocation.mandiName);
-    return [...new Set(mandiNames)];
+    return [...new Set(mandiNames.filter(Boolean))];
   }, [targetAllocations]);
 
   const physicalEntries = useMemo(() => 
     (paddyLiftedItems || [])
       .filter(item => selectedMandi === 'All' || item.mandiName === selectedMandi)
       .filter(item => item.entryType === 'physical' || !item.entryType)
-      .sort((a,b) => b.date.getTime() - a.date.getTime()), 
+      .sort((a,b) => {
+        const dateA = a.date instanceof Date ? a.date.getTime() : 0;
+        const dateB = b.date instanceof Date ? b.date.getTime() : 0;
+        return dateB - dateA;
+      }), 
   [paddyLiftedItems, selectedMandi]);
 
   const physicalForm = useForm<z.infer<typeof physicalFormSchema>>({
@@ -231,6 +235,11 @@ export function PaddyLifted() {
       setShowMonetaryForm(false);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDownloadSlip = (item: PaddyLiftedType) => {
+    const fileName = `slip-${item.farmerName.toLowerCase().replace(/\s+/g, '-')}-${item.id.slice(-4)}`;
+    downloadPdf(`slip-${item.id}`, fileName);
   };
 
   const cancelForm = () => {
@@ -450,7 +459,7 @@ export function PaddyLifted() {
                         physicalEntries.map((item) => (
                           <TableRow key={item.id} className="hover:bg-primary/5 transition-colors">
                               <TableCell className="font-mono text-[10px] text-muted-foreground">#{item.id.slice(-6)}</TableCell>
-                              <TableCell className="text-xs">{format(item.date, 'dd MMM yy')}</TableCell>
+                              <TableCell className="text-xs">{isValid(item.date) ? format(item.date, 'dd MMM yy') : 'N/A'}</TableCell>
                               <TableCell>
                                   <div className="flex flex-col">
                                       <span className="font-bold text-primary">{item.farmerName}</span>
