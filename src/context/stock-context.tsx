@@ -15,9 +15,11 @@ interface StockContextType {
   addMandiProcessing: (item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
   purchases: PrivatePurchase[];
   addPurchase: (item: Omit<PrivatePurchase, 'id' | 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { initialPayment: number }) => void;
+  deletePurchase: (id: string) => void;
   addPayment: (purchaseId: string, amount: number) => void;
   sales: PrivateSale[];
   addSale: (item: Omit<PrivateSale, 'id' | 'date' | 'totalAmount' | 'amountReceived' | 'balance' | 'payments'> & { initialPayment: number }) => void;
+  deleteSale: (id: string) => void;
   addSalePayment: (saleId: string, amount: number) => void;
   transferRiceToMandi: (quantity: number) => void;
   loading: boolean;
@@ -125,6 +127,10 @@ export function StockProvider({ children }: { children: ReactNode }) {
     setPurchases(prev => [...prev, newPurchase]);
   }, []);
 
+  const deletePurchase = useCallback((id: string) => {
+    setPurchases(prev => prev.filter(p => p.id !== id));
+  }, []);
+
   const addPayment = useCallback((purchaseId: string, amount: number) => {
     setPurchases(prev => prev.map(p => {
       if (p.id === purchaseId) {
@@ -149,6 +155,10 @@ export function StockProvider({ children }: { children: ReactNode }) {
       payments: item.initialPayment > 0 ? [{ id: id + '-sp', amount: item.initialPayment, date: new Date() }] : [] 
     };
     setSales(prev => [...prev, newSale]);
+  }, []);
+
+  const deleteSale = useCallback((id: string) => {
+    setSales(prev => prev.filter(s => s.id !== id));
   }, []);
 
   const addSalePayment = useCallback((saleId: string, amount: number) => {
@@ -177,9 +187,11 @@ export function StockProvider({ children }: { children: ReactNode }) {
     addMandiProcessing,
     purchases,
     addPurchase,
+    deletePurchase,
     addPayment,
     sales,
     addSale,
+    deleteSale,
     addSalePayment,
     transferRiceToMandi,
     loading
@@ -193,9 +205,11 @@ export function StockProvider({ children }: { children: ReactNode }) {
     addMandiProcessing,
     purchases,
     addPurchase,
+    deletePurchase,
     addPayment,
     sales,
     addSale,
+    deleteSale,
     addSalePayment,
     transferRiceToMandi,
     loading
