@@ -26,7 +26,6 @@ import type { PrivatePurchase, Payment } from '@/lib/types';
 import { BagWeightCalculator } from '../mandi/bag-weight-calculator';
 import { Badge } from '../ui/badge';
 
-
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
   labourerIds: z.array(z.object({ value: z.string().min(1, "Please select a labourer.") })).default([]),
@@ -62,21 +61,9 @@ const purchaseFormSchema = z.object({
     path: ['tripCharge'],
 });
 
-const paymentFormSchema = z.object({
-  amount: z.coerce.number().positive('Payment amount must be positive'),
-});
-
-
 const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; name: string; purchases: any[]; totalBalance: number } }>(({ farmer }, ref) => {
     const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2 }).format(amount);
     
-    const getVehicleDetails = (purchase: PrivatePurchase) => {
-        if (!purchase.vehicleType || purchase.vehicleType === 'farmer') return "Farmer's Vehicle";
-        if (purchase.vehicleType === 'own') return 'Own Vehicle';
-        if (purchase.vehicleType === 'hired') return `${purchase.ownerName} (${purchase.vehicleNumber})`;
-        return 'N/A';
-    };
-
     return (
         <div ref={ref} className="p-8 bg-white text-black min-h-screen">
             <div className="text-center mb-8 border-b-2 pb-4">
@@ -85,18 +72,18 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
             </div>
             <div className="mb-10 p-6 bg-primary/5 rounded-3xl border border-primary/10">
                 <div className="grid grid-cols-3 gap-8 text-center">
-                    <div><p className="text-[10px] font-bold uppercase opacity-50">Total Purchases</p><p className="text-2xl font-black">{farmer.purchases.length}</p></div>
+                    <div><p className="text-[10px] font-bold uppercase opacity-50">Purchases</p><p className="text-2xl font-black">{farmer.purchases.length}</p></div>
                     <div><p className="text-[10px] font-bold uppercase opacity-50">Total Value</p><p className="text-2xl font-black">{formatCurrency(farmer.purchases.reduce((acc, p) => acc + p.totalAmount, 0))}</p></div>
-                    <div><p className="text-[10px] font-bold uppercase opacity-50">Outstanding Balance</p><p className={`text-2xl font-black ${farmer.totalBalance > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(farmer.totalBalance)}</p></div>
+                    <div><p className="text-[10px] font-bold uppercase opacity-50">Balance</p><p className={`text-2xl font-black ${farmer.totalBalance > 0 ? 'text-destructive' : 'text-green-600'}`}>{formatCurrency(farmer.totalBalance)}</p></div>
                 </div>
             </div>
             <div className="space-y-8">
                 {farmer.purchases.map((p: PrivatePurchase) => (
-                    <div key={p.id} className="border border-black/5 rounded-2xl overflow-hidden p-4">
-                        <div className="flex justify-between mb-4"><span className="font-bold">Record Date: {format(p.date, 'dd MMM yyyy')}</span><span className="font-mono text-xs opacity-50">ID: #{p.id.slice(-6)}</span></div>
+                    <div key={p.id} className="border border-black/5 rounded-2xl p-4">
+                        <div className="flex justify-between mb-2"><span className="font-bold">{format(p.date, 'dd MMM yyyy')}</span><span className="text-xs opacity-50">#{p.id.slice(-6)}</span></div>
                         <div className="grid grid-cols-4 gap-4 text-xs">
-                            <div><p className="font-bold opacity-50">Type</p><p className="capitalize font-black">{p.itemType}</p></div>
-                            <div><p className="font-bold opacity-50">Qty</p><p className="font-black">{p.quantity.toFixed(4)} Qtl</p></div>
+                            <div><p className="font-bold opacity-50">Item</p><p className="capitalize font-black">{p.itemType}</p></div>
+                            <div><p className="font-bold opacity-50">Qty</p><p className="font-black">{p.quantity.toFixed(2)} Qtl</p></div>
                             <div><p className="font-bold opacity-50">Rate</p><p className="font-black">{formatCurrency(p.rate)}</p></div>
                             <div><p className="font-bold opacity-50">Total</p><p className="font-black text-primary">{formatCurrency(p.totalAmount)}</p></div>
                         </div>
@@ -108,16 +95,13 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
 });
 FarmerPurchaseTable.displayName = 'FarmerPurchaseTable';
 
-
 export function PrivatePurchases() {
-  const { purchases, addPurchase, deletePurchase, addPayment } = useStockData();
+  const { purchases, addPurchase, deletePurchase } = useStockData();
   const { addVehicle, addTrip } = useVehicleData();
   const { labourers, addGroupWorkEntry } = useLabourData();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [openFarmerCollapsibles, setOpenFarmerCollapsibles] = useState<Record<string, boolean>>({});
-  const [isPaymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [selectedPurchase, setSelectedPurchase] = useState<string | null>(null);
   const [isCalculatorOpen, setCalculatorOpen] = useState(false);
 
   const purchaseForm = useForm<z.infer<typeof purchaseFormSchema>>({
@@ -133,9 +117,7 @@ export function PrivatePurchases() {
   
   const { fields, append, remove } = useFieldArray({ control: purchaseForm.control, name: "labourerIds" });
   const numberOfLabours = purchaseForm.watch('numberOfLabours');
-  const selectedLabourerIds = purchaseForm.watch('labourerIds').map(l => l.value);
 
-  // HARDENED LOOP PROTECTION
   useEffect(() => {
     const target = Math.max(0, parseInt(String(numberOfLabours || 0)));
     const current = fields.length;
@@ -143,11 +125,10 @@ export function PrivatePurchases() {
     if (target > current) {
       append(Array(target - current).fill({ value: '' }));
     } else {
-      for (let i = 0; i < (current - target); i++) remove(current - 1 - i);
+      for (let i = current; i > target; i--) remove(i - 1);
     }
   }, [numberOfLabours, fields.length, append, remove]);
 
-  const paymentForm = useForm<z.infer<typeof paymentFormSchema>>({ resolver: zodResolver(paymentFormSchema), defaultValues: { amount: 0 } });
   const vehicleType = purchaseForm.watch('vehicleType');
   const farmerNameValue = purchaseForm.watch('farmerName');
 
@@ -175,13 +156,20 @@ export function PrivatePurchases() {
         if (vId) addTrip(vId, { source: values.source || values.farmerName, destination: values.destination || 'Mill', quantity: values.quantity, tripCharge: values.tripCharge });
     }
     if (labourerIds.length > 0 && values.labourCharge > 0) addGroupWorkEntry(labourerIds, values.labourCharge, `Private Purchase: ${values.farmerName}`, values.quantity);
-    purchaseForm.reset();
+    
+    purchaseForm.reset({
+        farmerName: '', itemType: 'paddy', quantity: 0, rate: 0, initialPayment: 0,
+        description: '', vehicleType: 'farmer', destination: 'Mill', vehicleNumber: '',
+        driverName: '', ownerName: '', tripCharge: 0, source: '',
+        numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount',
+        individualBagWeights: [],
+    });
     setShowForm(false);
   }
 
   const handleDelete = (id: string) => {
     deletePurchase(id);
-    toast({ title: 'Deleted', description: 'Purchase record removed.' });
+    toast({ title: 'Deleted', description: 'Record removed.' });
   };
 
   const handleCalculatorConfirm = (v: { netQuintals: number; grossWeightKg: number; deductionKg: number; bagWeights: number[]; method: any }) => {
@@ -193,37 +181,36 @@ export function PrivatePurchases() {
     setCalculatorOpen(false);
   };
 
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => { e.target.select(); };
+
   return (
     <>
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
-            <div><CardTitle>Private Purchase Records</CardTitle><CardDescription>Add and view private purchase history.</CardDescription></div>
-            <Button onClick={() => setShowForm(!showForm)} size="sm"><PlusCircle className="mr-2 h-4 w-4" />{showForm ? 'Cancel' : 'Add New Purchase'}</Button>
+            <div><CardTitle>Private Purchases</CardTitle><CardDescription>Fresh entries enabled with Delete option.</CardDescription></div>
+            <Button onClick={() => setShowForm(!showForm)} size="sm"><PlusCircle className="mr-2 h-4 w-4" />{showForm ? 'Cancel' : 'New Purchase'}</Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {showForm && (
             <Card className="bg-muted/50">
-              <CardHeader><CardTitle>New Private Purchase</CardTitle></CardHeader>
+              <CardHeader><CardTitle>New Entry</CardTitle></CardHeader>
               <CardContent>
                 <Form {...purchaseForm}><form onSubmit={purchaseForm.handleSubmit(onPurchaseSubmit)} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                       <FormField control={purchaseForm.control} name="farmerName" render={({ field }) => (
-                        <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="Full Name" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Farmer</FormLabel><FormControl><Input placeholder="Full Name" {...field} /></FormControl></FormItem>
                       )} />
-                      <FormField control={purchaseForm.control} name="itemType" render={({ field }) => (
-                        <FormItem><FormLabel>Item Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="paddy">Paddy</SelectItem><SelectItem value="rice">Rice</SelectItem></SelectContent></Select></FormItem>
-                      )} />
-                      <div className="pt-8"><Button type="button" variant="outline" onClick={() => setCalculatorOpen(true)} className="w-full"><Calculator className="mr-2 h-4 w-4" /> Calculator</Button></div>
+                      <div className="pt-8"><Button type="button" variant="outline" onClick={() => setCalculatorOpen(true)} className="w-full"><Calculator className="mr-2 h-4 w-4" /> Open Calculator</Button></div>
                       <FormField control={purchaseForm.control} name="quantity" render={({ field }) => (
-                        <FormItem><FormLabel>Net Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="bg-primary/5 font-bold" /></FormControl></FormItem>
+                        <FormItem><FormLabel>Net Qtl</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="bg-primary/5 font-bold" /></FormControl></FormItem>
                       )} />
                       <FormField control={purchaseForm.control} name="rate" render={({ field }) => (
-                        <FormItem><FormLabel>Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
+                        <FormItem><FormLabel>Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} /></FormControl></FormItem>
                       )} />
                       <FormField control={purchaseForm.control} name="initialPayment" render={({ field }) => (
-                        <FormItem><FormLabel>Initial Paid (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
+                        <FormItem><FormLabel>Paid (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} /></FormControl></FormItem>
                       )} />
                     </div>
                     <Button type="submit" className="w-full bg-primary text-white">Save Purchase</Button>
@@ -232,39 +219,35 @@ export function PrivatePurchases() {
             </Card>
           )}
 
-          <div className="render-optimized">
-            <div className="border rounded-lg">
-                {farmerAggregates.map(farmer => (
-                    <Collapsible key={farmer.id} open={openFarmerCollapsibles[farmer.id]} onOpenChange={(o) => setOpenFarmerCollapsibles(p => ({...p, [farmer.id]: o}))} className="border-b last:border-b-0">
-                        <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
-                            <CollapsibleTrigger className="flex items-center gap-3 flex-grow text-left">
-                                {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                                <UserIcon className="h-5 w-5 text-muted-foreground" />
-                                <div><span className="font-bold">{farmer.name}</span><p className="text-xs text-muted-foreground">Balance: {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(farmer.totalBalance)}</p></div>
-                            </CollapsibleTrigger>
-                            <div className="flex gap-2">
-                                <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDownload(farmer.id, farmer.name); }}><Download className="h-4 w-4" /></Button>
-                            </div>
-                        </div>
-                        <CollapsibleContent className="p-4 space-y-4 bg-slate-50">
-                            <div className="absolute -left-[9999px] top-auto"><div id={`printable-purchases-${farmer.id}`}><FarmerPurchaseTable farmer={farmer} /></div></div>
-                            <Table>
-                                <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Qty</TableHead><TableHead className="text-right">Total</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {farmer.purchases.map(p => (
-                                        <TableRow key={p.id}>
-                                            <TableCell>{format(p.date, 'dd MMM yy')}</TableCell>
-                                            <TableCell>{p.quantity.toFixed(2)} Qtl</TableCell>
-                                            <TableCell className="text-right font-bold">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(p.totalAmount)}</TableCell>
-                                            <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CollapsibleContent>
-                    </Collapsible>
-                ))}
-            </div>
+          <div className="border rounded-lg">
+            {farmerAggregates.map(farmer => (
+                <Collapsible key={farmer.id} open={openFarmerCollapsibles[farmer.id]} onOpenChange={(o) => setOpenFarmerCollapsibles(p => ({...p, [farmer.id]: o}))} className="border-b last:border-b-0">
+                    <div className="flex w-full p-4 items-center justify-between hover:bg-muted/50 transition-colors">
+                        <CollapsibleTrigger className="flex items-center gap-3 flex-grow text-left">
+                            {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            <UserIcon className="h-5 w-5 text-muted-foreground" />
+                            <div><span className="font-bold">{farmer.name}</span><p className="text-xs opacity-60">Bal: {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(farmer.totalBalance)}</p></div>
+                        </CollapsibleTrigger>
+                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); downloadPdf(`printable-purchases-${farmer.id}`, `purchases-${farmer.id}`); }}><Download className="h-4 w-4" /></Button>
+                    </div>
+                    <CollapsibleContent className="p-4 bg-slate-50">
+                        <div className="absolute -left-[9999px] top-auto"><div id={`printable-purchases-${farmer.id}`}><FarmerPurchaseTable farmer={farmer} /></div></div>
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Qty</TableHead><TableHead className="text-right">Total</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {farmer.purchases.map(p => (
+                                    <TableRow key={p.id}>
+                                        <TableCell>{format(p.date, 'dd MMM yy')}</TableCell>
+                                        <TableCell>{p.quantity.toFixed(2)} Qtl</TableCell>
+                                        <TableCell className="text-right font-bold">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(p.totalAmount)}</TableCell>
+                                        <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CollapsibleContent>
+                </Collapsible>
+            ))}
           </div>
         </CardContent>
       </Card>

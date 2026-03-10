@@ -10,7 +10,7 @@ import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
 import { useStockData as useMainStockData } from '@/context/stock-context';
 import { useMill } from '@/hooks/use-mill';
-import { PlusCircle, DollarSign, Download, Trash2, Car, Users, Calculator, Calendar as CalendarIcon, Info, FileText, X } from 'lucide-react';
+import { PlusCircle, DollarSign, Trash2, Car, Users, Calculator, Calendar as CalendarIcon, Info, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,10 +29,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { cn } from '@/lib/utils';
 import { Switch } from '../ui/switch';
-import { Textarea } from '../ui/textarea';
 import { PaddyLiftingSlip } from './paddy-lifting-slip';
 import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
@@ -128,29 +127,22 @@ export function PaddyLifted() {
     defaultValues: { mandiName: '', moneyReceived: 0, ratePerQuintal: 0, date: new Date() },
   });
   
-  const vehicleType = physicalForm.watch('vehicleType');
+  const numberOfLabours = physicalForm.watch('numberOfLabours');
   const mandiWeight = physicalForm.watch('mandiWeight');
   const tokenLimit = physicalForm.watch('mandiTokenLimit');
   const isOverflowEnabled = physicalForm.watch('isPrivateOverflow');
-  const numberOfLabours = physicalForm.watch('numberOfLabours');
+  const vehicleType = physicalForm.watch('vehicleType');
   const watchedBagWeights = physicalForm.watch('individualBagWeights');
 
-  // HARDENED FIELD MANAGEMENT: FIXED LOOP
+  // Hardened loop protection for labour selection
   useEffect(() => {
-    const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
-    const currentCount = fields.length;
-    
-    if (targetCount === currentCount) return;
-
-    if (targetCount > currentCount) {
-      const diff = targetCount - currentCount;
-      const newItems = Array(diff).fill({ value: '' });
-      append(newItems);
+    const target = Math.max(0, parseInt(String(numberOfLabours || 0)));
+    const current = fields.length;
+    if (target === current) return;
+    if (target > current) {
+      append(Array(target - current).fill({ value: '' }));
     } else {
-      const diff = currentCount - targetCount;
-      for (let i = 0; i < diff; i++) {
-        remove(currentCount - 1 - i);
-      }
+      for (let i = current; i > target; i--) remove(i - 1);
     }
   }, [numberOfLabours, fields.length, append, remove]);
 

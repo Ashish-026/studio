@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect, forwardRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -16,11 +16,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
-import { downloadPdf } from '@/lib/pdf-utils';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
@@ -54,10 +51,8 @@ const saleFormSchema = z.object({
     path: ['tripCharge'],
 });
 
-const paymentFormSchema = z.object({ amount: z.coerce.number().positive('Payment amount must be positive') });
-
 export function PrivateSales() {
-  const { sales, addSale, deleteSale, addSalePayment, privateStock } = useStockData();
+  const { sales, addSale, deleteSale, privateStock } = useStockData();
   const { addVehicle, addTrip } = useVehicleData();
   const { labourers, addGroupWorkEntry } = useLabourData();
   const { toast } = useToast();
@@ -76,9 +71,7 @@ export function PrivateSales() {
 
   const { fields, append, remove } = useFieldArray({ control: saleForm.control, name: "labourerIds" });
   const numberOfLabours = saleForm.watch('numberOfLabours');
-  const selectedLabourerIds = saleForm.watch('labourerIds').map(l => l.value);
 
-  // HARDENED LOOP PROTECTION
   useEffect(() => {
     const target = Math.max(0, parseInt(String(numberOfLabours || 0)));
     const current = fields.length;
@@ -86,7 +79,7 @@ export function PrivateSales() {
     if (target > current) {
       append(Array(target - current).fill({ value: '' }));
     } else {
-      for (let i = 0; i < (current - target); i++) remove(current - 1 - i);
+      for (let i = current; i > target; i--) remove(i - 1);
     }
   }, [numberOfLabours, fields.length, append, remove]);
 
@@ -117,7 +110,13 @@ export function PrivateSales() {
         if (vId) addTrip(vId, { source: values.sourceLocation || 'Mill', destination: values.destination || values.customerName, quantity: values.quantity, tripCharge: values.tripCharge });
     }
     if (labourerIds.length > 0 && values.labourCharge > 0) addGroupWorkEntry(labourerIds, values.labourCharge, `Sale: ${values.customerName}`, values.quantity);
-    saleForm.reset();
+    
+    saleForm.reset({
+        customerName: '', itemType: 'rice', quantity: 0, rate: 0, initialPayment: 0,
+        description: '', vehicleType: 'customer', sourceLocation: 'Mill', vehicleNumber: '',
+        driverName: '', ownerName: '', tripCharge: 0, destination: '',
+        numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount',
+    });
     setShowForm(false);
   }
 
@@ -126,35 +125,34 @@ export function PrivateSales() {
     toast({ title: 'Deleted', description: 'Sale record removed.' });
   };
 
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => { e.target.select(); };
+
   return (
     <Card>
       <CardHeader>
         <div className="flex justify-between items-start">
-          <div><CardTitle>Private Sale Records</CardTitle><CardDescription>Add and view private sale history.</CardDescription></div>
-          <Button onClick={() => setShowForm(!showForm)} size="sm"><PlusCircle className="mr-2 h-4 w-4" />{showForm ? 'Cancel' : 'Add New Sale'}</Button>
+          <div><CardTitle>Private Sales</CardTitle><CardDescription>Fresh entries with Delete option enabled.</CardDescription></div>
+          <Button onClick={() => setShowForm(!showForm)} size="sm"><PlusCircle className="mr-2 h-4 w-4" />{showForm ? 'Cancel' : 'New Sale'}</Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {showForm && (
           <Card className="bg-muted/50">
-            <CardHeader><CardTitle>New Private Sale</CardTitle></CardHeader>
+            <CardHeader><CardTitle>New Sale</CardTitle></CardHeader>
             <CardContent>
               <Form {...saleForm}><form onSubmit={saleForm.handleSubmit(onSaleSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                     <FormField control={saleForm.control} name="customerName" render={({ field }) => (
-                      <FormItem><FormLabel>Customer Name</FormLabel><FormControl><Input placeholder="Full Name" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={saleForm.control} name="itemType" render={({ field }) => (
-                      <FormItem><FormLabel>Item Type</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="paddy">Paddy</SelectItem><SelectItem value="rice">Rice</SelectItem></SelectContent></Select></FormItem>
+                      <FormItem><FormLabel>Customer</FormLabel><FormControl><Input placeholder="Full Name" {...field} /></FormControl></FormItem>
                     )} />
                     <FormField control={saleForm.control} name="quantity" render={({ field }) => (
-                      <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
+                      <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} /></FormControl></FormItem>
                     )} />
                     <FormField control={saleForm.control} name="rate" render={({ field }) => (
-                      <FormItem><FormLabel>Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
+                      <FormItem><FormLabel>Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} /></FormControl></FormItem>
                     )} />
                     <FormField control={saleForm.control} name="initialPayment" render={({ field }) => (
-                      <FormItem><FormLabel>Paid (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
+                      <FormItem><FormLabel>Paid (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} /></FormControl></FormItem>
                     )} />
                   </div>
                   <Button type="submit" className="w-full bg-primary text-white">Save Sale</Button>
@@ -170,10 +168,10 @@ export function PrivateSales() {
                         <CollapsibleTrigger className="flex items-center gap-3 flex-grow text-left">
                             {openCustomerCollapsibles[customer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             <UserIcon className="h-5 w-5 text-muted-foreground" />
-                            <div><span className="font-bold">{customer.name}</span><p className="text-xs text-muted-foreground">Balance: {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(customer.totalBalance)}</p></div>
+                            <div><span className="font-bold">{customer.name}</span><p className="text-xs opacity-60">Bal: {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(customer.totalBalance)}</p></div>
                         </CollapsibleTrigger>
                     </div>
-                    <CollapsibleContent className="p-4 space-y-4 bg-slate-50">
+                    <CollapsibleContent className="p-4 bg-slate-50">
                         <Table>
                             <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Qty</TableHead><TableHead className="text-right">Total</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                             <TableBody>
