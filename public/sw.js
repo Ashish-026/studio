@@ -1,53 +1,45 @@
-
 /**
- * MANDI MONITOR - STANDALONE OFFLINE ENGINE (v7)
+ * MANDI MONITOR - OFFLINE STANDALONE ENGINE (v7)
  * This script saves the app logic to the phone's memory.
  */
 
-const CACHE_NAME = 'mandi-monitor-offline-v7';
-const OFFLINE_URL = '/';
+const CACHE_NAME = 'mandi-monitor-v7';
+const ASSETS_TO_CACHE = [
+  '/',
+  '/manifest.json',
+  'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
+  'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
+];
 
-// 1. Installation: Save the "App Portal" to the phone
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([
-        OFFLINE_URL,
-        '/manifest.json',
-        'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
-        'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
-      ]);
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
-  self.skipWaiting();
 });
 
-// 2. Activation: Clear old versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      );
+      return Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)));
     })
   );
   self.clients.claim();
 });
 
-// 3. Fetch Interceptor: The "Zero Internet" Launcher
 self.addEventListener('fetch', (event) => {
-  // Only handle navigation requests (opening the app)
+  // Navigation Interceptor: Catches "You are offline" and serving local app portal
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        // If the server is offline or suspended, serve the local copy instantly
-        return caches.match(OFFLINE_URL);
+        return caches.match('/');
       })
     );
     return;
   }
 
-  // Handle other assets (images, scripts)
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);

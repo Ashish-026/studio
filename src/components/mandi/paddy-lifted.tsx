@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -299,7 +298,7 @@ export function PaddyLifted() {
 
   const handleTogglePhysicalForm = () => {
     if (!showPhysicalForm) {
-      // START NEW ENTRY: Clear everything
+      // FORCE RESET ON NEW ENTRY BUTTON CLICK
       physicalForm.reset({
         mandiName: '',
         farmerName: '',
@@ -364,7 +363,7 @@ export function PaddyLifted() {
             <Card className="bg-white border-primary/10 shadow-2xl rounded-3xl overflow-hidden animate-in zoom-in-95 duration-300">
               <CardHeader className="bg-primary/5 border-b border-primary/10 pb-4">
                   <CardTitle className="text-lg font-bold text-primary">New Farmer Procurement Entry</CardTitle>
-                  <CardDescription>Record weights and tokens. Use the calculator for bag-by-bag detailed entries.</CardDescription>
+                  <CardDescription>Record weights and tokens. Deduction applies to Actual Gross first.</CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 <Form {...physicalForm}>

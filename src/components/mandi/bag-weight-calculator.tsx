@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -75,14 +74,12 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
         name: "bags"
     });
 
-    // START FRESH: Reset forms when the component mounts if no initial data exists
     useEffect(() => {
         if (!initialBagWeights || initialBagWeights.length === 0) {
             uniformForm.reset({ numberOfBags: 0, weightPerBag: isPrivate ? 75 : 78, consideredWeight: 75, deduction: 0 });
             bagByBagForm.reset({ bags: [{ weight: 0 }], consideredWeight: 75, weightPerBag: 78, deduction: 0 });
             weighbridgeForm.reset({ grossWeightTotal: 0, weightPerBag: 78, consideredWeight: 75, deduction: 0 });
         } else {
-            // Load existing data if editing
             replace(initialBagWeights.map(w => ({ weight: w })));
             uniformForm.setValue('numberOfBags', initialBagWeights.length);
             setActiveTab('bag-by-bag');
@@ -96,56 +93,50 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
     const summary = useMemo(() => {
         let grossWeightKg = 0;
         let deductionKg = 0;
-        let netWeightKg = 0;
         let finalWeightForRecordKg = 0;
         let bagWeights: number[] = [];
+        let refWt = 78;
+        let targetWt = 75;
 
         if (activeTab === 'uniform') {
             const { numberOfBags, weightPerBag, consideredWeight, deduction } = watchedUniformValues;
             grossWeightKg = (numberOfBags || 0) * (weightPerBag || 0);
             deductionKg = parseFloat(String(deduction || 0));
-            
-            if (isPrivate) {
-                finalWeightForRecordKg = grossWeightKg - deductionKg;
-            } else {
-                finalWeightForRecordKg = (numberOfBags || 0) * (consideredWeight || 0);
-            }
+            refWt = weightPerBag || 78;
+            targetWt = consideredWeight || 75;
             bagWeights = Array(numberOfBags || 0).fill(weightPerBag || 0);
         } else if (activeTab === 'bag-by-bag') {
             const { bags, consideredWeight, weightPerBag, deduction } = watchedBagByBagValues;
             bagWeights = (bags || []).map(b => parseFloat(String(b.weight)) || 0).filter(w => w > 0);
             grossWeightKg = bagWeights.reduce((acc, w) => acc + w, 0);
             deductionKg = parseFloat(String(deduction || 0));
-            
-            if (isPrivate) {
-                finalWeightForRecordKg = grossWeightKg - deductionKg;
-            } else {
-                finalWeightForRecordKg = (grossWeightKg / (weightPerBag || 78)) * (consideredWeight || 75);
-            }
+            refWt = weightPerBag || 78;
+            targetWt = consideredWeight || 75;
         } else {
             const { grossWeightTotal, weightPerBag, consideredWeight, deduction } = watchedWeighbridgeValues;
             grossWeightKg = parseFloat(String(grossWeightTotal || 0));
             deductionKg = parseFloat(String(deduction || 0));
-            
-            if (isPrivate) {
-                finalWeightForRecordKg = grossWeightKg - deductionKg;
-            } else {
-                finalWeightForRecordKg = (grossWeightKg / (weightPerBag || 78)) * (consideredWeight || 75);
-            }
+            refWt = weightPerBag || 78;
+            targetWt = consideredWeight || 75;
             bagWeights = [];
         }
 
-        netWeightKg = grossWeightKg - deductionKg;
-        const grossQuintals = grossWeightKg > 0 ? grossWeightKg / 100 : 0;
-        const netQuintals = finalWeightForRecordKg > 0 ? finalWeightForRecordKg / 100 : 0;
-        
+        const netActualWeightKg = grossWeightKg - deductionKg;
+
+        if (isPrivate) {
+            finalWeightForRecordKg = netActualWeightKg;
+        } else {
+            // OFFICIAL MANDI LOGIC: Standardization applies to the NET ACTUAL weight
+            finalWeightForRecordKg = (netActualWeightKg / refWt) * targetWt;
+        }
+
         return {
             grossWeightKg,
             deductionKg,
-            netWeightKg,
+            netActualWeightKg,
             finalWeightForRecordKg,
-            grossQuintals,
-            netQuintals,
+            grossQuintals: grossWeightKg / 100,
+            netQuintals: finalWeightForRecordKg / 100,
             bagWeights
         };
     }, [activeTab, watchedUniformValues, watchedBagByBagValues, watchedWeighbridgeValues, isPrivate]);
@@ -160,7 +151,7 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
         onConfirm({ 
             grossQuintals: summary.grossQuintals, 
             netQuintals: summary.netQuintals, 
-            netWeightKg: summary.netWeightKg,
+            netWeightKg: summary.netActualWeightKg,
             grossWeightKg: summary.grossWeightKg,
             deductionKg: summary.deductionKg,
             bagWeights: summary.bagWeights,
@@ -168,9 +159,7 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
         });
     }
 
-    const addNewBag = () => {
-        append({ weight: 0 });
-    };
+    const addNewBag = () => append({ weight: 0 });
 
     return (
         <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col rounded-3xl overflow-hidden p-0 border-none shadow-2xl">
@@ -182,7 +171,7 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
                 <DialogDescription className="text-white/70 font-medium">
                     {isPrivate 
                         ? 'Calculate total weight and deductions for private purchase.' 
-                        : 'Select your calculation method for standardized Mandi weights.'}
+                        : 'Deduction is subtracted from Actual weight before Mandi Standardization.'}
                 </DialogDescription>
             </DialogHeader>
             
@@ -203,7 +192,7 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
                                     )} />
                                     <div className={`grid ${isPrivate ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                                         <FormField control={uniformForm.control} name="weightPerBag" render={({ field }) => (
-                                            <FormItem><FormLabel>{isPrivate ? 'Average Weight per Bag (kg)' : 'Actual Avg (kg)'}</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormLabel>{isPrivate ? 'Avg Weight per Bag (kg)' : 'Actual Avg (kg)'}</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                                         )} />
                                         {!isPrivate && (
                                             <FormField control={uniformForm.control} name="consideredWeight" render={({ field }) => (
@@ -305,8 +294,8 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
                                         <Truck className="h-8 w-8 text-primary opacity-40" />
                                         <p className="text-xs text-muted-foreground italic leading-relaxed">
                                             {isPrivate 
-                                                ? 'Enter total vehicle weight. Deductions apply directly to the final quintals.' 
-                                                : 'Use this mode for direct weighbridge readings. Standardization applies automatically based on the Reference/Target ratio.'}
+                                                ? 'Gross - Deduction = Net Purchase Quantity.' 
+                                                : '((Gross - Deduction) / Ref) * Target = Mandi Quantity.'}
                                         </p>
                                     </div>
                                     
@@ -338,7 +327,7 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
            
             <DialogFooter className="bg-muted/30 p-6 border-t flex flex-col md:flex-row items-center gap-4 shrink-0">
                 <p className="text-[10px] text-muted-foreground italic max-w-xs text-center md:text-left">
-                    {isPrivate ? 'Formula: Gross Weight - Deduction. Decimals preserved for accuracy.' : 'Formula: (Total Actual / Reference) * Target. All decimals preserved for mill accuracy.'}
+                    Logic: Deduction is subtracted from Actual Gross before any standardization ratios are applied.
                 </p>
                 <div className="hidden md:flex flex-1" />
                 <div className="flex w-full md:w-auto gap-3">
@@ -368,9 +357,15 @@ function CalculationResult({ summary, isPrivate }: { summary: any, isPrivate: bo
                 <div className="flex justify-between text-destructive font-medium"><span className="text-destructive/80">Quality Deduction</span><span className="font-bold">- {summary.deductionKg.toFixed(2)} kg</span></div>
                 <Separator className="bg-primary/10" />
                 <div className="flex justify-between font-bold">
-                    <span className="text-primary/70">{isPrivate ? 'Net Weight' : 'Standardized Mandi Wt'}</span>
-                    <span className="text-primary text-lg">{isPrivate ? summary.netWeightKg.toLocaleString() : summary.finalWeightForRecordKg.toLocaleString()} kg</span>
+                    <span className="text-primary/70">{isPrivate ? 'Net Purchase Wt' : 'Net Actual Wt (FAQ)'}</span>
+                    <span className="text-primary text-lg">{summary.netActualWeightKg.toLocaleString()} kg</span>
                 </div>
+                {!isPrivate && (
+                    <div className="flex justify-between text-[10px] opacity-60 italic">
+                        <span>Standardized Result:</span>
+                        <span>{summary.finalWeightForRecordKg.toLocaleString()} kg</span>
+                    </div>
+                )}
                 <div className="pt-4">
                     <Badge variant="secondary" className="w-full flex-col items-center py-4 rounded-2xl bg-primary text-white border-none shadow-lg gap-1">
                         <span className="opacity-70 text-[10px] uppercase font-bold tracking-widest">{isPrivate ? 'Final Purchase Quantity' : 'Final Mandi Quantity'}</span>

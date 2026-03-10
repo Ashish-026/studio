@@ -1,20 +1,26 @@
 
-MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v6)
+MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v7)
 
-1. RESOLVING "OFFLINE" LAUNCH ERRORS (FINAL FIX)
+1. RESOLVING "OFFLINE" LAUNCH ERRORS (FINAL VERIFICATION)
 ---------------------------------------------------------
-- PROBLEM: App failed to start from scratch without internet because the Service Worker file was missing from the filesystem.
-- ACTION: Physically implemented /public/sw.js with a robust "Navigation Interceptor".
-- RESULT: The app shell is now saved to the phone's memory. Launching the home screen icon will now work with ZERO internet.
+- ACTION: Physically re-implemented /public/sw.js with explicit navigation interception.
+- FIX: Added logic to serve '/' immediately when a browser detects an offline state during navigation.
+- RESULT: The app can now boot from its local cache even if the Firebase URL is inactive.
 
-2. MILL DATA REALIGNMENT
+2. MATH REFINEMENT: DEDUCTION LOGIC
 ---------------------------------------------------------
-- ACTION: Swapped Mill Registry names (ID 1: Konkorada Mill, ID 2: Rambha Mill).
-- REASON: User reported data was entered into the wrong mill; renaming the IDs allows the existing data to show under the correct name.
+- PROBLEM: Clarity on whether deduction applies before or after standardization.
+- ACTION: Updated BagWeightCalculator logic. Formula: Net Actual = (Gross - Deduction). 
+- RESULT: Official Mandi Quantity is now calculated based on this Net Actual weight.
 
-3. AUTHENTICATION & INITIALIZATION
+3. DATA PERSISTENCE: FRESH FORMS
 ---------------------------------------------------------
-- ACTION: Verified detached initialization in firebase/index.ts.
-- RESULT: App boots instantly using local IndexedDB even if the Firebase server is unreachable.
+- ACTION: Added explicit reset() calls to 'Farmer Arrival' and 'New Purchase' buttons.
+- RESULT: Bag tables and weights are now force-cleared for every new entry, preventing old data from showing.
 
-LOG FINALIZED. THE APP IS NOW PHYSICALLY DETACHED FROM SERVER DEPENDENCY FOR STARTUP.
+4. USER EXPERIENCE: INPUT AUTO-SELECTION
+---------------------------------------------------------
+- ACTION: Added onFocus selection to all weight inputs.
+- RESULT: Tapping an input highlights the existing '0', allowing direct numeric entry without manual clearing.
+
+LOG FINALIZED. STANDALONE ENGINE ACTIVE. DEDUCTION MATH CORRECTED.
