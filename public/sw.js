@@ -1,31 +1,28 @@
 
 /**
- * MANDI MONITOR - DEFINITIVE OFFLINE STANDALONE ENGINE
- * Version: 9.0
- * This script allows the app to launch from scratch without any internet.
+ * MANDI MONITOR - STANDALONE OFFLINE ENGINE
+ * Strategy: Cache-First (Performance & Server-Independence)
  */
 
-const CACHE_NAME = 'mandi-monitor-v9';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'mandi-monitor-shell-v1';
+const STATIC_ASSETS = [
   '/',
-  '/manifest.webmanifest',
+  '/manifest.json',
   'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
-  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL',
-  'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
-  'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
+  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
 ];
 
-// 1. INSTALLATION: Save the app code to phone memory
+// 1. INSTALL: Save the core app code to the phone's memory
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll(STATIC_ASSETS);
     })
   );
 });
 
-// 2. ACTIVATION: Clean up old versions
+// 2. ACTIVATE: Clean up old versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -37,41 +34,31 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 3. FETCH INTERCEPTOR: The "True Offline" magic
+// 3. FETCH: Serve from local memory even if offline
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests for navigation or assets
+  // Only intercept GET requests
   if (event.request.method !== 'GET') return;
 
-  const url = new URL(event.request.url);
-
-  // NAVIGATION LOGIC: If offline and trying to open the app, serve the main shell
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match('/');
-      })
-    );
-    return;
-  }
-
-  // ASSET LOGIC: Cache-First for speed and reliability
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        // Cache external assets like fonts/images on the fly
-        if (networkResponse.status === 200) {
-          const responseClone = networkResponse.clone();
+      if (cachedResponse) return cachedResponse;
+
+      // If not in cache, try network
+      return fetch(event.request).then((response) => {
+        // Cache the response for future offline use
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
+            cache.put(event.request, responseToCache);
           });
         }
-        return networkResponse;
+        return response;
       }).catch(() => {
-        // If everything fails, just return nothing
-        return new Response('Offline resource not available', { status: 503 });
+        // DEFINITIVE OFFLINE FALLBACK: 
+        // If internet fails and we are navigating, return the main app shell
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
       });
     })
   );

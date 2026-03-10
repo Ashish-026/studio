@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, useFieldArray } from 'react-hook-form';
@@ -161,6 +162,10 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
 
     const addNewBag = () => append({ weight: 0 });
 
+    const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+        e.target.select();
+    };
+
     return (
         <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col rounded-3xl overflow-hidden p-0 border-none shadow-2xl">
             <DialogHeader className="bg-primary p-6 text-white shrink-0">
@@ -188,20 +193,20 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
                             <form className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
                                     <FormField control={uniformForm.control} name="numberOfBags" render={({ field }) => (
-                                        <FormItem><FormLabel>Total Bag Count</FormLabel><FormControl><Input type="number" placeholder="e.g., 200" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Total Bag Count</FormLabel><FormControl><Input type="number" placeholder="e.g., 200" {...field} onFocus={handleInputFocus} onClick={handleInputFocus} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                                     )} />
                                     <div className={`grid ${isPrivate ? 'grid-cols-1' : 'grid-cols-2'} gap-4`}>
                                         <FormField control={uniformForm.control} name="weightPerBag" render={({ field }) => (
-                                            <FormItem><FormLabel>{isPrivate ? 'Avg Weight per Bag (kg)' : 'Actual Avg (kg)'}</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormLabel>{isPrivate ? 'Avg Weight per Bag (kg)' : 'Actual Avg (kg)'}</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={handleInputFocus} onClick={handleInputFocus} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                                         )} />
                                         {!isPrivate && (
                                             <FormField control={uniformForm.control} name="consideredWeight" render={({ field }) => (
-                                                <FormItem><FormLabel>Mandi Standard (kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormLabel>Mandi Standard (kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={handleInputFocus} onClick={handleInputFocus} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                                             )} />
                                         )}
                                     </div>
                                     <FormField control={uniformForm.control} name="deduction" render={({ field }) => (
-                                        <FormItem><FormLabel>Total Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="0" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Total Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="0" {...field} onFocus={handleInputFocus} onClick={handleInputFocus} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                                     )} />
                                 </div>
                                 <CalculationResult summary={summary} isPrivate={isPrivate} />
@@ -232,7 +237,8 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
                                                                     type="number" 
                                                                     step="0.1" 
                                                                     {...field} 
-                                                                    onFocus={(e) => e.target.select()}
+                                                                    onFocus={handleInputFocus}
+                                                                    onClick={handleInputFocus}
                                                                     className="h-10 rounded-lg text-center font-bold border-primary/5 focus:border-primary/30"
                                                                     onKeyDown={(e) => {
                                                                         if (e.key === 'Enter') {
@@ -270,15 +276,15 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
                                     {!isPrivate && (
                                         <div className="grid grid-cols-2 gap-4">
                                             <FormField control={bagByBagForm.control} name="weightPerBag" render={({ field }) => (
-                                                <FormItem><FormLabel>Ref (78kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-10" /></FormControl></FormItem>
+                                                <FormItem><FormLabel>Ref (78kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={handleInputFocus} onClick={handleInputFocus} className="rounded-xl h-10" /></FormControl></FormItem>
                                             )} />
                                             <FormField control={bagByBagForm.control} name="consideredWeight" render={({ field }) => (
-                                                <FormItem><FormLabel>Target (75kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-10" /></FormControl></FormItem>
+                                                <FormItem><FormLabel>Target (75kg)</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={handleInputFocus} onClick={handleInputFocus} className="rounded-xl h-10" /></FormControl></FormItem>
                                             )} />
                                         </div>
                                     )}
                                     <FormField control={bagByBagForm.control} name="deduction" render={({ field }) => (
-                                        <FormItem><FormLabel>Total Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="0" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-10" /></FormControl></FormItem>
+                                        <FormItem><FormLabel>Total Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="0" {...field} onFocus={handleInputFocus} onClick={handleInputFocus} className="rounded-xl h-10" /></FormControl></FormItem>
                                     )} />
                                 </div>
                                 <CalculationResult summary={summary} isPrivate={isPrivate} />
@@ -300,22 +306,22 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, in
                                     </div>
                                     
                                     <FormField control={weighbridgeForm.control} name="grossWeightTotal" render={({ field }) => (
-                                        <FormItem><FormLabel className="text-lg font-bold text-primary">Total Gross Weight (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="e.g., 15600" {...field} onFocus={(e) => e.target.select()} className="rounded-2xl h-16 text-2xl font-black text-primary border-primary/20 bg-white" /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel className="text-lg font-bold text-primary">Total Gross Weight (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="e.g., 15600" {...field} onFocus={handleInputFocus} onClick={handleInputFocus} className="rounded-2xl h-16 text-2xl font-black text-primary border-primary/20 bg-white" /></FormControl><FormMessage /></FormItem>
                                     )} />
 
                                     {!isPrivate && (
                                         <div className="grid grid-cols-2 gap-4">
                                             <FormField control={weighbridgeForm.control} name="weightPerBag" render={({ field }) => (
-                                                <FormItem><FormLabel>Reference (e.g. 78)</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                                                <FormItem><FormLabel>Reference (e.g. 78)</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={handleInputFocus} onClick={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
                                             )} />
                                             <FormField control={weighbridgeForm.control} name="consideredWeight" render={({ field }) => (
-                                                <FormItem><FormLabel>Target (e.g. 75)</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                                                <FormItem><FormLabel>Target (e.g. 75)</FormLabel><FormControl><Input type="number" step="0.1" {...field} onFocus={handleInputFocus} onClick={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
                                             )} />
                                         </div>
                                     )}
                                     
                                     <FormField control={weighbridgeForm.control} name="deduction" render={({ field }) => (
-                                        <FormItem><FormLabel>Total Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="0" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                                        <FormItem><FormLabel>Total Deduction (kg)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="0" {...field} onFocus={handleInputFocus} onClick={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
                                     )} />
                                 </div>
                                 <CalculationResult summary={summary} isPrivate={isPrivate} />

@@ -32,6 +32,7 @@ import { Switch } from '../ui/switch';
 import { Textarea } from '../ui/textarea';
 import { PaddyLiftingSlip } from './paddy-lifting-slip';
 import { Badge } from '../ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
@@ -49,7 +50,7 @@ const physicalFormSchema = z.object({
   calculationMethod: z.enum(['uniform', 'bag-by-bag', 'weighbridge']).default('uniform'),
   tokenNumber: z.string().optional(),
   mandiTokenLimit: z.coerce.number().optional(),
-  isPrivateOverflow: z.boolean().default(false),
+  isPrivateOverflow: b => b === true || b === false, // Fix for zod boolean
   privateOverflowRate: z.coerce.number().optional(),
   description: z.string().optional(),
   vehicleType: z.enum(['farmer', 'own', 'hired'], { required_error: 'Vehicle type is required' }),
@@ -133,19 +134,19 @@ export function PaddyLifted() {
   const tokenLimit = physicalForm.watch('mandiTokenLimit');
   const isOverflowEnabled = physicalForm.watch('isPrivateOverflow');
   const numberOfLabours = physicalForm.watch('numberOfLabours');
+  const watchedBagWeights = physicalForm.watch('individualBagWeights');
 
-  // HARDENED FIELD MANAGEMENT: Uses a single processing step to prevent infinite loops
+  // HARDENED FIELD MANAGEMENT
   useEffect(() => {
-    const targetCount = parseInt(String(numberOfLabours || 0));
+    const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
     const currentCount = fields.length;
     
     if (targetCount === currentCount) return;
 
     if (targetCount > currentCount) {
       const diff = targetCount - currentCount;
-      for (let i = 0; i < diff; i++) {
-        append({ value: '' });
-      }
+      const newItems = Array(diff).fill({ value: '' });
+      append(newItems);
     } else {
       const diff = currentCount - targetCount;
       for (let i = 0; i < diff; i++) {
@@ -537,7 +538,7 @@ export function PaddyLifted() {
         <BagWeightCalculator 
           onConfirm={handleCalculatorConfirm} 
           onCancel={() => setCalculatorOpen(false)} 
-          initialBagWeights={physicalForm.getValues('individualBagWeights')}
+          initialBagWeights={watchedBagWeights}
         />
       </Dialog>
     </>
