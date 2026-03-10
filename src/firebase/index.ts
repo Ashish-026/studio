@@ -1,4 +1,3 @@
-
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -8,46 +7,37 @@ import { getFirestore } from 'firebase/firestore'
 
 /**
  * MANDI MONITOR - DETACHED INITIALIZATION
- * This logic ensures the app never crashes if the Firebase URL is suspended or offline.
- * It favors local IndexedDB storage over network connectivity for launch stability.
+ * This logic is designed to be 100% resilient. It will never crash the app
+ * if the Firebase URL is suspended or the device is offline.
  */
 export function initializeFirebase() {
+  const nullResult = { firebaseApp: null as any, auth: null as any, firestore: null as any };
+  
   try {
     if (typeof window === 'undefined') {
-        return { firebaseApp: null as any, auth: null as any, firestore: null as any };
+        return nullResult;
     }
 
-    // Force Standalone Detachment
+    // Attempt standard initialization but catch all failures
     if (!getApps().length) {
-      let firebaseApp;
       try {
-        // Detect connectivity and config validity
-        if (firebaseConfig && firebaseConfig.apiKey && navigator.onLine) {
-          firebaseApp = initializeApp(firebaseConfig);
-          console.log("Mandi Monitor: Cloud Sync Active.");
-        } else {
-          console.log("Mandi Monitor: 100% Local-Only Mode Active.");
-          return { firebaseApp: null as any, auth: null as any, firestore: null as any };
+        if (firebaseConfig && firebaseConfig.apiKey) {
+          const app = initializeApp(firebaseConfig);
+          return {
+            firebaseApp: app,
+            auth: getAuth(app),
+            firestore: getFirestore(app)
+          };
         }
       } catch (e) {
-        // SILENT FALLBACK: If URL is suspended, proceed using internal database only
-        console.warn("Mandi Monitor: Firebase detached. Using local storage.");
-        return {
-          firebaseApp: null as any,
-          auth: null as any,
-          firestore: null as any
-        };
+        console.warn("Mandi Monitor: Cloud features suspended. Running in Standalone Local Mode.");
+        return nullResult;
       }
-      return getSdks(firebaseApp);
     }
     return getSdks(getApp());
   } catch (err) {
-    // Total detachment: ensure app starts even if server is deleted
-    return {
-      firebaseApp: null as any,
-      auth: null as any,
-      firestore: null as any
-    };
+    // Total detachment: ensure app starts even if server is completely offline
+    return nullResult;
   }
 }
 

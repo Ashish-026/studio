@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -14,10 +13,11 @@ import {
   Tooltip as RechartsTooltip, 
   ResponsiveContainer, 
   Legend,
-  LabelList
+  LabelList,
+  Cell
 } from 'recharts';
 import { Badge } from '../ui/badge';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, CheckCircle2 } from 'lucide-react';
 
 type MandiSummaryData = {
   mandiName: string;
@@ -75,14 +75,22 @@ export function MandiSummary() {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="grid grid-cols-1 gap-6">
-        {/* UNIFIED PERFORMANCE & EFFICIENCY CHART */}
+        {/* MERGED PERFORMANCE & EFFICIENCY ANALYTICS */}
         <Card className="shadow-xl border-primary/5 rounded-3xl overflow-hidden bg-white/50 backdrop-blur-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              Unified Procurement Analytics
-            </CardTitle>
-            <CardDescription>Target vs. Actual procurement with completion rates.</CardDescription>
+            <div className="flex items-center justify-between">
+                <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                        Procurement & Efficiency Analytics
+                    </CardTitle>
+                    <CardDescription>Target vs. Actual procurement with completion rates.</CardDescription>
+                </div>
+                <div className="hidden md:flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest opacity-40">
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-primary/10" /> Target</div>
+                    <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-primary" /> Actual</div>
+                </div>
+            </div>
           </CardHeader>
           <CardContent className="h-[450px] pt-4">
             {chartData.length > 0 ? (
@@ -90,7 +98,7 @@ export function MandiSummary() {
                 <BarChart 
                   data={chartData} 
                   layout="vertical" 
-                  margin={{ top: 20, right: 60, left: 40, bottom: 20 }}
+                  margin={{ top: 20, right: 80, left: 40, bottom: 20 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
                   <XAxis type="number" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
@@ -109,7 +117,11 @@ export function MandiSummary() {
                   <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '12px', paddingBottom: '20px' }} />
                   <Bar dataKey="Target" name="Total Allotted" fill="rgba(0,0,0,0.05)" radius={[0, 6, 6, 0]} barSize={25} />
                   <Bar dataKey="Lifted" name="Actual Lifted" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} barSize={25}>
-                    <LabelList dataKey="Efficiency" position="right" style={{ fontSize: '10px', fontWeight: 'bold', fill: 'hsl(var(--primary))' }} />
+                    <LabelList 
+                        dataKey="Efficiency" 
+                        position="right" 
+                        style={{ fontSize: '11px', fontWeight: '900', fill: 'hsl(var(--primary))', paddingLeft: '10px' }} 
+                    />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -133,7 +145,7 @@ export function MandiSummary() {
                     <TableHead className="font-bold py-4">Mandi ID</TableHead>
                     <TableHead className="text-right font-bold py-4">Target (Qtl)</TableHead>
                     <TableHead className="text-right font-bold py-4">Lifted (Qtl)</TableHead>
-                    <TableHead className="text-right font-bold py-4 pr-6">Balance (Qtl)</TableHead>
+                    <TableHead className="text-right font-bold py-4 pr-6">Status</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -147,9 +159,15 @@ export function MandiSummary() {
                         <TableCell className="text-right font-medium">{item.totalTarget.toLocaleString('en-IN')}</TableCell>
                         <TableCell className="text-right font-medium">{item.totalLifted.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
                         <TableCell className="text-right pr-6">
-                            <Badge variant="outline" className={`font-black text-xs h-7 min-w-20 justify-center rounded-lg ${item.balance < 0 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-green-500/10 text-green-700 border-green-200'}`}>
-                                {item.balance.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                            </Badge>
+                            <div className="flex flex-col items-end gap-1">
+                                <Badge variant="outline" className={`font-black text-[10px] h-6 min-w-20 justify-center rounded-lg ${item.balance <= 0 ? 'bg-green-500/10 text-green-700 border-green-200' : 'bg-primary/5 text-primary border-primary/10'}`}>
+                                    {item.balance <= 0 ? <CheckCircle2 className="h-3 w-3 mr-1" /> : null}
+                                    {item.balance <= 0 ? 'COMPLETED' : `${item.percent.toFixed(0)}% DONE`}
+                                </Badge>
+                                <span className="text-[9px] font-bold opacity-40 uppercase tracking-tighter">
+                                    Bal: {item.balance.toLocaleString('en-IN', { maximumFractionDigits: 1 })} Qtl
+                                </span>
+                            </div>
                         </TableCell>
                     </TableRow>
                 ))}

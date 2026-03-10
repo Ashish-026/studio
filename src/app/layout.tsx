@@ -58,13 +58,18 @@ export default function RootLayout({
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
-              window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                  console.log('Mandi Monitor Engine: DETACHED & ACTIVE.');
+              function register() {
+                navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                  console.log('Mandi Monitor: Standalone Engine Active.');
                 }).catch(function(err) {
-                  console.error('Mandi Monitor Engine: Pending Setup.', err);
+                  console.error('Mandi Monitor: Engine initialization pending.', err);
                 });
-              });
+              }
+              if (document.readyState === 'complete') {
+                register();
+              } else {
+                window.addEventListener('load', register);
+              }
             }
           `}
         </Script>

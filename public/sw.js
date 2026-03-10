@@ -1,37 +1,34 @@
-
 /**
- * MANDI MONITOR - OFFLINE PERSISTENCE ENGINE
- * Strategy: Cache-First for Shell, Network-First for Data
+ * MANDI MONITOR - STANDALONE OFFLINE ENGINE
+ * This file saves the app code to the phone's memory to allow
+ * launching from the home screen with ZERO internet.
  */
 
-const CACHE_NAME = 'mandi-monitor-v6';
+const CACHE_NAME = 'mandi-monitor-v8';
 const OFFLINE_URL = '/';
 
-const ASSETS_TO_CACHE = [
-  '/',
-  '/manifest.webmanifest',
-  'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
-  'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
-];
-
+// 1. Install: Save core app files to memory
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('Mandi Engine: Caching shell...');
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll([
+        OFFLINE_URL,
+        '/manifest.json',
+        'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
+        'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
+      ]);
     })
   );
   self.skipWaiting();
 });
 
+// 2. Activate: Clean up old versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
+          if (key !== CACHE_NAME) return caches.delete(key);
         })
       );
     })
@@ -39,25 +36,34 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// 3. Fetch: Intercept launch requests and serve from memory
 self.addEventListener('fetch', (event) => {
-  // Handle Navigation Requests (e.g. typing URL or refreshing)
+  // Catch navigation requests (opening the app)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        // If network fails (offline), serve the cached root shell
         return caches.match(OFFLINE_URL);
       })
     );
     return;
   }
 
-  // Generic Cache-First Strategy for assets
+  // Catch asset requests (scripts, styles, icons)
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request);
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request).then((fetchRes) => {
+        // Automatically save new assets to memory as they are loaded
+        if (fetchRes.status === 200 && fetchRes.type === 'basic') {
+          const resClone = fetchRes.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
+        }
+        return fetchRes;
+      }).catch(() => {
+        // Silent fallback for images
+        if (event.request.destination === 'image') {
+          return caches.match('https://placehold.co/32x32/0b3d1e/ffffff.png?text=M');
+        }
+      });
     })
   );
 });
