@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -50,23 +50,20 @@ export function MandiProcessing() {
   const numberOfLabours = processingForm.watch('numberOfLabours');
   const selectedLabourerIds = processingForm.watch('labourerIds').map(l => l.value);
 
-  useMemo(() => {
+  // FIXED: Field management moved from useMemo to useEffect to prevent Memory Glitch crash
+  useEffect(() => {
     const currentCount = fields.length;
     if (numberOfLabours > currentCount) {
-        for(let i = currentCount; i < numberOfLabours; i++) {
-            append({ value: '' });
-        }
-    } else if (numberOfLabours < currentCount) {
-        for(let i = currentCount; i > numberOfLabours; i--) {
-            remove(i-1);
-        }
+      append({ value: '' });
+    } else if (numberOfLabours < currentCount && currentCount > 0) {
+      remove(currentCount - 1);
     }
   }, [numberOfLabours, fields.length, append, remove]);
 
 
   const availablePaddy = useMemo(() => {
-    const totalLifted = paddyLiftedItems.reduce((sum, item) => sum + item.totalPaddyReceived, 0);
-    const totalUsed = processingHistory.reduce((sum, item) => sum + item.paddyUsed, 0);
+    const totalLifted = (paddyLiftedItems || []).reduce((sum, item) => sum + (item.totalPaddyReceived || 0), 0);
+    const totalUsed = (processingHistory || []).reduce((sum, item) => sum + (item.paddyUsed || 0), 0);
     return totalLifted - totalUsed;
   }, [paddyLiftedItems, processingHistory]);
 
@@ -82,11 +79,10 @@ export function MandiProcessing() {
     const submissionValues = { ...values, labourerIds };
 
     addMandiProcessing(submissionValues);
-    toast({ title: 'Success!', description: 'Processing has been recorded and stock updated.' });
+    toast({ title: 'Success!', description: 'Processing has been recorded.' });
 
     if (labourerIds.length > 0 && values.labourCharge > 0) {
         addGroupWorkEntry(labourerIds, values.labourCharge, 'Mandi paddy processing', values.paddyUsed);
-        toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
 
     processingForm.reset();
@@ -118,24 +114,22 @@ export function MandiProcessing() {
             <Card className="bg-muted/50">
               <CardHeader>
                 <CardTitle>New Processing Entry</CardTitle>
-                <CardDescription>Convert paddy into rice and other byproducts.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Form {...processingForm}>
                   <form onSubmit={processingForm.handleSubmit(onProcessingSubmit)} className="space-y-6">
                       <FormField control={processingForm.control} name="paddyUsed" render={({ field }) => (
-                          <FormItem><FormLabel>Paddy to Process (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="e.g., 100" {...field} /></FormControl><FormMessage /></FormItem>
+                          <FormItem><FormLabel>Paddy to Process (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                       )} />
-                      <p className="font-medium text-sm">Enter Yields (in Quintals):</p>
                       <div className="grid grid-cols-3 gap-4">
                            <FormField control={processingForm.control} name="riceYield" render={({ field }) => (
-                              <FormItem><FormLabel>Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Rice Yield</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                           )} />
                            <FormField control={processingForm.control} name="branYield" render={({ field }) => (
-                              <FormItem><FormLabel>Bran</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Bran</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                           )} />
                            <FormField control={processingForm.control} name="brokenRiceYield" render={({ field }) => (
-                              <FormItem><FormLabel>Broken Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Broken Rice</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                           )} />
                       </div>
 
@@ -148,7 +142,7 @@ export function MandiProcessing() {
                                 <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={processingForm.control} name="labourCharge" render={({ field }) => (
-                                <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 800" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                             )} />
                         </div>
                         {fields.map((field, index) => (
@@ -162,7 +156,7 @@ export function MandiProcessing() {
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                    {labourers
+                                    {(labourers || [])
                                         .filter(l => !selectedLabourerIds.includes(l.id) || l.id === field.value)
                                         .map((l) => (
                                         <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
@@ -191,22 +185,18 @@ export function MandiProcessing() {
                             <TableHead>Date</TableHead>
                             <TableHead>Paddy Used (Qtl)</TableHead>
                             <TableHead>Rice Yield (Qtl)</TableHead>
-                            <TableHead>Bran Yield (Qtl)</TableHead>
-                            <TableHead>Broken Rice (Qtl)</TableHead>
                             <TableHead className="text-right">Yield (%)</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {processingHistory.length === 0 ? (
-                            <TableRow><TableCell colSpan={6} className="text-center h-24">No processing history.</TableCell></TableRow>
+                        {(processingHistory || []).length === 0 ? (
+                            <TableRow><TableCell colSpan={4} className="text-center h-24">No processing history.</TableCell></TableRow>
                         ) : (
                             [...processingHistory].sort((a, b) => b.date.getTime() - a.date.getTime()).map(p => (
                                 <TableRow key={p.id}>
                                     <TableCell>{format(p.date, 'dd MMM yyyy')}</TableCell>
                                     <TableCell>{formatNumber(p.paddyUsed)}</TableCell>
                                     <TableCell>{formatNumber(p.riceYield)}</TableCell>
-                                    <TableCell>{formatNumber(p.branYield)}</TableCell>
-                                    <TableCell>{formatNumber(p.brokenRiceYield)}</TableCell>
                                     <TableCell className="text-right font-medium">{formatNumber(p.yieldPercentage)}%</TableCell>
                                 </TableRow>
                             ))

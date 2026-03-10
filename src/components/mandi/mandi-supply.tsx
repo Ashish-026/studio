@@ -61,8 +61,6 @@ export function MandiSupply() {
   const [showForm, setShowForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<MandiStockRelease | null>(null);
   const [isEditDialogOpen, setEditDialogOpen] = useState(false);
-  
-  // Auto-close calendar state
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const supplyForm = useForm<z.infer<typeof supplySchema>>({
@@ -114,16 +112,13 @@ export function MandiSupply() {
     }
   }, [editingEntry, supplyForm]);
 
-  useMemo(() => {
+  // FIXED: Field management moved from useMemo to useEffect to prevent Memory Glitch crash
+  useEffect(() => {
     const currentCount = fields.length;
     if (numberOfLabours > currentCount) {
-        for(let i = currentCount; i < numberOfLabours; i++) {
-            append({ value: '' });
-        }
-    } else if (numberOfLabours < currentCount) {
-        for(let i = currentCount; i > numberOfLabours; i--) {
-            remove(i-1);
-        }
+      append({ value: '' });
+    } else if (numberOfLabours < currentCount && currentCount > 0) {
+      remove(currentCount - 1);
     }
   }, [numberOfLabours, fields.length, append, remove]);
 
@@ -131,7 +126,7 @@ export function MandiSupply() {
   const vehicleType = supplyForm.watch('vehicleType');
   const godownDetailsValue = supplyForm.watch('godownDetails');
   
-  useMemo(() => {
+  useEffect(() => {
     if (godownDetailsValue) {
       supplyForm.setValue('destination', godownDetailsValue);
     }
@@ -141,7 +136,7 @@ export function MandiSupply() {
 
   function onSupplySubmit(values: z.infer<typeof supplySchema>) {
     const originalQuantity = editingEntry ? editingEntry.quantity : 0;
-    const stockAvailableForOperation = availableRiceForSupply + originalQuantity;
+    const stockAvailableForOperation = (availableRiceForSupply || 0) + originalQuantity;
 
     if(values.quantity > stockAvailableForOperation) {
         supplyForm.setError('quantity', { message: `Exceeds available rice stock of ${formatNumber(availableRiceForSupply)} Qtl` });
@@ -153,10 +148,10 @@ export function MandiSupply() {
 
     if (editingEntry) {
         updateStockRelease(editingEntry.id, submissionValues);
-        toast({ title: 'Success!', description: 'Rice supply record has been updated.' });
+        toast({ title: 'Success!', description: 'Supply record updated.' });
     } else {
         addStockRelease(submissionValues);
-        toast({ title: 'Success!', description: 'Rice supply has been recorded.' });
+        toast({ title: 'Success!', description: 'Rice supply recorded.' });
 
         if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
             const vehicleId = addVehicle({
@@ -174,13 +169,11 @@ export function MandiSupply() {
                     quantity: submissionValues.quantity,
                     tripCharge: submissionValues.tripCharge,
                 });
-                toast({ title: 'Vehicle Updated', description: `Trip for ${submissionValues.vehicleNumber} has been added to Vehicle Register.` });
             }
         }
         
         if (labourerIds.length > 0 && values.labourCharge > 0) {
             addGroupWorkEntry(labourerIds, values.labourCharge, `Rice supply to ${values.godownDetails}`, values.quantity);
-            toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
         }
     }
 
@@ -219,10 +212,7 @@ export function MandiSupply() {
         <CardContent className="space-y-6">
         {showForm && (
             <Card className="bg-muted/50">
-              <CardHeader>
-                <CardTitle>New Supply Entry</CardTitle>
-                <CardDescription>Release rice stock for supply.</CardDescription>
-              </CardHeader>
+              <CardHeader><CardTitle>New Supply Entry</CardTitle></CardHeader>
               <CardContent>
                 <Form {...supplyForm}>
                   <form onSubmit={supplyForm.handleSubmit(onSupplySubmit)} className="space-y-6">
@@ -232,37 +222,22 @@ export function MandiSupply() {
                               <FormLabel>Supply Date</FormLabel>
                               <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                                 <PopoverTrigger asChild>
-                                  <FormControl>
-                                    <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                  </FormControl>
+                                  <FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : <span>Pick a date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar 
-                                      mode="single" 
-                                      selected={field.value} 
-                                      onSelect={(date) => {
-                                        field.onChange(date);
-                                        setIsCalendarOpen(false); // AUTO-CLOSE
-                                      }} 
-                                      initialFocus 
-                                    />
-                                </PopoverContent>
+                                <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={(date) => { field.onChange(date); setIsCalendarOpen(false); }} initialFocus /></PopoverContent>
                               </Popover>
                               <FormMessage />
                             </FormItem>
                         )} />
                         <FormField control={supplyForm.control} name="lotNumber" render={({ field }) => (
-                            <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input placeholder="e.g., LOT-001" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input placeholder="LOT-001" {...field} /></FormControl><FormMessage /></FormItem>
                         )} />
                          <FormField control={supplyForm.control} name="quantity" render={({ field }) => (
-                            <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                         )} />
                     </div>
                      <FormField control={supplyForm.control} name="godownDetails" render={({ field }) => (
-                        <FormItem><FormLabel>Godown Details</FormLabel><FormControl><Textarea placeholder="e.g., Central Godown, Bay 4" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Godown Details</FormLabel><FormControl><Textarea placeholder="Godown location..." {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
 
                     <Separator />
@@ -270,42 +245,19 @@ export function MandiSupply() {
                     <div>
                         <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Car className="h-5 w-5" /> Vehicle Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-                           <FormField
-                                control={supplyForm.control}
-                                name="vehicleType"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Vehicle Type</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="own">Own Vehicle</SelectItem>
-                                                <SelectItem value="hired">Hired Vehicle</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                           />
+                           <FormField control={supplyForm.control} name="vehicleType" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Vehicle Type</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="own">Own Vehicle</SelectItem><SelectItem value="hired">Hired Vehicle</SelectItem></SelectContent></Select>
+                                </FormItem>
+                           )} />
                            {vehicleType === 'hired' && (
                             <>
                                 <FormField control={supplyForm.control} name="vehicleNumber" render={({ field }) => (
-                                    <FormItem><FormLabel>Vehicle Number</FormLabel><FormControl><Input placeholder="OD01AB1234" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                 <FormField control={supplyForm.control} name="driverName" render={({ field }) => (
-                                    <FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input placeholder="Suresh" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={supplyForm.control} name="ownerName" render={({ field }) => (
-                                    <FormItem><FormLabel>Owner/Agency</FormLabel><FormControl><Input placeholder="Gupta Transports" {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} /></FormControl></FormItem>
                                 )} />
                                 <FormField control={supplyForm.control} name="tripCharge" render={({ field }) => (
-                                    <FormItem><FormLabel>Trip Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="2500" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={supplyForm.control} name="source" render={({ field }) => (
-                                    <FormItem><FormLabel>Source</FormLabel><FormControl><Input placeholder="Source location" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={supplyForm.control} name="destination" render={({ field }) => (
-                                    <FormItem><FormLabel>Destination</FormLabel><FormControl><Input placeholder="Destination location" {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
                                 )} />
                             </>
                            )}
@@ -318,39 +270,19 @@ export function MandiSupply() {
                         <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <FormField control={supplyForm.control} name="numberOfLabours" render={({ field }) => (
-                                <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
                             )} />
                             <FormField control={supplyForm.control} name="labourCharge" render={({ field }) => (
-                                <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 600" {...field} /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel>Total Charge (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
                             )} />
                         </div>
                         {fields.map((field, index) => (
-                           <FormField
-                            key={field.id}
-                            control={supplyForm.control}
-                            name={`labourerIds.${index}.value`}
-                            render={({ field }) => (
-                                <FormItem className="mt-4">
-                                <FormLabel>Labourer {index + 1}</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                    {labourers
-                                        .filter(l => !selectedLabourerIds.includes(l.id) || l.id === field.value)
-                                        .map((l) => (
-                                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
-                                    ))}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
+                           <FormField key={field.id} control={supplyForm.control} name={`labourerIds.${index}.value`} render={({ field }) => (
+                                <FormItem className="mt-4"><FormLabel>Labourer {index + 1}</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger></FormControl><SelectContent>{(labourers || []).filter(l => !selectedLabourerIds.includes(l.id) || l.id === field.value).map((l) => (<SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>))}</SelectContent></Select></FormItem>
+                            )} />
                         ))}
                     </div>
-
-
-                    <Button type="submit" className="w-full md:w-auto bg-accent hover:bg-accent/90">Record Supply</Button>
+                    <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Record Supply</Button>
                   </form>
                 </Form>
               </CardContent>
@@ -364,37 +296,24 @@ export function MandiSupply() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Date</TableHead>
-                            <TableHead>Lot Number</TableHead>
-                            <TableHead>Godown Details</TableHead>
-                            <TableHead>Vehicle</TableHead>
+                            <TableHead>Lot</TableHead>
+                            <TableHead>Destination</TableHead>
                             <TableHead className="text-right">Quantity (Qtl)</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {stockReleases.length === 0 ? (
-                            <TableRow><TableCell colSpan={6} className="text-center h-24">No supply history.</TableCell></TableRow>
+                        {(stockReleases || []).length === 0 ? (
+                            <TableRow><TableCell colSpan={5} className="text-center h-24">No supply history.</TableCell></TableRow>
                         ) : (
                             [...stockReleases].sort((a, b) => b.date.getTime() - a.date.getTime()).map(s => (
                                 <TableRow key={s.id}>
-                                    <TableCell>{format(s.date, 'dd MMM yyyy')}</TableCell>
+                                    <TableCell>{format(s.date, 'dd MMM yy')}</TableCell>
                                     <TableCell>{s.lotNumber}</TableCell>
                                     <TableCell>{s.godownDetails}</TableCell>
-                                    <TableCell>
-                                        {s.vehicleNumber ? (
-                                            <div className="flex flex-col">
-                                                <span className="font-medium">{s.vehicleNumber}</span>
-                                                <span className="text-xs capitalize text-muted-foreground">{s.vehicleType} Vehicle</span>
-                                            </div>
-                                        ) : (
-                                            <span className="capitalize">{s.vehicleType} Vehicle</span>
-                                        )}
-                                    </TableCell>
                                     <TableCell className="text-right font-medium">{formatNumber(s.quantity)}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="sm" onClick={() => handleEditClick(s)}>
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => handleEditClick(s)}><Edit className="h-4 w-4" /></Button>
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -407,18 +326,12 @@ export function MandiSupply() {
     </Card>
 
     <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Edit Supply Entry</DialogTitle>
-            </DialogHeader>
-            <Form {...supplyForm}>
-                <form onSubmit={supplyForm.handleSubmit(onSupplySubmit)} className="space-y-4">
-                    <FormField control={supplyForm.control} name="quantity" render={({ field }) => (
-                        <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <Button type="submit" className="w-full bg-accent hover:bg-accent/90">Save Changes</Button>
-                </form>
-            </Form>
+        <DialogContent><DialogHeader><DialogTitle>Edit Supply</DialogTitle></DialogHeader>
+            <Form {...supplyForm}><form onSubmit={supplyForm.handleSubmit(onSupplySubmit)} className="space-y-4">
+                <FormField control={supplyForm.control} name="quantity" render={({ field }) => (
+                    <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
+                )} /><Button type="submit" className="w-full bg-accent hover:bg-accent/90">Save</Button>
+            </form></Form>
         </DialogContent>
     </Dialog>
     </>

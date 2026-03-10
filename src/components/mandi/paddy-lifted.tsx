@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -8,7 +7,8 @@ import * as z from 'zod';
 import { useMandiData } from '@/context/mandi-context';
 import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
-import { useStockData } from '@/context/stock-context';
+import { useStockData } from '@/context/stock-data-bridge'; // Use high-fidelity stock bridge if needed, else fallback
+import { useStockData as useMainStockData } from '@/context/stock-context';
 import { useMill } from '@/hooks/use-mill';
 import { PlusCircle, DollarSign, Download, Edit, Car, Users, Calculator, Calendar as CalendarIcon, Info, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -68,14 +68,6 @@ const physicalFormSchema = z.object({
 }, {
     message: "Hired vehicle details are incomplete.",
     path: ['tripCharge'],
-}).refine(data => {
-    if (data.isPrivateOverflow) {
-        return !!data.mandiTokenLimit && !!data.privateOverflowRate && data.mandiTokenLimit < data.mandiWeight;
-    }
-    return true;
-}, {
-    message: "Overflow requires a token limit and rate. Limit must be less than weight.",
-    path: ['privateOverflowRate'],
 });
 
 const monetaryFormSchema = z.object({
@@ -88,8 +80,8 @@ const monetaryFormSchema = z.object({
 export function PaddyLifted() {
   const { paddyLiftedItems, addPaddyLifted, updatePaddyLifted, targetAllocations } = useMandiData();
   const { addVehicle, addTrip } = useVehicleData();
-  const { addGroupWorkEntry } = useLabourData();
-  const { addPurchase } = useStockData();
+  const { labourers, addGroupWorkEntry } = useLabourData();
+  const { addPurchase } = useMainStockData();
   const { selectedMill } = useMill();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -141,8 +133,21 @@ export function PaddyLifted() {
   const tokenLimit = physicalForm.watch('mandiTokenLimit');
   const isOverflowEnabled = physicalForm.watch('isPrivateOverflow');
 
+  // FIXED: Field management moved from useMemo to useEffect to prevent Memory Glitch crash
+  useEffect(() => {
+    const currentCount = fields.length;
+    const targetCount = physicalForm.watch('numberOfLabours');
+    if (targetCount > currentCount) {
+      append({ value: '' });
+    } else if (targetCount < currentCount && currentCount > 0) {
+      remove(currentCount - 1);
+    }
+  }, [physicalForm.watch('numberOfLabours'), fields.length, append, remove]);
+
   const overflowQuantity = useMemo(() => {
-    if (mandiWeight > 0 && tokenLimit > 0) return Math.max(0, mandiWeight - tokenLimit);
+    const mw = parseFloat(String(mandiWeight || 0));
+    const tl = parseFloat(String(tokenLimit || 0));
+    if (mw > 0 && tl > 0) return Math.max(0, mw - tl);
     return 0;
   }, [mandiWeight, tokenLimit]);
 
@@ -335,8 +340,8 @@ export function PaddyLifted() {
                           <FormItem>
                             <FormLabel>Total Weight (Actual Qtl)</FormLabel>
                               <div className="flex items-center gap-2">
-                                <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl>
-                                <Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)} className="h-12 w-12 rounded-xl border-primary/20 hover:bg-primary/5"><Calculator className="h-5 w-5 text-primary" /></Button>
+                                <FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl>
+                                <Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)} className="h-12 w-12 rounded-xl border-primary/20"><Calculator className="h-5 w-5 text-primary" /></Button>
                               </div>
                             <FormMessage />
                           </FormItem>
@@ -344,7 +349,7 @@ export function PaddyLifted() {
                         <FormField control={physicalForm.control} name="mandiWeight" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Considered Mandi Qtl (FAQ)</FormLabel>
-                            <FormControl><Input type="number" step="0.01" placeholder="0.00" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12 bg-primary/5 border-primary/20 font-bold text-primary" /></FormControl>
+                            <FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12 bg-primary/5 border-primary/20 font-bold text-primary" /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
@@ -354,7 +359,7 @@ export function PaddyLifted() {
                           <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2 text-primary font-bold"><Info className="h-5 w-5" /> Token & Overflow Management</div>
                               <div className="flex items-center gap-3">
-                                  <span className="text-sm font-medium opacity-70">Excess to Private Register?</span>
+                                  <span className="text-sm font-medium opacity-70">Excess to Private?</span>
                                   <FormField control={physicalForm.control} name="isPrivateOverflow" render={({ field }) => (
                                       <Switch checked={field.value} onCheckedChange={field.onChange} />
                                   )} />
@@ -362,16 +367,16 @@ export function PaddyLifted() {
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
                               <FormField control={physicalForm.control} name="tokenNumber" render={({ field }) => (
-                                  <FormItem><FormLabel>Token Number</FormLabel><FormControl><Input placeholder="Token ID" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                  <FormItem><FormLabel>Token Number</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
                               )} />
                               <FormField control={physicalForm.control} name="mandiTokenLimit" render={({ field }) => (
-                                  <FormItem><FormLabel>Mandi Token Limit (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Limit" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                                  <FormItem><FormLabel>Mandi Token Limit (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
                               )} />
                               {isOverflowEnabled && (
                                   <>
-                                      <FormItem><FormLabel>Calculated Excess (Qtl)</FormLabel><div className="h-10 flex items-center px-3 bg-destructive/10 text-destructive rounded-xl font-bold text-sm">{overflowQuantity.toFixed(2)} Qtl</div></FormItem>
+                                      <FormItem><FormLabel>Excess (Qtl)</FormLabel><div className="h-10 flex items-center px-3 bg-destructive/10 text-destructive rounded-xl font-bold text-sm">{overflowQuantity.toFixed(2)} Qtl</div></FormItem>
                                       <FormField control={physicalForm.control} name="privateOverflowRate" render={({ field }) => (
-                                          <FormItem><FormLabel>Private Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" placeholder="Rate" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                                          <FormItem><FormLabel>Private Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
                                       )} />
                                   </>
                               )}
@@ -396,13 +401,10 @@ export function PaddyLifted() {
                              {vehicleType === 'hired' && (
                               <>
                                   <FormField control={physicalForm.control} name="vehicleNumber" render={({ field }) => (
-                                      <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input placeholder="Number" {...field} className="rounded-xl" /></FormControl></FormItem>
-                                  )} />
-                                  <FormField control={physicalForm.control} name="ownerName" render={({ field }) => (
-                                      <FormItem><FormLabel>Agency</FormLabel><FormControl><Input placeholder="Owner Name" {...field} className="rounded-xl" /></FormControl></FormItem>
+                                      <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
                                   )} />
                                   <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (
-                                      <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="0" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                                      <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
                                   )} />
                               </>
                              )}
@@ -446,15 +448,13 @@ export function PaddyLifted() {
                           <TableHead className="font-bold py-4">RECORD ID</TableHead>
                           <TableHead className="font-bold py-4">Date</TableHead>
                           <TableHead className="font-bold py-4">Farmer / Source</TableHead>
-                          <TableHead className="font-bold py-4">Method</TableHead>
-                          <TableHead className="text-right font-bold py-4">Actual (Qtl)</TableHead>
                           <TableHead className="text-right font-bold py-4">Mandi FAQ (Qtl)</TableHead>
                           <TableHead className="text-right font-bold py-4">Actions</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
                       {physicalEntries.length === 0 ? (
-                          <TableRow><TableCell colSpan={7} className="text-center h-32 opacity-50 italic">No procurement records found.</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={5} className="text-center h-32 opacity-50 italic">No procurement records found.</TableCell></TableRow>
                       ) : (
                         physicalEntries.map((item) => (
                           <TableRow key={item.id} className="hover:bg-primary/5 transition-colors">
@@ -466,12 +466,6 @@ export function PaddyLifted() {
                                       <span className="text-[10px] uppercase font-medium opacity-60">{item.mandiName} {item.tokenNumber && `| TOKEN: ${item.tokenNumber}`}</span>
                                   </div>
                               </TableCell>
-                              <TableCell>
-                                  <Badge variant="outline" className="capitalize text-[10px] h-5 border-primary/20 text-primary bg-primary/5">
-                                      {item.calculationMethod || 'Manual'}
-                                  </Badge>
-                              </TableCell>
-                              <TableCell className="text-right text-xs font-medium">{item.totalPaddyReceived.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
                               <TableCell className="text-right font-black text-primary">{item.mandiWeight.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
                               <TableCell className="text-right">
                                 <div className="flex gap-2 justify-end">
@@ -484,7 +478,7 @@ export function PaddyLifted() {
                                 </div>
                                 <div className="absolute -left-[9999px] top-auto pointer-events-none" aria-hidden="true">
                                     <div id={`slip-${item.id}`}>
-                                        <PaddyLiftingSlip entry={item} millName={selectedMill?.name || 'Mandi Monitor'} millLocation={selectedMill?.location || 'Operational Facility'} />
+                                        <PaddyLiftingSlip entry={item} millName={selectedMill?.name || 'Mandi Monitor'} millLocation={selectedMill?.location || 'Facility'} />
                                     </div>
                                 </div>
                               </TableCell>
