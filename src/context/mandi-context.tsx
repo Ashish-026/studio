@@ -15,8 +15,9 @@ interface MandiContextType {
   availableRiceForSupply: number;
   addTarget: (item: Omit<TargetAllocation, 'id'>) => void;
   updateTarget: (id: string, updatedTarget: Omit<TargetAllocation, 'id'>) => void;
+  deleteTarget: (id: string) => void;
   addPaddyLifted: (item: Omit<PaddyLifted, 'id'>) => PaddyLifted;
-  updatePaddyLifted: (id: string, updatedPaddyLifted: Omit<PaddyLifted, 'id'>) => void;
+  deletePaddyLifted: (id: string) => void;
   addMandiProcessing: (item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
   addStockRelease: (item: Omit<MandiStockRelease, 'id'>) => void;
   updateStockRelease: (id: string, updatedStockRelease: Omit<MandiStockRelease, 'id' | 'date'>) => void;
@@ -83,14 +84,18 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     setTargetAllocations(prev => prev.map(t => t.id === id ? { ...updatedTarget, id } : t));
   }, []);
 
+  const deleteTarget = useCallback((id: string) => {
+    setTargetAllocations(prev => prev.filter(t => t.id !== id));
+  }, []);
+
   const addPaddyLifted = useCallback((item: Omit<PaddyLifted, 'id'>) => {
     const newEntry = { ...item, id: Date.now().toString() } as PaddyLifted;
     setPaddyLiftedItems(prev => [...prev, newEntry]);
     return newEntry;
   }, []);
 
-  const updatePaddyLifted = useCallback((id: string, updatedPaddyLifted: Omit<PaddyLifted, 'id'>) => {
-    setPaddyLiftedItems(prev => prev.map(p => p.id === id ? { ...updatedPaddyLifted, id } : p));
+  const deletePaddyLifted = useCallback((id: string) => {
+    setPaddyLiftedItems(prev => prev.filter(p => p.id !== id));
   }, []);
 
   const addStockRelease = useCallback((item: Omit<MandiStockRelease, 'id'>) => {
@@ -109,8 +114,9 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     stockReleases,
     addTarget,
     updateTarget,
+    deleteTarget,
     addPaddyLifted,
-    updatePaddyLifted,
+    deletePaddyLifted,
     addMandiProcessing: addMandiProcessingToStock,
     addStockRelease,
     availableRiceForSupply,
@@ -124,8 +130,9 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     stockReleases,
     addTarget,
     updateTarget,
+    deleteTarget,
     addPaddyLifted,
-    updatePaddyLifted,
+    deletePaddyLifted,
     addMandiProcessingToStock,
     addStockRelease,
     availableRiceForSupply,

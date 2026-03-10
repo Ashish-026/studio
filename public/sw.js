@@ -1,65 +1,53 @@
 
 /**
- * MANDI MONITOR - STANDALONE OFFLINE ENGINE
- * Strategy: Cache-First (Performance & Server-Independence)
+ * MANDI MONITOR - STANDALONE OFFLINE ENGINE (v10)
+ * This script makes the app 100% server-independent after the first launch.
  */
 
-const CACHE_NAME = 'mandi-monitor-shell-v1';
-const STATIC_ASSETS = [
+const CACHE_NAME = 'mandi-monitor-shell-v10';
+const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
-  'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
-  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
+  'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
+  'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
 ];
 
-// 1. INSTALL: Save the core app code to the phone's memory
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      console.log('Mandi Monitor: Storing App Shell in Internal Memory...');
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
 });
 
-// 2. ACTIVATE: Clean up old versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
       );
     })
   );
   self.clients.claim();
 });
 
-// 3. FETCH: Serve from local memory even if offline
 self.addEventListener('fetch', (event) => {
-  // Only intercept GET requests
-  if (event.request.method !== 'GET') return;
+  // NAVIGATION INTERCEPTOR: Prevents "You are offline" on page load
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match('/');
+      })
+    );
+    return;
+  }
 
+  // CACHE-FIRST STRATEGY for all other assets
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-
-      // If not in cache, try network
-      return fetch(event.request).then((response) => {
-        // Cache the response for future offline use
-        if (response && response.status === 200 && response.type === 'basic') {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return response;
-      }).catch(() => {
-        // DEFINITIVE OFFLINE FALLBACK: 
-        // If internet fails and we are navigating, return the main app shell
-        if (event.request.mode === 'navigate') {
-          return caches.match('/');
-        }
-      });
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
     })
   );
 });

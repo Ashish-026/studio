@@ -10,7 +10,7 @@ import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
 import { useStockData as useMainStockData } from '@/context/stock-context';
 import { useMill } from '@/hooks/use-mill';
-import { PlusCircle, DollarSign, Download, Edit, Car, Users, Calculator, Calendar as CalendarIcon, Info, FileText, X } from 'lucide-react';
+import { PlusCircle, DollarSign, Download, Trash2, Car, Users, Calculator, Calendar as CalendarIcon, Info, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,7 +50,7 @@ const physicalFormSchema = z.object({
   calculationMethod: z.enum(['uniform', 'bag-by-bag', 'weighbridge']).default('uniform'),
   tokenNumber: z.string().optional(),
   mandiTokenLimit: z.coerce.number().optional(),
-  isPrivateOverflow: b => b === true || b === false, // Fix for zod boolean
+  isPrivateOverflow: z.boolean().default(false),
   privateOverflowRate: z.coerce.number().optional(),
   description: z.string().optional(),
   vehicleType: z.enum(['farmer', 'own', 'hired'], { required_error: 'Vehicle type is required' }),
@@ -79,7 +79,7 @@ const monetaryFormSchema = z.object({
 });
 
 export function PaddyLifted() {
-  const { paddyLiftedItems, addPaddyLifted, updatePaddyLifted, targetAllocations } = useMandiData();
+  const { paddyLiftedItems, addPaddyLifted, deletePaddyLifted, targetAllocations } = useMandiData();
   const { addVehicle, addTrip } = useVehicleData();
   const { labourers, addGroupWorkEntry } = useLabourData();
   const { addPurchase } = useMainStockData();
@@ -89,7 +89,6 @@ export function PaddyLifted() {
   const isAdmin = user?.role === 'admin';
   const [showPhysicalForm, setShowPhysicalForm] = useState(false);
   const [showMonetaryForm, setShowMonetaryForm] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<PaddyLiftedType | null>(null);
   const [isCalculatorOpen, setCalculatorOpen] = useState(false);
   const [selectedMandi, setSelectedMandi] = useState('All');
   const [isPhysicalCalendarOpen, setIsPhysicalCalendarOpen] = useState(false);
@@ -136,7 +135,7 @@ export function PaddyLifted() {
   const numberOfLabours = physicalForm.watch('numberOfLabours');
   const watchedBagWeights = physicalForm.watch('individualBagWeights');
 
-  // HARDENED FIELD MANAGEMENT
+  // HARDENED FIELD MANAGEMENT: FIXED LOOP
   useEffect(() => {
     const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
     const currentCount = fields.length;
@@ -186,30 +185,25 @@ export function PaddyLifted() {
         labourerIds, entryType: 'physical' as const 
     };
 
-    if (editingEntry) {
-      updatePaddyLifted(editingEntry.id, { ...editingEntry, ...submissionValues });
-      toast({ title: 'Success!', description: 'Record updated.' });
-    } else {
-      addPaddyLifted(submissionValues);
-      toast({ title: 'Success!', description: 'Arrival recorded.' });
+    addPaddyLifted(submissionValues);
+    toast({ title: 'Success!', description: 'Arrival recorded.' });
 
-      if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
-        const vehicleId = addVehicle({
-            vehicleNumber: submissionValues.vehicleNumber, driverName: submissionValues.driverName || '',
-            ownerName: submissionValues.ownerName || '', rentType: 'per_trip', rentAmount: 0,
-        });
-        if (vehicleId) {
-            addTrip(vehicleId, {
-                source: submissionValues.source || submissionValues.mandiName,
-                destination: submissionValues.destination || 'Mill',
-                quantity: submissionValues.totalPaddyReceived, tripCharge: submissionValues.tripCharge,
-            });
-        }
+    if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
+      const vehicleId = addVehicle({
+          vehicleNumber: submissionValues.vehicleNumber, driverName: submissionValues.driverName || '',
+          ownerName: submissionValues.ownerName || '', rentType: 'per_trip', rentAmount: 0,
+      });
+      if (vehicleId) {
+          addTrip(vehicleId, {
+              source: submissionValues.source || submissionValues.mandiName,
+              destination: submissionValues.destination || 'Mill',
+              quantity: submissionValues.totalPaddyReceived, tripCharge: submissionValues.tripCharge,
+          });
       }
+    }
 
-      if (labourerIds.length > 0 && submissionValues.labourCharge > 0) {
-        addGroupWorkEntry(labourerIds, submissionValues.labourCharge, `Paddy lifting: ${submissionValues.mandiName}`, submissionValues.totalPaddyReceived);
-      }
+    if (labourerIds.length > 0 && submissionValues.labourCharge > 0) {
+      addGroupWorkEntry(labourerIds, submissionValues.labourCharge, `Paddy lifting: ${submissionValues.mandiName}`, submissionValues.totalPaddyReceived);
     }
     cancelForm();
   }
@@ -222,36 +216,13 @@ export function PaddyLifted() {
       totalPaddyReceived: equivalentQuintal, mandiWeight: 0, date: values.date, entryType: 'monetary' as const,
     };
     
-    if (editingEntry) {
-      updatePaddyLifted(editingEntry.id, { ...editingEntry, ...newEntryData });
-    } else {
-      addPaddyLifted(newEntryData);
-    }
+    addPaddyLifted(newEntryData);
     cancelForm();
   }
 
-  const handleEditClick = (entry: PaddyLiftedType) => {
-    setEditingEntry(entry);
-    if (entry.entryType === 'monetary') {
-      monetaryForm.reset({
-        mandiName: entry.mandiName, moneyReceived: entry.moneyReceived || 0,
-        ratePerQuintal: entry.ratePerQuintal || 0, date: new Date(entry.date)
-      });
-      setShowMonetaryForm(true);
-      setShowPhysicalForm(false);
-    } else {
-      physicalForm.reset({
-        ...entry,
-        date: new Date(entry.date),
-        mandiTokenLimit: entry.mandiTokenLimit || 0,
-        privateOverflowRate: entry.privateOverflowRate || 0,
-        labourerIds: entry.labourerIds?.map(id => ({ value: id })) || [],
-        numberOfLabours: entry.labourerIds?.length || 0,
-      });
-      setShowPhysicalForm(true);
-      setShowMonetaryForm(false);
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleDeleteClick = (id: string) => {
+    deletePaddyLifted(id);
+    toast({ title: 'Deleted', description: 'Record has been removed.' });
   };
 
   const handleDownloadSlip = (item: PaddyLiftedType) => {
@@ -262,7 +233,6 @@ export function PaddyLifted() {
   const cancelForm = () => {
     setShowPhysicalForm(false);
     setShowMonetaryForm(false);
-    setEditingEntry(null);
     physicalForm.reset({
         mandiName: '', farmerName: '', vehicleType: 'farmer', destination: 'Mill',
         totalPaddyReceived: 0, mandiWeight: 0, date: new Date(), calculationMethod: 'uniform',
@@ -282,6 +252,10 @@ export function PaddyLifted() {
     setCalculatorOpen(false);
   };
 
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
   return (
     <>
       <Card className="border-none shadow-none bg-transparent">
@@ -289,7 +263,7 @@ export function PaddyLifted() {
           <div className="flex justify-between items-start mb-6">
             <div>
               <CardTitle className="text-2xl font-bold font-headline text-primary">Procurement Records</CardTitle>
-              <CardDescription>Full form editing enabled. Deduction applies before standardization.</CardDescription>
+              <CardDescription>Fresh entries enabled. Deduction applies before standardization.</CardDescription>
             </div>
              <Button variant="outline" size="sm" onClick={() => downloadPdf('paddy-lifted-table', 'paddy-lifted-summary')} className="rounded-xl border-primary/20">
                 <Download className="mr-2 h-4 w-4" /> Export Summary PDF
@@ -320,7 +294,7 @@ export function PaddyLifted() {
             <Card className="bg-white border-primary/10 shadow-2xl rounded-3xl overflow-hidden animate-in zoom-in-95 duration-300">
               <CardHeader className="bg-primary/5 border-b border-primary/10 pb-4 flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg font-bold text-primary">{editingEntry ? 'Edit Record' : 'New Entry'}</CardTitle>
+                    <CardTitle className="text-lg font-bold text-primary">New Entry</CardTitle>
                     <CardDescription>{showPhysicalForm ? 'Physical Arrival Form' : 'Monetary Record Form'}</CardDescription>
                   </div>
                   <Button variant="ghost" size="icon" onClick={cancelForm} className="rounded-full"><X className="h-5 w-5" /></Button>
@@ -359,7 +333,7 @@ export function PaddyLifted() {
                           <FormItem>
                             <FormLabel>Total Weight (Actual Qtl)</FormLabel>
                               <div className="flex items-center gap-2">
-                                <FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl>
+                                <FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl h-12" /></FormControl>
                                 <Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)} className="h-12 w-12 rounded-xl border-primary/20"><Calculator className="h-5 w-5 text-primary" /></Button>
                               </div>
                             <FormMessage />
@@ -368,7 +342,7 @@ export function PaddyLifted() {
                         <FormField control={physicalForm.control} name="mandiWeight" render={({ field }) => (
                           <FormItem>
                             <FormLabel>Considered Mandi Qtl (FAQ)</FormLabel>
-                            <FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12 bg-primary/5 border-primary/20 font-bold text-primary" /></FormControl>
+                            <FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl h-12 bg-primary/5 border-primary/20 font-bold text-primary" /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
@@ -389,13 +363,13 @@ export function PaddyLifted() {
                                   <FormItem><FormLabel>Token Number</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
                               )} />
                               <FormField control={physicalForm.control} name="mandiTokenLimit" render={({ field }) => (
-                                  <FormItem><FormLabel>Mandi Token Limit (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                                  <FormItem><FormLabel>Mandi Token Limit (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
                               )} />
                               {isOverflowEnabled && (
                                   <>
                                       <FormItem><FormLabel>Excess (Qtl)</FormLabel><div className="h-10 flex items-center px-3 bg-destructive/10 text-destructive rounded-xl font-bold text-sm">{overflowQuantity.toFixed(2)} Qtl</div></FormItem>
                                       <FormField control={physicalForm.control} name="privateOverflowRate" render={({ field }) => (
-                                          <FormItem><FormLabel>Private Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                                          <FormItem><FormLabel>Private Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
                                       )} />
                                   </>
                               )}
@@ -423,7 +397,7 @@ export function PaddyLifted() {
                                       <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
                                   )} />
                                   <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (
-                                      <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                                      <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
                                   )} />
                               </>
                              )}
@@ -434,10 +408,10 @@ export function PaddyLifted() {
                           <h3 className="text-md font-bold flex items-center gap-2 text-primary opacity-80"><Users className="h-5 w-5" /> Labour Selection</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <FormField control={physicalForm.control} name="numberOfLabours" render={({ field }) => (
-                                  <FormItem><FormLabel>Number of Workers</FormLabel><FormControl><Input type="number" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                                  <FormItem><FormLabel>Number of Workers</FormLabel><FormControl><Input type="number" {...field} onFocus={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
                               )} />
                               <FormField control={physicalForm.control} name="labourCharge" render={({ field }) => (
-                                  <FormItem><FormLabel>Total Loading Wage (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} className="rounded-xl" /></FormControl></FormItem>
+                                  <FormItem><FormLabel>Total Loading Wage (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
                               )} />
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -455,7 +429,7 @@ export function PaddyLifted() {
                       </div>
 
                       <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl font-bold text-lg shadow-xl shadow-primary/20">
-                        {editingEntry ? 'Update Record' : 'Confirm Procurement Arrival'}
+                        Confirm Procurement Arrival
                       </Button>
                     </form>
                   </Form>
@@ -467,12 +441,12 @@ export function PaddyLifted() {
                           <FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>
                         )} />
                         <FormField control={monetaryForm.control} name="moneyReceived" render={({ field }) => (
-                          <FormItem><FormLabel>Cash Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl></FormItem>
+                          <FormItem><FormLabel>Cash Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl h-12" /></FormControl></FormItem>
                         )} />
                         <FormField control={monetaryForm.control} name="ratePerQuintal" render={({ field }) => (
-                          <FormItem><FormLabel>Rate Applied (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={(e) => e.target.select()} className="rounded-xl h-12" /></FormControl></FormItem>
+                          <FormItem><FormLabel>Rate Applied (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl h-12" /></FormControl></FormItem>
                         )} />
-                        <Button type="submit" className="bg-primary hover:bg-primary/90 h-12 rounded-xl font-bold">{editingEntry ? 'Update Cash Entry' : 'Save Cash Entry'}</Button>
+                        <Button type="submit" className="bg-primary hover:bg-primary/90 h-12 rounded-xl font-bold">Save Cash Entry</Button>
                       </div>
                     </form>
                   </Form>
@@ -515,8 +489,8 @@ export function PaddyLifted() {
                                     <Button variant="outline" size="sm" onClick={() => handleDownloadSlip(item)} className="rounded-lg h-8 px-2 border-primary/20 hover:bg-primary/5 hover:text-primary">
                                         <FileText className="h-3.5 w-3.5 mr-1" /> Slip
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)} className="h-8 w-8 rounded-lg hover:text-primary hover:bg-primary/10">
-                                        <Edit className="h-4 w-4" />
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(item.id)} className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10">
+                                        <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>
                                 <div className="absolute -left-[9999px] top-auto pointer-events-none" aria-hidden="true">
