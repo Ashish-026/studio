@@ -1,26 +1,26 @@
 
-MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v7)
+MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v8)
 
 1. RESOLVING "OFFLINE" LAUNCH ERRORS (FINAL VERIFICATION)
 ---------------------------------------------------------
 - ACTION: Physically re-implemented /public/sw.js with explicit navigation interception.
-- FIX: Added logic to serve '/' immediately when a browser detects an offline state during navigation.
+- FIX: Added logic to serve '/' shell immediately when a browser detects an offline state during navigation.
 - RESULT: The app can now boot from its local cache even if the Firebase URL is inactive.
 
-2. MATH REFINEMENT: DEDUCTION LOGIC
+2. EDITING CAPABILITIES: FULL FORM RE-ENTRY
 ---------------------------------------------------------
-- PROBLEM: Clarity on whether deduction applies before or after standardization.
+- PROBLEM: Users couldn't modify Token Overflow or Bag Weights after saving.
+- ACTION: Updated handleEditClick to reopen the complete Physical Arrival form instead of a minimal dialog.
+- RESULT: Records can be fully re-calculated and shifted between registers (Mandi to Private) during edit.
+
+3. MATH REFINEMENT: DEDUCTION LOGIC
+---------------------------------------------------------
 - ACTION: Updated BagWeightCalculator logic. Formula: Net Actual = (Gross - Deduction). 
 - RESULT: Official Mandi Quantity is now calculated based on this Net Actual weight.
-
-3. DATA PERSISTENCE: FRESH FORMS
----------------------------------------------------------
-- ACTION: Added explicit reset() calls to 'Farmer Arrival' and 'New Purchase' buttons.
-- RESULT: Bag tables and weights are now force-cleared for every new entry, preventing old data from showing.
 
 4. USER EXPERIENCE: INPUT AUTO-SELECTION
 ---------------------------------------------------------
 - ACTION: Added onFocus selection to all weight inputs.
 - RESULT: Tapping an input highlights the existing '0', allowing direct numeric entry without manual clearing.
 
-LOG FINALIZED. STANDALONE ENGINE ACTIVE. DEDUCTION MATH CORRECTED.
+LOG FINALIZED. STANDALONE ENGINE ACTIVE. DEDUCTION MATH CORRECTED. FULL EDIT MODE ENABLED.
