@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -10,7 +9,7 @@ import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
 import { useStockData as useMainStockData } from '@/context/stock-context';
 import { useMill } from '@/hooks/use-mill';
-import { PlusCircle, DollarSign, Trash2, Car, Users, Calculator, Calendar as CalendarIcon, Info, FileText, X } from 'lucide-react';
+import { PlusCircle, DollarSign, Trash2, Car, Users, Calculator, Calendar as CalendarIcon, Info, FileText, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -134,15 +133,20 @@ export function PaddyLifted() {
   const vehicleType = physicalForm.watch('vehicleType');
   const watchedBagWeights = physicalForm.watch('individualBagWeights');
 
-  // Hardened loop protection for labour selection
   useEffect(() => {
-    const target = Math.max(0, parseInt(String(numberOfLabours || 0)));
+    const target = Math.max(0, parseInt(String(numberOfLabours)) || 0);
     const current = fields.length;
     if (target === current) return;
+    
     if (target > current) {
-      append(Array(target - current).fill({ value: '' }));
+      const diff = target - current;
+      const newItems = Array(diff).fill({ value: '' });
+      append(newItems);
     } else {
-      for (let i = current; i > target; i--) remove(i - 1);
+      const diff = current - target;
+      for (let i = 0; i < diff; i++) {
+        remove(current - 1 - i);
+      }
     }
   }, [numberOfLabours, fields.length, append, remove]);
 

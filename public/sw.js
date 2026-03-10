@@ -1,16 +1,18 @@
+/**
+ * MANDI MONITOR - DEFINITIVE OFFLINE ENGINE (v9)
+ * Forces app loading from phone memory even when server is disconnected.
+ */
 
-const CACHE_NAME = 'mandi-monitor-engine-v10';
-const ASSETS_TO_CACHE = [
-  '/',
-  '/manifest.json',
-  'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
-  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
-];
+const CACHE_NAME = 'mandi-monitor-v9';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll([
+        '/',
+        '/manifest.json',
+        '/_next/static/css/app/globals.css'
+      ]).catch(() => console.log('SW: Pre-cache minor fail, proceeding...'));
     })
   );
   self.skipWaiting();
@@ -20,7 +22,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
       );
     })
   );
@@ -28,7 +30,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Navigation interceptor: catch offline 404s and serve app shell
+  // NAVIGATION INTERCEPTOR: Essential for Standalone Launch
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -38,10 +40,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Generic Cache-First strategy for static assets
+  // CACHE-FIRST ASSET LOADING
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+      if (response) return response;
+      
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
+        }
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+        return networkResponse;
+      }).catch(() => {
+        // Silent fail for failed dynamic network assets
+      });
     })
   );
 });

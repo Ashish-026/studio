@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -51,22 +50,19 @@ export function MandiProcessing() {
   const numberOfLabours = processingForm.watch('numberOfLabours');
   const selectedLabourerIds = processingForm.watch('labourerIds').map(l => l.value);
 
-  // HARDENED FIELD MANAGEMENT: Uses a single processing step to prevent infinite loops
   useEffect(() => {
-    const targetCount = parseInt(String(numberOfLabours || 0));
-    const currentCount = fields.length;
-    
-    if (targetCount === currentCount) return;
+    const target = Math.max(0, parseInt(String(numberOfLabours)) || 0);
+    const current = fields.length;
+    if (target === current) return;
 
-    if (targetCount > currentCount) {
-      const diff = targetCount - currentCount;
-      for (let i = 0; i < diff; i++) {
-        append({ value: '' });
-      }
+    if (target > current) {
+      const diff = target - current;
+      const newItems = Array(diff).fill({ value: '' });
+      append(newItems);
     } else {
-      const diff = currentCount - targetCount;
+      const diff = current - target;
       for (let i = 0; i < diff; i++) {
-        remove(currentCount - 1 - i);
+        remove(current - 1 - i);
       }
     }
   }, [numberOfLabours, fields.length, append, remove]);
