@@ -1,30 +1,28 @@
 
 /**
- * MANDI MONITOR - STANDALONE OFFLINE ENGINE
- * Version: 8.0
- * Strategy: Cache-First with Navigation Interceptor
+ * MANDI MONITOR - STANDALONE OFFLINE ENGINE (v7)
+ * This script saves the app logic to the phone's memory.
  */
 
-const CACHE_NAME = 'mandi-monitor-engine-v8';
+const CACHE_NAME = 'mandi-monitor-offline-v7';
 const OFFLINE_URL = '/';
 
-const INITIAL_ASSETS = [
-  '/',
-  '/manifest.json',
-  'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
-  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
-];
-
+// 1. Installation: Save the "App Portal" to the phone
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('Mandi Monitor: Storing app shell in memory...');
-      return cache.addAll(INITIAL_ASSETS);
+      return cache.addAll([
+        OFFLINE_URL,
+        '/manifest.json',
+        'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
+        'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
+      ]);
     })
   );
   self.skipWaiting();
 });
 
+// 2. Activation: Clear old versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -36,39 +34,23 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// 3. Fetch Interceptor: The "Zero Internet" Launcher
 self.addEventListener('fetch', (event) => {
-  // 1. NAVIGATION INTERCEPTOR: Prevents "You are offline" launch errors
+  // Only handle navigation requests (opening the app)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
+        // If the server is offline or suspended, serve the local copy instantly
         return caches.match(OFFLINE_URL);
       })
     );
     return;
   }
 
-  // 2. ASSET HANDLER: Serves images and code from local storage
+  // Handle other assets (images, scripts)
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(event.request).then((networkResponse) => {
-        // Store new code/assets as they are downloaded
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
-      }).catch(() => {
-        // Fallback for missing images
-        if (event.request.destination === 'image') {
-          return caches.match('https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL');
-        }
-      });
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
     })
   );
 });

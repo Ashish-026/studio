@@ -48,9 +48,10 @@ interface BagWeightCalculatorProps {
     }) => void;
     onCancel: () => void;
     isPrivate?: boolean;
+    initialBagWeights?: number[];
 }
 
-export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false }: BagWeightCalculatorProps) {
+export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false, initialBagWeights }: BagWeightCalculatorProps) {
     const [activeTab, setActiveTab] = useState('uniform');
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -69,10 +70,24 @@ export function BagWeightCalculator({ onConfirm, onCancel, isPrivate = false }: 
         defaultValues: { grossWeightTotal: 0, weightPerBag: 78, consideredWeight: 75, deduction: 0 },
     });
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields, append, remove, replace } = useFieldArray({
         control: bagByBagForm.control,
         name: "bags"
     });
+
+    // START FRESH: Reset forms when the component mounts if no initial data exists
+    useEffect(() => {
+        if (!initialBagWeights || initialBagWeights.length === 0) {
+            uniformForm.reset({ numberOfBags: 0, weightPerBag: isPrivate ? 75 : 78, consideredWeight: 75, deduction: 0 });
+            bagByBagForm.reset({ bags: [{ weight: 0 }], consideredWeight: 75, weightPerBag: 78, deduction: 0 });
+            weighbridgeForm.reset({ grossWeightTotal: 0, weightPerBag: 78, consideredWeight: 75, deduction: 0 });
+        } else {
+            // Load existing data if editing
+            replace(initialBagWeights.map(w => ({ weight: w })));
+            uniformForm.setValue('numberOfBags', initialBagWeights.length);
+            setActiveTab('bag-by-bag');
+        }
+    }, [initialBagWeights, isPrivate, replace]);
 
     const watchedUniformValues = uniformForm.watch();
     const watchedBagByBagValues = bagByBagForm.watch();

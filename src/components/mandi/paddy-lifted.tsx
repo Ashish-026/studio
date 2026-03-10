@@ -297,6 +297,27 @@ export function PaddyLifted() {
     downloadPdf(`slip-${entry.id}`, `slip-${entry.farmerName.toLowerCase().replace(/\s+/g, '-')}-${entry.id.slice(-4)}`);
   }
 
+  const handleTogglePhysicalForm = () => {
+    if (!showPhysicalForm) {
+      // START NEW ENTRY: Clear everything
+      physicalForm.reset({
+        mandiName: '',
+        farmerName: '',
+        vehicleType: 'farmer',
+        destination: 'Mill',
+        totalPaddyReceived: 0,
+        mandiWeight: 0,
+        date: new Date(),
+        calculationMethod: 'uniform',
+        individualBagWeights: [],
+        numberOfLabours: 0,
+        labourerIds: [],
+        labourCharge: 0
+      });
+    }
+    setShowPhysicalForm(!showPhysicalForm);
+  };
+
   return (
     <>
       <Card className="border-none shadow-none bg-transparent">
@@ -325,7 +346,7 @@ export function PaddyLifted() {
                 </Select>
               </div>
               <div className="flex gap-3">
-                <Button onClick={() => setShowPhysicalForm(!showPhysicalForm)} className="rounded-xl shadow-lg shadow-primary/10" disabled={uniqueMandis.length === 0}>
+                <Button onClick={handleTogglePhysicalForm} className="rounded-xl shadow-lg shadow-primary/10" disabled={uniqueMandis.length === 0}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   {showPhysicalForm ? 'Cancel' : 'Farmer Arrival'}
                 </Button>
@@ -553,7 +574,11 @@ export function PaddyLifted() {
       </Card>
       
       <Dialog open={isCalculatorOpen} onOpenChange={setCalculatorOpen}>
-        <BagWeightCalculator onConfirm={handleCalculatorConfirm} onCancel={() => setCalculatorOpen(false)} />
+        <BagWeightCalculator 
+          onConfirm={handleCalculatorConfirm} 
+          onCancel={() => setCalculatorOpen(false)} 
+          initialBagWeights={physicalForm.watch('individualBagWeights')}
+        />
       </Dialog>
       
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
