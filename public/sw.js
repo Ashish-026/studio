@@ -1,59 +1,71 @@
+
 /**
- * MANDI MONITOR - STANDALONE OFFLINE ENGINE
- * Version: 5.0
- * This script caches the entire app shell on the device to prevent "Offline" errors at launch.
+ * MANDI MONITOR - OFFLINE SERVICE WORKER (v1.0)
+ * This script caches the app shell on the device to allow 
+ * launching from the home screen without internet.
  */
 
-const CACHE_NAME = 'mandi-monitor-v5';
+const CACHE_NAME = 'mandi-monitor-standalone-v1';
 const OFFLINE_URL = '/';
 
-// 1. INSTALLATION: Save the app shell to local phone storage
+// 1. Install Phase: Cache the root portal
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll([
-        OFFLINE_URL,
+        '/',
         '/manifest.webmanifest',
+        'https://placehold.co/192x192/0b3d1e/ffffff.png?text=MILL',
+        'https://placehold.co/512x512/0b3d1e/ffffff.png?text=MILL'
       ]);
     })
   );
+  self.skipWaiting();
 });
 
-// 2. ACTIVATION: Claim control immediately
+// 2. Activate Phase: Clean up old caches
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.filter((cacheName) => cacheName !== CACHE_NAME)
+          .map((cacheName) => caches.delete(cacheName))
+      );
+    })
+  );
+  self.clients.claim();
 });
 
-// 3. FETCH INTERCEPTION: Serve from memory if network fails
+// 3. Fetch Phase: Intercept navigations and serve from cache if offline
 self.addEventListener('fetch', (event) => {
-  // Navigation requests (opening the app)
+  // Handle navigation requests (e.g. opening the app)
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        // If network fails or URL is suspended, serve the local app shell
         return caches.match(OFFLINE_URL);
       })
     );
     return;
   }
 
-  // Asset requests (JS, CSS, Images)
+  // Handle assets (JS, CSS, Images) with Stale-While-Revalidate
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).then((networkResponse) => {
-        // Cache new assets on the fly for permanent offline access
-        if (networkResponse.status === 200) {
-          const responseClone = networkResponse.clone();
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        // Cache new assets on the fly
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
+            cache.put(event.request, responseToCache);
           });
         }
         return networkResponse;
+      }).catch(() => {
+        // Silent fail for network errors
+        return null;
       });
-    }).catch(() => {
-        // Fallback to main shell for any failed asset
-        return caches.match(OFFLINE_URL);
+
+      return cachedResponse || fetchPromise;
     })
   );
 });

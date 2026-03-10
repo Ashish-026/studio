@@ -1,3 +1,4 @@
+
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
@@ -30,6 +31,7 @@ export function initializeFirebase() {
         }
       } catch (e) {
         // SILENT FALLBACK: If URL is suspended, proceed using internal database only
+        console.warn("Mandi Monitor: Firebase detached. Using local storage.");
         return {
           firebaseApp: null as any,
           auth: null as any,
