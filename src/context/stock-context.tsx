@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useContext, ReactNode, useMemo, useState, useCallback, useEffect } from 'react';
@@ -17,10 +16,12 @@ interface StockContextType {
   addPurchase: (item: Omit<PrivatePurchase, 'id' | 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { initialPayment: number }) => void;
   deletePurchase: (id: string) => void;
   addPayment: (purchaseId: string, amount: number) => void;
+  addFarmerPaymentByName: (farmerName: string, amount: number) => void;
   sales: PrivateSale[];
   addSale: (item: Omit<PrivateSale, 'id' | 'date' | 'totalAmount' | 'amountReceived' | 'balance' | 'payments'> & { initialPayment: number }) => void;
   deleteSale: (id: string) => void;
   addSalePayment: (saleId: string, amount: number) => void;
+  addCustomerPaymentByName: (customerName: string, amount: number) => void;
   transferRiceToMandi: (quantity: number) => void;
   loading: boolean;
 }
@@ -122,7 +123,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
       totalAmount, 
       amountPaid: item.initialPayment, 
       balance: totalAmount - item.initialPayment, 
-      payments: item.initialPayment > 0 ? [{ id: id + '-p', amount: item.initialPayment, date: new Date() }] : [] 
+      payments: item.initialPayment > 0 ? [{ id: id + '-p', amount: item.initialPayment, date: new Date(), note: 'Initial payment' }] : [] 
     };
     setPurchases(prev => [...prev, newPurchase]);
   }, []);
@@ -142,6 +143,22 @@ export function StockProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const addFarmerPaymentByName = useCallback((farmerName: string, amount: number) => {
+    setPurchases(prev => {
+      let remainingPayment = Number(amount);
+      return prev.map(p => {
+        if (p.farmerName === farmerName && remainingPayment > 0 && p.balance > 0) {
+          const paymentForThisRecord = Math.min(p.balance, remainingPayment);
+          remainingPayment -= paymentForThisRecord;
+          const updatedPaid = p.amountPaid + paymentForThisRecord;
+          const newPayment = { id: Date.now().toString() + '-' + p.id, amount: paymentForThisRecord, date: new Date(), note: 'Account payment' };
+          return { ...p, amountPaid: updatedPaid, balance: p.totalAmount - updatedPaid, payments: [...p.payments, newPayment] };
+        }
+        return p;
+      });
+    });
+  }, []);
+
   const addSale = useCallback((item: Omit<PrivateSale, 'id' | 'date' | 'totalAmount' | 'amountReceived' | 'balance' | 'payments'> & { initialPayment: number }) => {
     const totalAmount = item.quantity * item.rate;
     const id = Date.now().toString();
@@ -152,7 +169,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
       totalAmount, 
       amountReceived: item.initialPayment, 
       balance: totalAmount - item.initialPayment, 
-      payments: item.initialPayment > 0 ? [{ id: id + '-sp', amount: item.initialPayment, date: new Date() }] : [] 
+      payments: item.initialPayment > 0 ? [{ id: id + '-sp', amount: item.initialPayment, date: new Date(), note: 'Initial payment' }] : [] 
     };
     setSales(prev => [...prev, newSale]);
   }, []);
@@ -172,6 +189,22 @@ export function StockProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const addCustomerPaymentByName = useCallback((customerName: string, amount: number) => {
+    setSales(prev => {
+      let remainingPayment = Number(amount);
+      return prev.map(s => {
+        if (s.customerName === customerName && remainingPayment > 0 && s.balance > 0) {
+          const paymentForThisRecord = Math.min(s.balance, remainingPayment);
+          remainingPayment -= paymentForThisRecord;
+          const updatedReceived = s.amountReceived + paymentForThisRecord;
+          const newPayment = { id: Date.now().toString() + '-' + s.id, amount: paymentForThisRecord, date: new Date(), note: 'Account payment' };
+          return { ...s, amountReceived: updatedReceived, balance: s.totalAmount - updatedReceived, payments: [...s.payments, newPayment] };
+        }
+        return s;
+      });
+    });
+  }, []);
+
   const transferRiceToMandi = useCallback((quantity: number) => {
     const newTransfer = { date: new Date(), quantity: Number(quantity) };
     setTransferredInStock(prev => [...prev, newTransfer]);
@@ -189,10 +222,12 @@ export function StockProvider({ children }: { children: ReactNode }) {
     addPurchase,
     deletePurchase,
     addPayment,
+    addFarmerPaymentByName,
     sales,
     addSale,
     deleteSale,
     addSalePayment,
+    addCustomerPaymentByName,
     transferRiceToMandi,
     loading
   }), [
@@ -207,10 +242,12 @@ export function StockProvider({ children }: { children: ReactNode }) {
     addPurchase,
     deletePurchase,
     addPayment,
+    addFarmerPaymentByName,
     sales,
     addSale,
     deleteSale,
     addSalePayment,
+    addCustomerPaymentByName,
     transferRiceToMandi,
     loading
   ]);

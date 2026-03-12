@@ -79,6 +79,7 @@ export type Payment = {
   id: string;
   amount: number;
   date: Date;
+  note?: string;
 };
 
 export type PrivatePurchase = {
@@ -93,6 +94,8 @@ export type PrivatePurchase = {
   description?: string;
   date: Date;
   payments: Payment[];
+  isMandiExcess?: boolean;
+  mandiTokenNo?: string;
   vehicleType?: 'farmer' | 'own' | 'hired';
   vehicleNumber?: string;
   driverName?: string;
