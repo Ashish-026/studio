@@ -39,13 +39,8 @@ export type PaddyLifted = {
   labourerIds?: string[];
   labourCharge?: number;
   labourWageType?: 'per_item' | 'total_amount';
-  // New Fields for Token Logic
   tokenNumber?: string;
-  mandiTokenLimit?: number;
-  privateOverflowQty?: number;
-  privateOverflowRate?: number;
-  isPrivateOverflow?: boolean;
-  // Detailed bag weights
+  description?: string;
   individualBagWeights?: number[];
 };
 
@@ -108,7 +103,6 @@ export type PrivatePurchase = {
   labourerIds?: string[];
   labourCharge?: number;
   labourWageType?: 'per_item' | 'total_amount';
-  // New fields for detail tracking
   individualBagWeights?: number[];
   calculationMethod?: 'uniform' | 'bag-by-bag' | 'weighbridge';
   deductionKg?: number;
@@ -146,10 +140,8 @@ export type LabourWorkEntry = {
   description: string;
   entryType: 'daily' | 'item_rate';
   wage: number;
-  // Daily wage fields
   activity?: string;
-  dailyRate?: number; // Rate for a full day
-  // Item rate fields
+  dailyRate?: number; 
   itemName?: string;
   quantity?: number;
   ratePerItem?: number;

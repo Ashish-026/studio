@@ -1,26 +1,25 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMandiData } from '@/context/mandi-context';
 import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
-import { useStockData as useMainStockData } from '@/context/stock-context';
 import { useMill } from '@/hooks/use-mill';
 import { 
   PlusCircle, 
-  DollarSign, 
   Trash2, 
   Car, 
   Users, 
   Calculator, 
   Calendar as CalendarIcon, 
-  Info, 
-  FileText, 
   X, 
-  Download as DownloadIcon 
+  Download as DownloadIcon,
+  ChevronRight,
+  ChevronDown,
+  User as UserIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,20 +32,20 @@ import { useAuth } from '@/hooks/use-auth';
 import { Separator } from '@/components/ui/separator';
 import { downloadPdf } from '@/lib/pdf-utils';
 import type { PaddyLifted as PaddyLiftedType } from '@/lib/types';
-import { Label } from '../ui/label';
+import { Label } from '@/components/ui/label';
 import { format, isValid } from 'date-fns';
 import { BagWeightCalculator } from './bag-weight-calculator';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Calendar } from '../ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { Switch } from '../ui/switch';
 import { PaddyLiftingSlip } from './paddy-lifting-slip';
-import { Badge } from '../ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
-  labourerIds: z.array(z.object({ value: z.string().min(1, "Please select a labourer.") })).default([]),
+  labourerIds: z.array(z.object({ value: z.string() })).default([]),
   labourWageType: z.enum(['per_item', 'total_amount']).default('total_amount'),
   labourCharge: z.coerce.number().min(0).default(0),
 });
@@ -59,9 +58,6 @@ const physicalFormSchema = z.object({
   date: z.date({ required_error: 'A date is required.' }),
   calculationMethod: z.enum(['uniform', 'bag-by-bag', 'weighbridge']).default('uniform'),
   tokenNumber: z.string().optional(),
-  mandiTokenLimit: z.coerce.number().optional(),
-  isPrivateOverflow: z.boolean().default(false),
-  privateOverflowRate: z.coerce.number().optional(),
   description: z.string().optional(),
   vehicleType: z.enum(['farmer', 'own', 'hired'], { required_error: 'Vehicle type is required' }),
   vehicleNumber: z.string().optional(),
@@ -92,7 +88,6 @@ export function PaddyLifted() {
   const { paddyLiftedItems, addPaddyLifted, deletePaddyLifted, targetAllocations } = useMandiData();
   const { addVehicle, addTrip } = useVehicleData();
   const { labourers, addGroupWorkEntry } = useLabourData();
-  const { addPurchase } = useMainStockData();
   const { selectedMill } = useMill();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -103,29 +98,31 @@ export function PaddyLifted() {
   const [isCalculatorOpen, setCalculatorOpen] = useState(false);
   const [selectedMandi, setSelectedMandi] = useState('All');
   const [isPhysicalCalendarOpen, setIsPhysicalCalendarOpen] = useState(false);
+  const [openFarmerLedgers, setOpenFarmerLedgers] = useState<Record<string, boolean>>({});
 
   const uniqueMandis = useMemo(() => {
     const mandiNames = (targetAllocations || []).map((allocation) => allocation.mandiName);
     return [...new Set(mandiNames.filter(Boolean))];
   }, [targetAllocations]);
 
-  const physicalEntries = useMemo(() => 
-    (paddyLiftedItems || [])
-      .filter(item => selectedMandi === 'All' || item.mandiName === selectedMandi)
-      .filter(item => item.entryType === 'physical' || !item.entryType)
-      .sort((a,b) => {
-        const dateA = new Date(a.date).getTime() || 0;
-        const dateB = new Date(b.date).getTime() || 0;
-        return dateB - dateA;
-      }), 
-  [paddyLiftedItems, selectedMandi]);
+  const farmerAggregates = useMemo(() => {
+    const map: Record<string, { id: string; name: string; items: PaddyLiftedType[]; totalQty: number }> = {};
+    (paddyLiftedItems || []).forEach(item => {
+      const key = item.farmerName.trim();
+      if (!map[key]) {
+        map[key] = { id: key.toLowerCase().replace(/\s+/g, '-'), name: key, items: [], totalQty: 0 };
+      }
+      map[key].items.push(item);
+      map[key].totalQty += item.mandiWeight;
+    });
+    return Object.values(map).sort((a,b) => a.name.localeCompare(b.name));
+  }, [paddyLiftedItems]);
 
   const physicalForm = useForm<z.infer<typeof physicalFormSchema>>({
     resolver: zodResolver(physicalFormSchema),
     defaultValues: {
         mandiName: '', farmerName: '', vehicleType: 'farmer', destination: 'Mill',
         totalPaddyReceived: 0, mandiWeight: 0, date: new Date(), calculationMethod: 'uniform',
-        isPrivateOverflow: false, privateOverflowRate: 0, mandiTokenLimit: 0,
         tokenNumber: '', description: '', vehicleNumber: '', driverName: '',
         ownerName: '', tripCharge: 0, source: '', numberOfLabours: 0,
         labourerIds: [], labourCharge: 0, labourWageType: 'total_amount', individualBagWeights: [],
@@ -140,13 +137,9 @@ export function PaddyLifted() {
   });
   
   const numberOfLabours = physicalForm.watch('numberOfLabours');
-  const mandiWeight = physicalForm.watch('mandiWeight');
-  const tokenLimit = physicalForm.watch('mandiTokenLimit');
-  const isOverflowEnabled = physicalForm.watch('isPrivateOverflow');
   const vehicleType = physicalForm.watch('vehicleType');
   const watchedBagWeights = physicalForm.watch('individualBagWeights');
 
-  // Hardened worker selection logic using 'replace' to prevent recursive rendering loops
   useEffect(() => {
     const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
     if (fields.length === targetCount) return;
@@ -154,37 +147,21 @@ export function PaddyLifted() {
     const currentValues = physicalForm.getValues('labourerIds') || [];
     const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
     replace(nextFields);
-  }, [numberOfLabours, replace, physicalForm]);
+  }, [numberOfLabours, replace, physicalForm, fields.length]);
 
-  const overflowQuantity = useMemo(() => {
-    const mw = parseFloat(String(mandiWeight || 0));
-    const tl = parseFloat(String(tokenLimit || 0));
-    if (mw > 0 && tl > 0) return Math.max(0, mw - tl);
-    return 0;
-  }, [mandiWeight, tokenLimit]);
+  const cancelForm = () => {
+    setShowPhysicalForm(false);
+    setShowMonetaryForm(false);
+    physicalForm.reset();
+    monetaryForm.reset();
+  };
 
   function onPhysicalSubmit(values: z.infer<typeof physicalFormSchema>) {
     const labourerIds = values.labourerIds.map(l => l.value).filter(Boolean);
-    let finalMandiWeight = values.mandiWeight;
-    let actualOverflow = 0;
-
-    if (values.isPrivateOverflow && values.mandiTokenLimit && values.mandiTokenLimit < values.mandiWeight) {
-        finalMandiWeight = values.mandiTokenLimit;
-        actualOverflow = values.mandiWeight - values.mandiTokenLimit;
-        
-        addPurchase({
-            farmerName: values.farmerName, itemType: 'paddy', quantity: actualOverflow,
-            rate: values.privateOverflowRate || 0, initialPayment: 0,
-            description: `Overflow from Mandi Token ${values.tokenNumber || 'N/A'}.`,
-            vehicleType: values.vehicleType, vehicleNumber: values.vehicleNumber,
-            driverName: values.driverName, ownerName: values.ownerName, tripCharge: 0,
-            source: values.source, destination: values.destination, labourerIds: [], labourCharge: 0
-        });
-    }
-
     const submissionValues = { 
-        ...values, mandiWeight: finalMandiWeight, privateOverflowQty: actualOverflow,
-        labourerIds, entryType: 'physical' as const 
+        ...values, 
+        labourerIds, 
+        entryType: 'physical' as const 
     };
 
     addPaddyLifted(submissionValues);
@@ -233,21 +210,7 @@ export function PaddyLifted() {
     downloadPdf(`slip-${item.id}`, fileName);
   };
 
-  const cancelForm = () => {
-    setShowPhysicalForm(false);
-    setShowMonetaryForm(false);
-    physicalForm.reset({
-        mandiName: '', farmerName: '', vehicleType: 'farmer', destination: 'Mill',
-        totalPaddyReceived: 0, mandiWeight: 0, date: new Date(), calculationMethod: 'uniform',
-        isPrivateOverflow: false, privateOverflowRate: 0, mandiTokenLimit: 0,
-        tokenNumber: '', description: '', vehicleNumber: '', driverName: '',
-        ownerName: '', tripCharge: 0, source: '', numberOfLabours: 0,
-        labourerIds: [], labourCharge: 0, labourWageType: 'total_amount', individualBagWeights: [],
-    });
-    monetaryForm.reset();
-  };
-
-  const handleCalculatorConfirm = (vals: { grossQuintals: number; netQuintals: number; netWeightKg: number; bagWeights: number[]; method: any }) => {
+  const handleCalculatorConfirm = (vals: { grossQuintals: number; netQuintals: number; bagWeights: number[]; method: any }) => {
     physicalForm.setValue('totalPaddyReceived', vals.grossQuintals);
     physicalForm.setValue('mandiWeight', vals.netQuintals);
     physicalForm.setValue('individualBagWeights', vals.bagWeights);
@@ -255,18 +218,14 @@ export function PaddyLifted() {
     setCalculatorOpen(false);
   };
 
-  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    e.target.select();
-  };
-
   return (
-    <>
+    <div className="space-y-8">
       <Card className="border-none shadow-none bg-transparent">
         <CardHeader className="px-0 pt-0">
           <div className="flex justify-between items-start mb-6">
             <div>
               <CardTitle className="text-2xl font-bold font-headline text-primary">Procurement Records</CardTitle>
-              <CardDescription>View arrivals and achieve targets. Fresh entries enabled.</CardDescription>
+              <CardDescription>Pure volume tracking for physical arrivals and monetary conversions.</CardDescription>
             </div>
              <Button variant="outline" size="sm" onClick={() => downloadPdf('paddy-lifted-table', 'paddy-lifted-summary')} className="rounded-xl border-primary/20">
                 <DownloadIcon className="mr-2 h-4 w-4" /> Export Summary PDF
@@ -286,7 +245,7 @@ export function PaddyLifted() {
                 </Button>
                 {isAdmin && (
                   <Button onClick={() => { cancelForm(); setShowMonetaryForm(true); }} variant="secondary" className="rounded-xl shadow-md" disabled={uniqueMandis.length === 0}>
-                    <DollarSign className="mr-2 h-4 w-4" /> Monetary
+                    <CalendarIcon className="mr-2 h-4 w-4" /> Monetary Record
                   </Button>
                 )}
               </div>
@@ -334,9 +293,9 @@ export function PaddyLifted() {
                         )} />
                          <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Total Weight (Actual Qtl)</FormLabel>
+                            <FormLabel>Actual Quantity (Qtl)</FormLabel>
                               <div className="flex items-center gap-2">
-                                <FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl h-12" /></FormControl>
+                                <FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl>
                                 <Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)} className="h-12 w-12 rounded-xl border-primary/20"><Calculator className="h-5 w-5 text-primary" /></Button>
                               </div>
                             <FormMessage />
@@ -344,39 +303,14 @@ export function PaddyLifted() {
                         )} />
                         <FormField control={physicalForm.control} name="mandiWeight" render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Considered Mandi Qtl (FAQ)</FormLabel>
-                            <FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl h-12 bg-primary/5 border-primary/20 font-bold text-primary" /></FormControl>
+                            <FormLabel>Standard Mandi Weight (Qtl)</FormLabel>
+                            <FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12 bg-primary/5 border-primary/20 font-bold text-primary" /></FormControl>
                             <FormMessage />
                           </FormItem>
                         )} />
-                      </div>
-
-                      <div className="bg-muted/30 p-6 rounded-3xl border border-primary/5 space-y-6">
-                          <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-primary font-bold"><Info className="h-5 w-5" /> Token & Overflow Management</div>
-                              <div className="flex items-center gap-3">
-                                  <span className="text-sm font-medium opacity-70">Excess to Private?</span>
-                                  <FormField control={physicalForm.control} name="isPrivateOverflow" render={({ field }) => (
-                                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                  )} />
-                              </div>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
-                              <FormField control={physicalForm.control} name="tokenNumber" render={({ field }) => (
-                                  <FormItem><FormLabel>Token Number</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
-                              )} />
-                              <FormField control={physicalForm.control} name="mandiTokenLimit" render={({ field }) => (
-                                  <FormItem><FormLabel>Mandi Token Limit (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
-                              )} />
-                              {isOverflowEnabled && (
-                                  <>
-                                      <FormItem><FormLabel>Excess (Qtl)</FormLabel><div className="h-10 flex items-center px-3 bg-destructive/10 text-destructive rounded-xl font-bold text-sm">{overflowQuantity.toFixed(2)} Qtl</div></FormItem>
-                                      <FormField control={physicalForm.control} name="privateOverflowRate" render={({ field }) => (
-                                          <FormItem><FormLabel>Private Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
-                                      )} />
-                                  </>
-                              )}
-                          </div>
+                        <FormField control={physicalForm.control} name="tokenNumber" render={({ field }) => (
+                            <FormItem><FormLabel>Token Number</FormLabel><FormControl><Input {...field} className="rounded-xl h-12" /></FormControl></FormItem>
+                        )} />
                       </div>
 
                       <Separator className="opacity-50" />
@@ -400,7 +334,7 @@ export function PaddyLifted() {
                                       <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
                                   )} />
                                   <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (
-                                      <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
+                                      <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl></FormItem>
                                   )} />
                               </>
                              )}
@@ -411,10 +345,10 @@ export function PaddyLifted() {
                           <h3 className="text-md font-bold flex items-center gap-2 text-primary opacity-80"><Users className="h-5 w-5" /> Labour Selection</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <FormField control={physicalForm.control} name="numberOfLabours" render={({ field }) => (
-                                  <FormItem><FormLabel>Number of Workers</FormLabel><FormControl><Input type="number" {...field} onFocus={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
+                                  <FormItem><FormLabel>Number of Workers</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>
                               )} />
                               <FormField control={physicalForm.control} name="labourCharge" render={({ field }) => (
-                                  <FormItem><FormLabel>Total Loading Wage (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={handleInputFocus} className="rounded-xl" /></FormControl></FormItem>
+                                  <FormItem><FormLabel>Total Loading Wage (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} className="rounded-xl" /></FormControl></FormItem>
                               )} />
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -444,10 +378,10 @@ export function PaddyLifted() {
                           <FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>
                         )} />
                         <FormField control={monetaryForm.control} name="moneyReceived" render={({ field }) => (
-                          <FormItem><FormLabel>Cash Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl h-12" /></FormControl></FormItem>
+                          <FormItem><FormLabel>Cash Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl></FormItem>
                         )} />
                         <FormField control={monetaryForm.control} name="ratePerQuintal" render={({ field }) => (
-                          <FormItem><FormLabel>Rate Applied (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} onFocus={handleInputFocus} className="rounded-xl h-12" /></FormControl></FormItem>
+                          <FormItem><FormLabel>Rate Applied (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl></FormItem>
                         )} />
                         <Button type="submit" className="bg-primary hover:bg-primary/90 h-12 rounded-xl font-bold">Save Cash Entry</Button>
                       </div>
@@ -458,55 +392,80 @@ export function PaddyLifted() {
             </Card>
           )}
 
-          <div id="paddy-lifted-table" className="bg-white border border-primary/5 rounded-3xl overflow-hidden shadow-sm">
-              <div className="p-6 border-b border-primary/5 bg-primary/5">
-                  <h3 className="text-lg font-bold text-primary uppercase tracking-widest">Arrival History & Detailed Slips</h3>
-              </div>
-              <Table>
-                  <TableHeader className="bg-muted/30">
-                      <TableRow className="border-none">
-                          <TableHead className="font-bold py-4">RECORD ID</TableHead>
-                          <TableHead className="font-bold py-4">Date</TableHead>
-                          <TableHead className="font-bold py-4">Farmer / Source</TableHead>
-                          <TableHead className="text-right font-bold py-4">Mandi FAQ (Qtl)</TableHead>
-                          <TableHead className="text-right font-bold py-4">Actions</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      {physicalEntries.length === 0 ? (
-                          <TableRow><TableCell colSpan={5} className="text-center h-32 opacity-50 italic">No procurement records found.</TableCell></TableRow>
-                      ) : (
-                        physicalEntries.map((item) => (
-                          <TableRow key={item.id} className="hover:bg-primary/5 transition-colors">
-                              <TableCell className="font-mono text-[10px] text-muted-foreground">#{item.id.slice(-6)}</TableCell>
-                              <TableCell className="text-xs">{isValid(new Date(item.date)) ? format(new Date(item.date), 'dd MMM yy') : 'N/A'}</TableCell>
-                              <TableCell>
-                                  <div className="flex flex-col">
-                                      <span className="font-bold text-primary">{item.farmerName}</span>
-                                      <span className="text-[10px] uppercase font-medium opacity-60">{item.mandiName} {item.tokenNumber && `| TOKEN: ${item.tokenNumber}`}</span>
-                                  </div>
-                              </TableCell>
-                              <TableCell className="text-right font-black text-primary">{Number(item.mandiWeight).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex gap-2 justify-end">
-                                    <Button variant="outline" size="sm" onClick={() => handleDownloadSlip(item)} className="rounded-lg h-8 px-2 border-primary/20 hover:bg-primary/5 hover:text-primary">
-                                        <DownloadIcon className="h-3.5 w-3.5 mr-1" /> Slip
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(item.id)} className="h-8 w-8 rounded-lg hover:text-destructive hover:bg-destructive/10">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                                <div className="absolute -left-[9999px] top-auto pointer-events-none" aria-hidden="true">
-                                    <div id={`slip-${item.id}`}>
-                                        <PaddyLiftingSlip entry={item} millName={selectedMill?.name || 'Mandi Monitor'} millLocation={selectedMill?.location || 'Facility'} />
+          <div id="paddy-lifted-table" className="space-y-4">
+              <h3 className="text-lg font-bold text-primary uppercase tracking-widest px-2">Farmer Arrival Ledgers</h3>
+              <div className="border border-primary/5 rounded-3xl overflow-hidden shadow-sm bg-white">
+                {farmerAggregates.map((farmer) => (
+                  <Collapsible 
+                    key={farmer.id} 
+                    open={openFarmerLedgers[farmer.id]} 
+                    onOpenChange={(isOpen) => setOpenFarmerLedgers(prev => ({...prev, [farmer.id]: isOpen}))}
+                    className="border-b last:border-b-0 border-primary/5"
+                  >
+                    <div className="flex items-center justify-between p-4 hover:bg-primary/5 transition-colors group">
+                      <CollapsibleTrigger className="flex items-center gap-3 flex-grow text-left cursor-pointer">
+                        {openFarmerLedgers[farmer.id] ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                        <div className="bg-primary/5 p-2 rounded-xl group-hover:bg-primary/10 transition-colors">
+                          <UserIcon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-primary">{farmer.name}</p>
+                          <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{farmer.items.length} Arrival Records</p>
+                        </div>
+                      </CollapsibleTrigger>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-primary">{farmer.totalQty.toFixed(2)} Qtl</p>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase">Total Official Wt</p>
+                      </div>
+                    </div>
+                    <CollapsibleContent className="bg-muted/30">
+                      <div className="p-4 overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-primary/5">
+                              <TableHead className="text-[10px] font-bold uppercase">Date</TableHead>
+                              <TableHead className="text-[10px] font-bold uppercase">Mandi</TableHead>
+                              <TableHead className="text-[10px] font-bold uppercase text-right">Actual (Qtl)</TableHead>
+                              <TableHead className="text-[10px] font-bold uppercase text-right">Standard (Qtl)</TableHead>
+                              <TableHead className="text-[10px] font-bold uppercase text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {farmer.items.map(item => (
+                              <React.Fragment key={item.id}>
+                                <TableRow className="border-primary/5 hover:bg-primary/5 transition-colors">
+                                  <TableCell className="text-xs font-medium">{format(new Date(item.date), 'dd MMM yy')}</TableCell>
+                                  <TableCell className="text-xs font-bold text-primary">{item.mandiName}</TableCell>
+                                  <TableCell className="text-xs text-right opacity-60">{item.totalPaddyReceived.toFixed(2)}</TableCell>
+                                  <TableCell className="text-xs text-right font-black text-primary">{item.mandiWeight.toFixed(2)}</TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex gap-2 justify-end">
+                                      <Button variant="ghost" size="icon" onClick={() => handleDownloadSlip(item)} className="h-7 w-7 rounded-lg hover:text-primary">
+                                        <DownloadIcon className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(item.id)} className="h-7 w-7 rounded-lg hover:text-destructive">
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
                                     </div>
-                                </div>
-                              </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                  </TableBody>
-              </Table>
+                                    <div className="absolute -left-[9999px] top-auto pointer-events-none" aria-hidden="true">
+                                      <div id={`slip-${item.id}`}>
+                                        <PaddyLiftingSlip entry={item} millName={selectedMill?.name || 'Mandi Monitor'} millLocation={selectedMill?.location || 'Facility'} />
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              </React.Fragment>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+                {farmerAggregates.length === 0 && (
+                  <div className="p-12 text-center text-muted-foreground italic">No procurement records found. Click "Farmer Arrival" to start.</div>
+                )}
+              </div>
           </div>
         </CardContent>
       </Card>
@@ -518,6 +477,6 @@ export function PaddyLifted() {
           initialBagWeights={watchedBagWeights}
         />
       </Dialog>
-    </>
+    </div>
   );
 }
