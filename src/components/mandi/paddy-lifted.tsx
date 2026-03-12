@@ -240,7 +240,9 @@ export function PaddyLifted() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="All">All Mandis</SelectItem>
-                    {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem> ))}
+                    {uniqueMandis.map((mandi) => (
+                      <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -275,8 +277,16 @@ export function PaddyLifted() {
                             <FormItem>
                               <FormLabel>Mandi Source</FormLabel>
                               <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl><SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl>
-                                <SelectContent>{uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem> ))}</SelectContent>
+                                <FormControl>
+                                  <SelectTrigger className="rounded-xl h-12">
+                                    <SelectValue placeholder="Select mandi..." />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {uniqueMandis.map((mandi) => (
+                                    <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem>
+                                  ))}
+                                </SelectContent>
                               </Select>
                               <FormMessage />
                             </FormItem>
@@ -327,7 +337,11 @@ export function PaddyLifted() {
                                   <FormItem>
                                     <FormLabel>Ownership</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                      <FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
+                                      <FormControl>
+                                        <SelectTrigger className="rounded-xl">
+                                          <SelectValue placeholder="Select type" />
+                                        </SelectTrigger>
+                                      </FormControl>
                                       <SelectContent><SelectItem value="farmer">Farmer's Vehicle</SelectItem><SelectItem value="own">Own Vehicle</SelectItem><SelectItem value="hired">Hired Vehicle</SelectItem></SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -361,7 +375,11 @@ export function PaddyLifted() {
                                   <FormField key={field.id} control={physicalForm.control} name={`labourerIds.${index}.value`} render={({ field }) => (
                                       <FormItem>
                                           <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                              <FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select worker..." /></SelectTrigger></FormControl>
+                                              <FormControl>
+                                                <SelectTrigger className="rounded-xl">
+                                                  <SelectValue placeholder="Select worker..." />
+                                                </SelectTrigger>
+                                              </FormControl>
                                               <SelectContent>{(labourers || []).map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
                                           </Select>
                                       </FormItem>
@@ -380,7 +398,16 @@ export function PaddyLifted() {
                     <form onSubmit={monetaryForm.handleSubmit(onMonetarySubmit)} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
                         <FormField control={monetaryForm.control} name="mandiName" render={({ field }) => (
-                          <FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></FormItem>
+                          <FormItem><FormLabel>Mandi</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger className="rounded-xl h-12">
+                                  <SelectValue placeholder="Select mandi..." />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                            </Select>
+                          </FormItem>
                         )} />
                         <FormField control={monetaryForm.control} name="moneyReceived" render={({ field }) => (
                           <FormItem><FormLabel>Cash Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl></FormItem>
