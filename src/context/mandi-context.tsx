@@ -16,10 +16,12 @@ interface MandiContextType {
   updateTarget: (id: string, updatedTarget: Omit<TargetAllocation, 'id'>) => void;
   deleteTarget: (id: string) => void;
   addPaddyLifted: (item: Omit<PaddyLifted, 'id'>) => PaddyLifted;
+  updatePaddyLifted: (id: string, updatedItem: Partial<PaddyLifted>) => void;
   deletePaddyLifted: (id: string) => void;
   addMandiProcessing: (item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
   addStockRelease: (item: Omit<MandiStockRelease, 'id'>) => void;
   updateStockRelease: (id: string, updatedStockRelease: Omit<MandiStockRelease, 'id' | 'date'>) => void;
+  deleteStockRelease: (id: string) => void;
   loading: boolean;
 }
 
@@ -93,8 +95,18 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     return newEntry;
   }, []);
 
+  const updatePaddyLifted = useCallback((id: string, updatedItem: Partial<PaddyLifted>) => {
+    setPaddyLiftedItems(prev => prev.map(item => item.id === id ? { ...item, ...updatedItem } as PaddyLifted : item));
+  }, []);
+
   const deletePaddyLifted = useCallback((id: string) => {
     setPaddyLiftedItems(prev => prev.filter(p => p.id !== id));
+  }, []);
+
+  const addMandiProcessing = useCallback((item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => {
+    const id = Date.now().toString();
+    const newProc = { ...item, id, date: new Date(), yieldPercentage: (item.riceYield / item.paddyUsed) * 100 };
+    setMandiProcessingHistory(prev => [...prev, newProc as MandiProcessingResult]);
   }, []);
 
   const addStockRelease = useCallback((item: Omit<MandiStockRelease, 'id'>) => {
@@ -106,6 +118,10 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     setStockReleases(prev => prev.map(s => s.id === id ? { ...s, ...updatedStockRelease } : s));
   }, []);
 
+  const deleteStockRelease = useCallback((id: string) => {
+    setStockReleases(prev => prev.filter(s => s.id !== id));
+  }, []);
+
   const contextValue = useMemo(() => ({
     targetAllocations,
     paddyLiftedItems,
@@ -115,12 +131,14 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     updateTarget,
     deleteTarget,
     addPaddyLifted,
+    updatePaddyLifted,
     deletePaddyLifted,
     addMandiProcessing: addMandiProcessingToStock,
     addStockRelease,
     availableRiceForSupply,
     totalRiceFromProcessing,
     updateStockRelease,
+    deleteStockRelease,
     loading
   }), [
     targetAllocations,
@@ -131,12 +149,14 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     updateTarget,
     deleteTarget,
     addPaddyLifted,
+    updatePaddyLifted,
     deletePaddyLifted,
     addMandiProcessingToStock,
     addStockRelease,
     availableRiceForSupply,
     totalRiceFromProcessing,
     updateStockRelease,
+    deleteStockRelease,
     loading
   ]);
 

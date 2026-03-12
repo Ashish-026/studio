@@ -19,7 +19,8 @@ import {
   Download as DownloadIcon,
   ChevronRight,
   ChevronDown,
-  User as UserIcon
+  User as UserIcon,
+  Edit
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,7 +86,7 @@ const monetaryFormSchema = z.object({
 });
 
 export function PaddyLifted() {
-  const { paddyLiftedItems, addPaddyLifted, deletePaddyLifted, targetAllocations } = useMandiData();
+  const { paddyLiftedItems, addPaddyLifted, updatePaddyLifted, deletePaddyLifted, targetAllocations } = useMandiData();
   const { addVehicle, addTrip } = useVehicleData();
   const { labourers, addGroupWorkEntry } = useLabourData();
   const { selectedMill } = useMill();
@@ -99,6 +100,7 @@ export function PaddyLifted() {
   const [selectedMandi, setSelectedMandi] = useState('All');
   const [isPhysicalCalendarOpen, setIsPhysicalCalendarOpen] = useState(false);
   const [openFarmerLedgers, setOpenFarmerLedgers] = useState<Record<string, boolean>>({});
+  const [editingItem, setEditingItem] = useState<PaddyLiftedType | null>(null);
 
   const uniqueMandis = useMemo(() => {
     const mandiNames = (targetAllocations || []).map((allocation) => allocation.mandiName);
@@ -113,7 +115,7 @@ export function PaddyLifted() {
         map[key] = { id: key.toLowerCase().replace(/\s+/g, '-'), name: key, items: [], totalQty: 0 };
       }
       map[key].items.push(item);
-      map[key].totalQty += item.mandiWeight;
+      map[key].totalQty += (Number(item.mandiWeight) || 0);
     });
     return Object.values(map).sort((a,b) => a.name.localeCompare(b.name));
   }, [paddyLiftedItems]);
@@ -152,8 +154,15 @@ export function PaddyLifted() {
   const cancelForm = () => {
     setShowPhysicalForm(false);
     setShowMonetaryForm(false);
-    physicalForm.reset();
-    monetaryForm.reset();
+    setEditingItem(null);
+    physicalForm.reset({
+        mandiName: '', farmerName: '', vehicleType: 'farmer', destination: 'Mill',
+        totalPaddyReceived: 0, mandiWeight: 0, date: new Date(), calculationMethod: 'uniform',
+        tokenNumber: '', description: '', vehicleNumber: '', driverName: '',
+        ownerName: '', tripCharge: 0, source: '', numberOfLabours: 0,
+        labourerIds: [], labourCharge: 0, labourWageType: 'total_amount', individualBagWeights: [],
+    });
+    monetaryForm.reset({ mandiName: '', moneyReceived: 0, ratePerQuintal: 0, date: new Date() });
   };
 
   function onPhysicalSubmit(values: z.infer<typeof physicalFormSchema>) {
@@ -164,8 +173,13 @@ export function PaddyLifted() {
         entryType: 'physical' as const 
     };
 
-    addPaddyLifted(submissionValues);
-    toast({ title: 'Success!', description: 'Arrival recorded.' });
+    if (editingItem) {
+        updatePaddyLifted(editingItem.id, submissionValues);
+        toast({ title: 'Record Updated', description: 'Changes have been saved successfully.' });
+    } else {
+        addPaddyLifted(submissionValues);
+        toast({ title: 'Success!', description: 'Arrival recorded.' });
+    }
 
     if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
       const vehicleId = addVehicle({
@@ -189,21 +203,66 @@ export function PaddyLifted() {
 
   function onMonetarySubmit(values: z.infer<typeof monetaryFormSchema>) {
     const equivalentQuintal = values.moneyReceived / values.ratePerQuintal;
-    const newEntryData = {
+    const submissionValues = {
       mandiName: values.mandiName, 
       farmerName: `Monetary Entry`,
       moneyReceived: values.moneyReceived, 
       ratePerQuintal: values.ratePerQuintal,
       totalPaddyReceived: equivalentQuintal, 
-      mandiWeight: equivalentQuintal, // Official Weight = sum received / rate
+      mandiWeight: equivalentQuintal, 
       date: values.date, 
       entryType: 'monetary' as const,
     };
     
-    addPaddyLifted(newEntryData);
-    toast({ title: 'Success!', description: 'Monetary entry saved.' });
+    if (editingItem) {
+        updatePaddyLifted(editingItem.id, submissionValues);
+        toast({ title: 'Record Updated', description: 'Changes have been saved successfully.' });
+    } else {
+        addPaddyLifted(submissionValues);
+        toast({ title: 'Success!', description: 'Monetary entry saved.' });
+    }
     cancelForm();
   }
+
+  const handleEditClick = (item: PaddyLiftedType) => {
+    setEditingItem(item);
+    if (item.entryType === 'monetary') {
+        setShowMonetaryForm(true);
+        setShowPhysicalForm(false);
+        monetaryForm.reset({
+            mandiName: item.mandiName,
+            moneyReceived: item.moneyReceived || 0,
+            ratePerQuintal: item.ratePerQuintal || 0,
+            date: new Date(item.date),
+        });
+    } else {
+        setShowPhysicalForm(true);
+        setShowMonetaryForm(false);
+        physicalForm.reset({
+            mandiName: item.mandiName,
+            farmerName: item.farmerName,
+            totalPaddyReceived: item.totalPaddyReceived,
+            mandiWeight: item.mandiWeight,
+            date: new Date(item.date),
+            calculationMethod: item.calculationMethod || 'uniform',
+            tokenNumber: item.tokenNumber || '',
+            description: item.description || '',
+            vehicleType: item.vehicleType || 'farmer',
+            vehicleNumber: item.vehicleNumber || '',
+            driverName: item.driverName || '',
+            ownerName: item.ownerName || '',
+            tripCharge: item.tripCharge || 0,
+            source: item.source || '',
+            destination: item.destination || 'Mill',
+            numberOfLabours: item.labourerIds?.length || 0,
+            labourerIds: (item.labourerIds || []).map(id => ({ value: id })),
+            labourCharge: item.labourCharge || 0,
+            labourWageType: item.labourWageType || 'total_amount',
+            individualBagWeights: item.individualBagWeights || [],
+        });
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleDeleteClick = (id: string) => {
     deletePaddyLifted(id);
@@ -268,7 +327,7 @@ export function PaddyLifted() {
             <Card className="bg-white border-primary/10 shadow-2xl rounded-3xl overflow-hidden animate-in zoom-in-95 duration-300">
               <CardHeader className="bg-primary/5 border-b border-primary/10 pb-4 flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg font-bold text-primary">New Entry</CardTitle>
+                    <CardTitle className="text-lg font-bold text-primary">{editingItem ? 'Edit Record' : 'New Entry'}</CardTitle>
                     <CardDescription>{showPhysicalForm ? 'Physical Arrival Form' : 'Monetary Record Form'}</CardDescription>
                   </div>
                   <Button variant="ghost" size="icon" onClick={cancelForm} className="rounded-full"><X className="h-5 w-5" /></Button>
@@ -281,7 +340,7 @@ export function PaddyLifted() {
                         <FormField control={physicalForm.control} name="mandiName" render={({ field }) => (
                             <FormItem>
                               <FormLabel>Mandi Source</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                   <SelectTrigger className="rounded-xl h-12">
                                     <SelectValue placeholder="Select mandi..." />
@@ -341,7 +400,7 @@ export function PaddyLifted() {
                              <FormField control={physicalForm.control} name="vehicleType" render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Ownership</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value}>
                                       <FormControl>
                                         <SelectTrigger className="rounded-xl">
                                           <SelectValue placeholder="Select type" />
@@ -379,7 +438,7 @@ export function PaddyLifted() {
                               {fields.map((field, index) => (
                                   <FormField key={field.id} control={physicalForm.control} name={`labourerIds.${index}.value`} render={({ field }) => (
                                       <FormItem>
-                                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                          <Select onValueChange={field.onChange} value={field.value}>
                                               <FormControl>
                                                 <SelectTrigger className="rounded-xl">
                                                   <SelectValue placeholder="Select worker..." />
@@ -394,7 +453,7 @@ export function PaddyLifted() {
                       </div>
 
                       <Button type="submit" className="w-full bg-primary hover:bg-primary/90 h-14 rounded-2xl font-bold text-lg shadow-xl shadow-primary/20">
-                        Confirm Procurement Arrival
+                        {editingItem ? 'Save Record Changes' : 'Confirm Procurement Arrival'}
                       </Button>
                     </form>
                   </Form>
@@ -404,7 +463,7 @@ export function PaddyLifted() {
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
                         <FormField control={monetaryForm.control} name="mandiName" render={({ field }) => (
                           <FormItem><FormLabel>Mandi</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
                                 <SelectTrigger className="rounded-xl h-12">
                                   <SelectValue placeholder="Select mandi..." />
@@ -420,7 +479,9 @@ export function PaddyLifted() {
                         <FormField control={monetaryForm.control} name="ratePerQuintal" render={({ field }) => (
                           <FormItem><FormLabel>Rate Applied (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl></FormItem>
                         )} />
-                        <Button type="submit" className="bg-primary hover:bg-primary/90 h-12 rounded-xl font-bold">Save Cash Entry</Button>
+                        <Button type="submit" className="bg-primary hover:bg-primary/90 h-12 rounded-xl font-bold">
+                            {editingItem ? 'Update Cash Entry' : 'Save Cash Entry'}
+                        </Button>
                       </div>
                     </form>
                   </Form>
@@ -473,12 +534,15 @@ export function PaddyLifted() {
                                 <TableRow className="border-primary/5 hover:bg-primary/5 transition-colors">
                                   <TableCell className="text-xs font-medium">{format(new Date(item.date), 'dd MMM yy')}</TableCell>
                                   <TableCell className="text-xs font-bold text-primary">{item.mandiName}</TableCell>
-                                  <TableCell className="text-xs text-right opacity-60">{item.totalPaddyReceived.toFixed(2)}</TableCell>
-                                  <TableCell className="text-xs text-right font-black text-primary">{item.mandiWeight.toFixed(2)}</TableCell>
+                                  <TableCell className="text-xs text-right opacity-60">{(Number(item.totalPaddyReceived) || 0).toFixed(2)}</TableCell>
+                                  <TableCell className="text-xs text-right font-black text-primary">{(Number(item.mandiWeight) || 0).toFixed(2)}</TableCell>
                                   <TableCell className="text-right">
                                     <div className="flex gap-2 justify-end">
                                       <Button variant="ghost" size="icon" onClick={() => handleDownloadSlip(item)} className="h-7 w-7 rounded-lg hover:text-primary">
                                         <DownloadIcon className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)} className="h-7 w-7 rounded-lg hover:text-primary">
+                                        <Edit className="h-3.5 w-3.5" />
                                       </Button>
                                       <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(item.id)} className="h-7 w-7 rounded-lg hover:text-destructive">
                                         <Trash2 className="h-3.5 w-3.5" />
