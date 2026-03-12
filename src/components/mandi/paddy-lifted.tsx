@@ -190,9 +190,14 @@ export function PaddyLifted() {
   function onMonetarySubmit(values: z.infer<typeof monetaryFormSchema>) {
     const equivalentQuintal = values.moneyReceived / values.ratePerQuintal;
     const newEntryData = {
-      mandiName: values.mandiName, farmerName: `Monetary Entry`,
-      moneyReceived: values.moneyReceived, ratePerQuintal: values.ratePerQuintal,
-      totalPaddyReceived: equivalentQuintal, mandiWeight: 0, date: values.date, entryType: 'monetary' as const,
+      mandiName: values.mandiName, 
+      farmerName: `Monetary Entry`,
+      moneyReceived: values.moneyReceived, 
+      ratePerQuintal: values.ratePerQuintal,
+      totalPaddyReceived: equivalentQuintal, 
+      mandiWeight: equivalentQuintal, // Official Weight = sum received / rate
+      date: values.date, 
+      entryType: 'monetary' as const,
     };
     
     addPaddyLifted(newEntryData);

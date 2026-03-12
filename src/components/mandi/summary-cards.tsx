@@ -13,7 +13,8 @@ export function SummaryCards() {
 
   const summary = useMemo(() => {
     const targetAllotted = targetAllocations.reduce((acc, item) => acc + item.target, 0);
-    const totalPaddyLifted = paddyLiftedItems.reduce((acc, item) => acc + item.totalPaddyReceived, 0);
+    // Official Weight sum calculation
+    const totalPaddyLifted = paddyLiftedItems.reduce((acc, item) => acc + (Number(item.mandiWeight) || 0), 0);
     const balanceToBeLifted = targetAllotted - totalPaddyLifted;
     
     return {
@@ -44,7 +45,7 @@ export function SummaryCards() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatNumber(summary.totalPaddyLifted)}</div>
-          <p className="text-xs text-muted-foreground">Total paddy physically received.</p>
+          <p className="text-xs text-muted-foreground">Sum of official mandi weights.</p>
         </CardContent>
       </Card>
       {isAdmin && (

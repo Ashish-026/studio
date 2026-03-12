@@ -91,7 +91,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     });
     paddyLiftedItems.forEach(l => {
       const existing = map.get(l.mandiName) || { target: 0, lifted: 0 };
-      existing.lifted += l.totalPaddyReceived;
+      // CHANGE: use Official weight (mandiWeight) for lifted total
+      existing.lifted += (Number(l.mandiWeight) || 0);
       map.set(l.mandiName, existing);
     });
     return Array.from(map.entries()).map(([name, data]) => ({
@@ -148,7 +149,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
               <TrendingUp className="h-5 w-5 text-primary" />
               Mandi Targets (Qtl)
             </CardTitle>
-            <CardDescription>Target Allotment vs Actual Lifting</CardDescription>
+            <CardDescription>Target Allotment vs Actual Official Lifting</CardDescription>
           </CardHeader>
           <CardContent className="h-[240px] pt-4">
             {mandiChartData.length > 0 ? (

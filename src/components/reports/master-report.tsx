@@ -43,10 +43,10 @@ export const MasterReport = forwardRef<HTMLDivElement>((props, ref) => {
       summaryMap.set(allocation.mandiName, entry);
     });
 
-    // Aggregate lifted paddy
+    // Aggregate lifted paddy using Official weight (mandiWeight)
     (paddyLiftedItems || []).forEach(item => {
       const entry = summaryMap.get(item.mandiName) || { totalTarget: 0, totalLifted: 0, mandiId: 'N/A' };
-      entry.totalLifted += (Number(item.totalPaddyReceived) || 0);
+      entry.totalLifted += (Number(item.mandiWeight) || 0);
       summaryMap.set(item.mandiName, entry);
     });
 

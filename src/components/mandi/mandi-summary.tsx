@@ -43,11 +43,11 @@ export function MandiSummary() {
       summaryMap.set(allocation.mandiName, entry);
     });
 
-    // Aggregate lifted paddy with safety checks
+    // Aggregate lifted paddy based on Official Weight (mandiWeight)
     (paddyLiftedItems || []).forEach(item => {
       if (!item || !item.mandiName) return;
       const entry = summaryMap.get(item.mandiName) || { totalTarget: 0, totalLifted: 0, mandiId: 'N/A' };
-      entry.totalLifted += (Number(item.totalPaddyReceived) || 0);
+      entry.totalLifted += (Number(item.mandiWeight) || 0);
       summaryMap.set(item.mandiName, entry);
     });
 
@@ -85,7 +85,7 @@ export function MandiSummary() {
                         <TrendingUp className="h-5 w-5 text-primary" />
                         Procurement & Efficiency Analytics
                     </CardTitle>
-                    <CardDescription>Target vs. Actual procurement completion.</CardDescription>
+                    <CardDescription>Target vs. Actual official weight completion.</CardDescription>
                 </div>
             </div>
           </CardHeader>
