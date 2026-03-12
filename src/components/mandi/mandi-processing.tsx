@@ -62,11 +62,11 @@ export function MandiProcessing() {
 
   useEffect(() => {
     const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
-    if (fields.length === targetCount) return;
-
     const currentValues = processingForm.getValues('labourerIds') || [];
-    const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
-    replace(nextFields);
+    if (fields.length !== targetCount) {
+      const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
+      replace(nextFields);
+    }
   }, [numberOfLabours, replace, processingForm, fields.length]);
 
 
@@ -148,10 +148,10 @@ export function MandiProcessing() {
                           <h3 className="text-md font-bold flex items-center gap-2 text-primary opacity-80"><Users className="h-5 w-5" /> Labour Selection</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <FormField control={processingForm.control} name="numberOfLabours" render={({ field }) => (
-                                  <FormItem><FormLabel>Number of Workers</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
+                                  <FormItem><FormLabel>Number of Workers</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>
                               )} />
                               <FormField control={processingForm.control} name="labourCharge" render={({ field }) => (
-                                  <FormItem><FormLabel>Total Processing Wage (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
+                                  <FormItem><FormLabel>Total Processing Wage (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} className="rounded-xl" /></FormControl></FormItem>
                               )} />
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

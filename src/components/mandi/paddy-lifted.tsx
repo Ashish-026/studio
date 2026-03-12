@@ -142,11 +142,11 @@ export function PaddyLifted() {
 
   useEffect(() => {
     const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
-    if (fields.length === targetCount) return;
-    
     const currentValues = physicalForm.getValues('labourerIds') || [];
-    const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
-    replace(nextFields);
+    if (fields.length !== targetCount) {
+      const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
+      replace(nextFields);
+    }
   }, [numberOfLabours, replace, physicalForm, fields.length]);
 
   const cancelForm = () => {
@@ -375,7 +375,7 @@ export function PaddyLifted() {
                     <form onSubmit={monetaryForm.handleSubmit(onMonetarySubmit)} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
                         <FormField control={monetaryForm.control} name="mandiName" render={({ field }) => (
-                          <FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>
+                          <FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></FormItem>
                         )} />
                         <FormField control={monetaryForm.control} name="moneyReceived" render={({ field }) => (
                           <FormItem><FormLabel>Cash Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl></FormItem>
