@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Fragment } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -235,8 +235,13 @@ export function PaddyLifted() {
               <div className="flex items-center gap-4">
                 <Label className="text-sm font-semibold uppercase tracking-tighter opacity-60">Filter:</Label>
                 <Select value={selectedMandi} onValueChange={setSelectedMandi}>
-                  <SelectTrigger className="w-[240px] rounded-xl border-primary/10 shadow-sm"><SelectValue placeholder="All Mandis" /></SelectTrigger>
-                  <SelectContent><SelectItem value="All">All Mandis</SelectItem>{uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem> ))}</SelectContent>
+                  <SelectTrigger className="w-[240px] rounded-xl border-primary/10 shadow-sm">
+                    <SelectValue placeholder="All Mandis" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Mandis</SelectItem>
+                    {uniqueMandis.map((mandi) => ( <SelectItem key={mandi} value={mandi}>{mandi}</SelectItem> ))}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="flex gap-3">
@@ -322,7 +327,7 @@ export function PaddyLifted() {
                                   <FormItem>
                                     <FormLabel>Ownership</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                      <FormControl><SelectTrigger className="rounded-xl"><SelectValue/></SelectTrigger></FormControl>
+                                      <FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select type" /></SelectTrigger></FormControl>
                                       <SelectContent><SelectItem value="farmer">Farmer's Vehicle</SelectItem><SelectItem value="own">Own Vehicle</SelectItem><SelectItem value="hired">Hired Vehicle</SelectItem></SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -432,7 +437,7 @@ export function PaddyLifted() {
                           </TableHeader>
                           <TableBody>
                             {farmer.items.map(item => (
-                              <React.Fragment key={item.id}>
+                              <Fragment key={item.id}>
                                 <TableRow className="border-primary/5 hover:bg-primary/5 transition-colors">
                                   <TableCell className="text-xs font-medium">{format(new Date(item.date), 'dd MMM yy')}</TableCell>
                                   <TableCell className="text-xs font-bold text-primary">{item.mandiName}</TableCell>
@@ -454,7 +459,7 @@ export function PaddyLifted() {
                                     </div>
                                   </TableCell>
                                 </TableRow>
-                              </React.Fragment>
+                              </Fragment>
                             ))}
                           </TableBody>
                         </Table>
