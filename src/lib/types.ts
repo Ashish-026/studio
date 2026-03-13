@@ -42,6 +42,8 @@ export type PaddyLifted = {
   tokenNumber?: string;
   description?: string;
   individualBagWeights?: number[];
+  privateExcessQty?: number;
+  privateExcessRate?: number;
 };
 
 export type MandiProcessingResult = {

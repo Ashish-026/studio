@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { useMandiData } from '@/context/mandi-context';
 import { useVehicleData } from '@/context/vehicle-context';
 import { useLabourData } from '@/context/labour-context';
+import { useStockData } from '@/context/stock-context';
 import { useMill } from '@/hooks/use-mill';
 import { 
   PlusCircle, 
@@ -20,7 +21,9 @@ import {
   ChevronRight,
   ChevronDown,
   User as UserIcon,
-  Edit
+  Edit,
+  TrendingUp,
+  Ticket
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,6 +71,8 @@ const physicalFormSchema = z.object({
   source: z.string().optional(),
   destination: z.string().optional(),
   individualBagWeights: z.array(z.number()).optional(),
+  privateExcessQty: z.coerce.number().min(0).default(0),
+  privateExcessRate: z.coerce.number().min(0).default(0),
 }).merge(labourDetailsSchema).refine(data => {
     if (data.vehicleType === 'hired') {
         return !!data.vehicleNumber && !!data.driverName && !!data.ownerName && data.tripCharge !== undefined && data.tripCharge > 0;
@@ -89,6 +94,7 @@ export function PaddyLifted() {
   const { paddyLiftedItems, addPaddyLifted, updatePaddyLifted, deletePaddyLifted, targetAllocations } = useMandiData();
   const { addVehicle, addTrip } = useVehicleData();
   const { labourers, addGroupWorkEntry } = useLabourData();
+  const { addPurchase } = useStockData();
   const { selectedMill } = useMill();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -128,6 +134,7 @@ export function PaddyLifted() {
         tokenNumber: '', description: '', vehicleNumber: '', driverName: '',
         ownerName: '', tripCharge: 0, source: '', numberOfLabours: 0,
         labourerIds: [], labourCharge: 0, labourWageType: 'total_amount', individualBagWeights: [],
+        privateExcessQty: 0, privateExcessRate: 0,
     },
   });
 
@@ -161,6 +168,7 @@ export function PaddyLifted() {
         tokenNumber: '', description: '', vehicleNumber: '', driverName: '',
         ownerName: '', tripCharge: 0, source: '', numberOfLabours: 0,
         labourerIds: [], labourCharge: 0, labourWageType: 'total_amount', individualBagWeights: [],
+        privateExcessQty: 0, privateExcessRate: 0,
     });
     monetaryForm.reset({ mandiName: '', moneyReceived: 0, ratePerQuintal: 0, date: new Date() });
   };
@@ -173,12 +181,31 @@ export function PaddyLifted() {
         entryType: 'physical' as const 
     };
 
+    let mandiEntryId = editingItem?.id;
+
     if (editingItem) {
         updatePaddyLifted(editingItem.id, submissionValues);
         toast({ title: 'Record Updated', description: 'Changes have been saved successfully.' });
     } else {
-        addPaddyLifted(submissionValues);
+        const newEntry = addPaddyLifted(submissionValues);
+        mandiEntryId = newEntry.id;
         toast({ title: 'Success!', description: 'Arrival recorded.' });
+    }
+
+    // MANDI EXCESS INTEGRATION
+    if (submissionValues.privateExcessQty && submissionValues.privateExcessQty > 0) {
+        addPurchase({
+            id: `excess-${mandiEntryId}`,
+            farmerName: submissionValues.farmerName,
+            itemType: 'paddy',
+            quantity: submissionValues.privateExcessQty,
+            rate: submissionValues.privateExcessRate || 0,
+            date: submissionValues.date,
+            description: `Mandi Excess from ${submissionValues.mandiName} (Token: ${submissionValues.tokenNumber || 'N/A'})`,
+            isMandiExcess: true,
+            mandiTokenNo: submissionValues.tokenNumber,
+            vehicleType: 'farmer',
+        });
     }
 
     if (submissionValues.vehicleType === 'hired' && submissionValues.vehicleNumber && submissionValues.tripCharge) {
@@ -259,6 +286,8 @@ export function PaddyLifted() {
             labourCharge: item.labourCharge || 0,
             labourWageType: item.labourWageType || 'total_amount',
             individualBagWeights: item.individualBagWeights || [],
+            privateExcessQty: item.privateExcessQty || 0,
+            privateExcessRate: item.privateExcessRate || 0,
         });
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -393,6 +422,21 @@ export function PaddyLifted() {
                       </div>
 
                       <Separator className="opacity-50" />
+
+                      <div className="space-y-6">
+                          <h3 className="text-md font-bold flex items-center gap-2 text-accent-foreground"><TrendingUp className="h-5 w-5" /> Mandi Token Excess</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
+                              <FormField control={physicalForm.control} name="privateExcessQty" render={({ field }) => (
+                                  <FormItem><FormLabel>Excess Qtl (To Private)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl border-accent/30" /></FormControl><FormMessage /></FormItem>
+                              )} />
+                              <FormField control={physicalForm.control} name="privateExcessRate" render={({ field }) => (
+                                  <FormItem><FormLabel>Private Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl border-accent/30" /></FormControl><FormMessage /></FormItem>
+                              )} />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground italic">Note: Excess recorded here will automatically generate a payable entry in the Private Register.</p>
+                      </div>
+
+                      <Separator className="opacity-50" />
                       
                       <div className="space-y-6">
                           <h3 className="text-md font-bold flex items-center gap-2 text-primary opacity-80"><Car className="h-5 w-5" /> Logistics</h3>
@@ -414,10 +458,16 @@ export function PaddyLifted() {
                              {vehicleType === 'hired' && (
                               <>
                                   <FormField control={physicalForm.control} name="vehicleNumber" render={({ field }) => (
-                                      <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
+                                      <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
+                                  )} />
+                                  <FormField control={physicalForm.control} name="driverName" render={({ field }) => (
+                                      <FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
+                                  )} />
+                                  <FormField control={physicalForm.control} name="ownerName" render={({ field }) => (
+                                      <FormItem><FormLabel>Owner Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>
                                   )} />
                                   <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (
-                                      <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl></FormItem>
+                                      <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl><FormMessage /></FormItem>
                                   )} />
                               </>
                              )}

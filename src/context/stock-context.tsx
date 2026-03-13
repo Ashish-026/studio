@@ -13,7 +13,7 @@ interface StockContextType {
   addProcessingResult: (result: Omit<ProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
   addMandiProcessing: (item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => void;
   purchases: PrivatePurchase[];
-  addPurchase: (item: Omit<PrivatePurchase, 'id' | 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { initialPayment: number }) => void;
+  addPurchase: (item: Omit<PrivatePurchase, 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { id?: string; initialPayment?: number; date?: Date }) => void;
   deletePurchase: (id: string) => void;
   addPayment: (purchaseId: string, amount: number) => void;
   addFarmerPaymentByName: (farmerName: string, amount: number) => void;
@@ -113,19 +113,27 @@ export function StockProvider({ children }: { children: ReactNode }) {
     setMandiProcessingHistory(prev => [...prev, newProc as MandiProcessingResult]);
   }, []);
 
-  const addPurchase = useCallback((item: Omit<PrivatePurchase, 'id' | 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { initialPayment: number }) => {
+  const addPurchase = useCallback((item: Omit<PrivatePurchase, 'date' | 'totalAmount' | 'amountPaid' | 'balance' | 'payments'> & { id?: string; initialPayment?: number; date?: Date }) => {
     const totalAmount = item.quantity * item.rate;
-    const id = Date.now().toString();
-    const newPurchase: PrivatePurchase = { 
-      ...item, 
-      id, 
-      date: new Date(), 
-      totalAmount, 
-      amountPaid: item.initialPayment, 
-      balance: totalAmount - item.initialPayment, 
-      payments: item.initialPayment > 0 ? [{ id: id + '-p', amount: item.initialPayment, date: new Date(), note: 'Initial payment' }] : [] 
-    };
-    setPurchases(prev => [...prev, newPurchase]);
+    const id = item.id || Date.now().toString();
+    const initialPayment = item.initialPayment || 0;
+    
+    setPurchases(prev => {
+      const existing = prev.find(p => p.id === id);
+      if (existing) {
+        return prev.map(p => p.id === id ? { ...p, ...item, id, totalAmount, balance: totalAmount - p.amountPaid } as PrivatePurchase : p);
+      }
+      const newPurchase: PrivatePurchase = { 
+        ...item, 
+        id, 
+        date: item.date || new Date(), 
+        totalAmount, 
+        amountPaid: initialPayment, 
+        balance: totalAmount - initialPayment, 
+        payments: initialPayment > 0 ? [{ id: id + '-p', amount: initialPayment, date: new Date(), note: 'Initial payment' }] : [] 
+      } as PrivatePurchase;
+      return [...prev, newPurchase];
+    });
   }, []);
 
   const deletePurchase = useCallback((id: string) => {

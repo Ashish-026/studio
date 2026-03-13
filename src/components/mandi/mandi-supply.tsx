@@ -88,7 +88,6 @@ export function MandiSupply() {
   const numberOfLabours = supplyForm.watch('numberOfLabours');
   const selectedLabourerIds = supplyForm.watch('labourerIds').map(l => l.value);
 
-  // Hardened worker selection logic using 'replace' to prevent recursive loops
   useEffect(() => {
     const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
     if (fields.length === targetCount) return;
@@ -96,7 +95,7 @@ export function MandiSupply() {
     const currentValues = supplyForm.getValues('labourerIds') || [];
     const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
     replace(nextFields);
-  }, [numberOfLabours, replace, supplyForm]);
+  }, [numberOfLabours, replace, supplyForm, fields.length]);
 
 
   const vehicleType = supplyForm.watch('vehicleType');
@@ -219,10 +218,16 @@ export function MandiSupply() {
                            {vehicleType === 'hired' && (
                             <>
                                 <FormField control={supplyForm.control} name="vehicleNumber" render={({ field }) => (
-                                    <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
+                                    <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={supplyForm.control} name="driverName" render={({ field }) => (
+                                    <FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={supplyForm.control} name="ownerName" render={({ field }) => (
+                                    <FormItem><FormLabel>Owner Name</FormLabel><FormControl><Input {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={supplyForm.control} name="tripCharge" render={({ field }) => (
-                                    <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} /></FormControl></FormItem>
+                                    <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} onFocus={(e) => e.target.select()} /></FormControl><FormMessage /></FormItem>
                                 )} />
                             </>
                            )}
