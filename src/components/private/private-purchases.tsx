@@ -362,6 +362,13 @@ export function PrivatePurchases() {
             <div className="border border-primary/5 rounded-3xl overflow-hidden shadow-sm bg-white">
                 {farmerAggregates.map(farmer => (
                     <Collapsible key={farmer.id} open={openFarmerCollapsibles[farmer.id]} onOpenChange={(o) => setOpenFarmerCollapsibles(p => ({...p, [farmer.id]: o}))} className="border-b last:border-b-0 border-primary/5">
+                        {/* HIDDEN PRINTABLE ELEMENT - PLACED OUTSIDE COLLAPSIBLE CONTENT */}
+                        <div className="absolute -left-[9999px] top-auto" aria-hidden="true">
+                            <div id={`printable-purchases-${farmer.id}`}>
+                                <FarmerPurchaseTable farmer={farmer} />
+                            </div>
+                        </div>
+
                         <div className="flex w-full p-4 items-center justify-between hover:bg-primary/5 transition-colors group">
                             <CollapsibleTrigger className="flex items-center gap-3 flex-grow text-left cursor-pointer">
                                 {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4" />}
@@ -390,8 +397,6 @@ export function PrivatePurchases() {
                         </div>
                         <CollapsibleContent className="bg-muted/30">
                             <div className="p-4 space-y-6">
-                                <div className="absolute -left-[9999px] top-auto"><div id={`printable-purchases-${farmer.id}`}><FarmerPurchaseTable farmer={farmer} /></div></div>
-                                
                                 <div className="space-y-2">
                                     <h4 className="text-xs font-bold text-primary uppercase opacity-60 tracking-widest flex items-center gap-2"><Receipt className="h-3 w-3" /> Recent History</h4>
                                     <Table className="bg-white rounded-2xl overflow-hidden shadow-sm">

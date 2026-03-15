@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -56,8 +57,8 @@ export function StockProcessing() {
     defaultValues: { source: 'private', riceUsed: 0, finalRiceYield: 0, brokenRiceYield: 0, numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount' }
   });
 
-  const { fields: paddyFields, append: paddyAppend, remove: paddyRemove } = useFieldArray({ control: paddyProcessingForm.control, name: "labourerIds" });
-  const { fields: riceFields, append: riceAppend, remove: riceRemove } = useFieldArray({ control: riceProcessingForm.control, name: "labourerIds" });
+  const { fields: paddyFields, replace: paddyReplace } = useFieldArray({ control: paddyProcessingForm.control, name: "labourerIds" });
+  const { fields: riceFields, replace: riceReplace } = useFieldArray({ control: riceProcessingForm.control, name: "labourerIds" });
   
   const paddyNumberOfLabours = paddyProcessingForm.watch('numberOfLabours');
   const selectedPaddyLabourerIds = paddyProcessingForm.watch('labourerIds').map(l => l.value);
@@ -65,30 +66,30 @@ export function StockProcessing() {
   const riceNumberOfLabours = riceProcessingForm.watch('numberOfLabours');
   const selectedRiceLabourerIds = riceProcessingForm.watch('labourerIds').map(l => l.value);
 
-  useMemo(() => {
-    const currentCount = paddyFields.length;
-    if (paddyNumberOfLabours > currentCount) {
-        for(let i = currentCount; i < paddyNumberOfLabours; i++) paddyAppend({ value: '' });
-    } else if (paddyNumberOfLabours < currentCount) {
-        for(let i = currentCount; i > paddyNumberOfLabours; i--) paddyRemove(i-1);
+  useEffect(() => {
+    const targetCount = Math.max(0, parseInt(String(paddyNumberOfLabours || 0)));
+    const currentValues = paddyProcessingForm.getValues('labourerIds') || [];
+    if (paddyFields.length !== targetCount) {
+      const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
+      paddyReplace(nextFields);
     }
-  }, [paddyNumberOfLabours, paddyFields.length, paddyAppend, paddyRemove]);
+  }, [paddyNumberOfLabours, paddyReplace, paddyProcessingForm, paddyFields.length]);
 
-  useMemo(() => {
-    const currentCount = riceFields.length;
-    if (riceNumberOfLabours > currentCount) {
-        for(let i = currentCount; i < riceNumberOfLabours; i++) riceAppend({ value: '' });
-    } else if (riceNumberOfLabours < currentCount) {
-        for(let i = currentCount; i > riceNumberOfLabours; i--) riceRemove(i-1);
+  useEffect(() => {
+    const targetCount = Math.max(0, parseInt(String(riceNumberOfLabours || 0)));
+    const currentValues = riceProcessingForm.getValues('labourerIds') || [];
+    if (riceFields.length !== targetCount) {
+      const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
+      riceReplace(nextFields);
     }
-  }, [riceNumberOfLabours, riceFields.length, riceAppend, riceRemove]);
+  }, [riceNumberOfLabours, riceReplace, riceProcessingForm, riceFields.length]);
 
   const formatNumber = (num: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(num);
 
   function onPaddyProcessingSubmit(values: z.infer<typeof paddyProcessingSchema>) {
     const stockSource = privateStock;
     if(values.paddyUsed > stockSource.paddy) {
-        paddyProcessingForm.setError('paddyUsed', { message: `Exceeds available paddy stock of ${formatNumber(stockSource.paddy)} Qtl from ${values.source}` });
+        paddyProcessingForm.setError('paddyUsed', { message: `Exceeds available paddy stock of ${formatNumber(stockSource.paddy)} Qtl` });
         return;
     }
 
@@ -100,7 +101,6 @@ export function StockProcessing() {
 
     if (labourerIds.length > 0 && submissionValues.labourCharge > 0) {
         addGroupWorkEntry(labourerIds, submissionValues.labourCharge, `Private stock processing (Paddy)`, submissionValues.paddyUsed);
-        toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
 
     paddyProcessingForm.reset();
@@ -110,7 +110,7 @@ export function StockProcessing() {
   function onRiceProcessingSubmit(values: z.infer<typeof riceProcessingSchema>) {
     const stockSource = privateStock;
     if (values.riceUsed > stockSource.rice) {
-        riceProcessingForm.setError('riceUsed', { message: `Exceeds available rice stock of ${formatNumber(stockSource.rice)} Qtl from ${values.source}` });
+        riceProcessingForm.setError('riceUsed', { message: `Exceeds available rice stock of ${formatNumber(stockSource.rice)} Qtl` });
         return;
     }
 
@@ -128,7 +128,6 @@ export function StockProcessing() {
 
     if (labourerIds.length > 0 && submissionValues.labourCharge > 0) {
         addGroupWorkEntry(labourerIds, submissionValues.labourCharge, 'Private stock processing (Rice)', submissionValues.riceUsed);
-        toast({ title: 'Labour Updated', description: 'Work entry added to Labour Register.' });
     }
 
     riceProcessingForm.reset();
@@ -190,7 +189,7 @@ export function StockProcessing() {
                                 <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField control={paddyProcessingForm.control} name="numberOfLabours" render={({ field }) => (
-                                        <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
                                     )} />
                                     <FormField control={paddyProcessingForm.control} name="labourCharge" render={({ field }) => (
                                         <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 500" {...field} /></FormControl><FormMessage /></FormItem>
@@ -207,7 +206,6 @@ export function StockProcessing() {
                                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                <SelectItem value="none">None</SelectItem>
                                                 {labourers
                                                     .filter(l => !selectedPaddyLabourerIds.includes(l.id) || l.id === field.value)
                                                     .map((l) => (
@@ -250,7 +248,7 @@ export function StockProcessing() {
                                 <h3 className="text-md font-medium mb-4 flex items-center gap-2"><Users className="h-5 w-5" /> Labour Details</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <FormField control={riceProcessingForm.control} name="numberOfLabours" render={({ field }) => (
-                                        <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem><FormLabel>Number of Labours</FormLabel><FormControl><Input type="number" {...field} /></FormControl></FormItem>
                                     )} />
                                     <FormField control={riceProcessingForm.control} name="labourCharge" render={({ field }) => (
                                         <FormItem><FormLabel>Total Labour Charge (₹)</FormLabel><FormControl><Input type="number" step="10" placeholder="e.g., 300" {...field} /></FormControl><FormMessage /></FormItem>
@@ -267,7 +265,6 @@ export function StockProcessing() {
                                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Select a labourer" /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    <SelectItem value="none">None</SelectItem>
                                                     {labourers
                                                         .filter(l => !selectedRiceLabourerIds.includes(l.id) || l.id === field.value)
                                                         .map((l) => (
