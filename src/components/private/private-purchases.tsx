@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useMemo, useEffect, forwardRef } from 'react';
+import React, { useState, useMemo, useEffect, forwardRef, Fragment } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -17,7 +16,6 @@ import {
   Users, 
   User as UserIcon, 
   Calculator, 
-  Info, 
   Trash2, 
   CreditCard,
   Receipt,
@@ -30,7 +28,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
@@ -86,52 +83,94 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('en-IN', { styl
 
 const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; name: string; purchases: any[]; totalBalance: number; allPayments: Payment[] } }>(({ farmer }, ref) => {
     return (
-        <div ref={ref} className="p-8 bg-white text-black min-h-screen">
-            <div className="text-center mb-8 border-b-2 pb-4">
-                <h3 className="text-3xl font-black uppercase tracking-widest text-primary">Mill Account Statement</h3>
-                <p className="text-xl font-bold mt-2">Farmer: {farmer.name}</p>
+        <div ref={ref} className="p-10 bg-white text-black min-h-screen w-[1000px] mx-auto border shadow-sm">
+            <div className="text-center mb-10 border-b-4 border-primary pb-6">
+                <h3 className="text-4xl font-black uppercase tracking-tighter text-primary">Private Account Statement</h3>
+                <p className="text-sm font-bold mt-2 opacity-60 uppercase tracking-widest text-muted-foreground">Detailed Purchase & Payment Log</p>
             </div>
-            <div className="mb-10 p-6 bg-primary/5 rounded-3xl border border-primary/10">
-                <div className="grid grid-cols-3 gap-8 text-center">
-                    <div><p className="text-[10px] font-bold uppercase opacity-50">Purchases</p><p className="text-2xl font-black">{farmer.purchases.length}</p></div>
-                    <div><p className="text-[10px] font-bold uppercase opacity-50">Total Value</p><p className="text-2xl font-black">{formatCurrency(farmer.purchases.reduce((acc, p) => acc + p.totalAmount, 0))}</p></div>
+            
+            <div className="mb-12 p-8 bg-primary/5 rounded-[40px] border border-primary/10">
+                <div className="grid grid-cols-2 gap-12">
                     <div>
-                        <p className="text-[10px] font-bold uppercase opacity-50">Status</p>
-                        <p className={`text-2xl font-black ${farmer.totalBalance > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                        <p className="text-[10px] font-black uppercase opacity-40 tracking-[0.2em] mb-1">Farmer / Supplier</p>
+                        <p className="text-3xl font-black text-primary">{farmer.name}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[10px] font-black uppercase opacity-40 tracking-[0.2em] mb-1">Current Account Status</p>
+                        <p className={`text-3xl font-black ${farmer.totalBalance > 0 ? 'text-destructive' : 'text-green-600'}`}>
                             {formatCurrency(Math.abs(farmer.totalBalance))}
-                            <span className="text-xs ml-1">{farmer.totalBalance > 0 ? '(Payable)' : '(Advance)'}</span>
+                            <span className="text-sm ml-2 opacity-60">{farmer.totalBalance > 0 ? '(PAYABLE)' : '(ADVANCE)'}</span>
                         </p>
                     </div>
                 </div>
             </div>
-            <div className="space-y-8">
-                <h4 className="font-bold border-b">Purchase Log</h4>
-                {farmer.purchases.map((p: PrivatePurchase) => (
-                    <div key={p.id} className="border border-black/5 rounded-2xl p-4">
-                        <div className="flex justify-between mb-2">
-                            <span className="font-bold flex items-center gap-2">
-                                {format(p.date, 'dd MMM yyyy')}
-                                {p.isMandiExcess && <Badge variant="outline" className="text-[8px] h-4">Mandi Excess</Badge>}
-                            </span>
-                            <span className="text-xs opacity-50">#{p.id.slice(-6)}</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-4 text-xs">
-                            <div><p className="font-bold opacity-50">Item</p><p className="capitalize font-black">{p.itemType}</p></div>
-                            <div><p className="font-bold opacity-50">Qty</p><p className="font-black">{p.quantity.toFixed(2)} Qtl</p></div>
-                            <div><p className="font-bold opacity-50">Rate</p><p className="font-black">{formatCurrency(p.rate)}</p></div>
-                            <div><p className="font-bold opacity-50">Total</p><p className="font-black text-primary">{formatCurrency(p.totalAmount)}</p></div>
-                        </div>
-                    </div>
-                ))}
 
-                <h4 className="font-bold border-b mt-8">Payment Log</h4>
-                <div className="space-y-2">
-                    {farmer.allPayments.map(pay => (
-                        <div key={pay.id} className="flex justify-between text-xs py-1 border-b border-dashed">
-                            <span>{format(pay.date, 'dd MMM yyyy, hh:mm a')}</span>
-                            <span className="font-bold text-green-600">{formatCurrency(pay.amount)}</span>
-                        </div>
-                    ))}
+            <div className="space-y-12">
+                <div className="space-y-4">
+                    <h4 className="text-xs font-black border-l-4 border-primary pl-3 uppercase tracking-widest text-primary/60">Purchase History</h4>
+                    <Table className="border border-black/10 rounded-3xl overflow-hidden">
+                        <TableHeader className="bg-primary/5">
+                            <TableRow className="border-black/10">
+                                <TableHead className="text-black font-black uppercase text-[10px] py-4">Date</TableHead>
+                                <TableHead className="text-black font-black uppercase text-[10px] py-4">Item Details</TableHead>
+                                <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right">Quantity (Qtl)</TableHead>
+                                <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right">Rate (₹/Qtl)</TableHead>
+                                <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right">Total Amount</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {farmer.purchases.map((p: PrivatePurchase) => (
+                                <TableRow key={p.id} className="border-black/5">
+                                    <TableCell className="text-xs font-medium">{format(new Date(p.date), 'dd MMM yyyy')}</TableCell>
+                                    <TableCell className="text-xs">
+                                        <div className="flex items-center gap-2 font-bold capitalize">
+                                            {p.itemType}
+                                            {p.isMandiExcess && <Badge variant="outline" className="text-[8px] h-4 bg-accent/10 border-accent/30 text-accent-foreground">EXCESS</Badge>}
+                                        </div>
+                                        {p.mandiTokenNo && <p className="text-[8px] opacity-50 font-bold">TOKEN: {p.mandiTokenNo}</p>}
+                                    </TableCell>
+                                    <TableCell className="text-xs text-right font-medium">{p.quantity.toFixed(2)}</TableCell>
+                                    <TableCell className="text-xs text-right opacity-60">{formatCurrency(p.rate)}</TableCell>
+                                    <TableCell className="text-xs text-right font-black text-primary">{formatCurrency(p.totalAmount)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <div className="space-y-4">
+                    <h4 className="text-xs font-black border-l-4 border-green-600 pl-3 uppercase tracking-widest text-green-600/60">Payment History</h4>
+                    <Table className="border border-black/10 rounded-3xl overflow-hidden">
+                        <TableHeader className="bg-green-50">
+                            <TableRow className="border-black/10">
+                                <TableHead className="text-black font-black uppercase text-[10px] py-4">Payment Date & Time</TableHead>
+                                <TableHead className="text-black font-black uppercase text-[10px] py-4">Mode / Reference</TableHead>
+                                <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right">Amount Paid (₹)</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {farmer.allPayments.length === 0 ? (
+                                <TableRow><TableCell colSpan={3} className="text-center py-10 opacity-40 italic text-xs">No payments recorded for this account.</TableCell></TableRow>
+                            ) : farmer.allPayments.map(pay => (
+                                <TableRow key={pay.id} className="border-black/5">
+                                    <TableCell className="text-xs font-medium">{format(new Date(pay.date), 'dd MMM yyyy, hh:mm a')}</TableCell>
+                                    <TableCell className="text-xs opacity-60 italic">{pay.note || 'Account Payment'}</TableCell>
+                                    <TableCell className="text-xs text-right font-black text-green-600">{formatCurrency(pay.amount)}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+
+            <div className="mt-32 flex justify-between border-t border-black/10 pt-8">
+                <div className="text-center">
+                    <div className="w-48 border-b-2 border-black mb-2"></div>
+                    <p className="text-[10px] font-black uppercase text-primary/60">Farmer Signature</p>
+                </div>
+                <div className="text-center">
+                    <div className="w-48 border-b-2 border-black mb-2"></div>
+                    <p className="text-[10px] font-black uppercase text-primary/60">Mill Authority</p>
                 </div>
             </div>
         </div>
@@ -172,10 +211,11 @@ export function PrivatePurchases() {
 
   useEffect(() => {
     const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
-    if (fields.length === targetCount) return;
     const currentValues = purchaseForm.getValues('labourerIds') || [];
-    const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
-    replace(nextFields);
+    if (fields.length !== targetCount) {
+      const nextFields = Array.from({ length: targetCount }, (_, i) => currentValues[i] || { value: '' });
+      replace(nextFields);
+    }
   }, [numberOfLabours, replace, purchaseForm, fields.length]);
 
   const vehicleType = purchaseForm.watch('vehicleType');
@@ -192,7 +232,7 @@ export function PrivatePurchases() {
     });
     Object.values(farmers).forEach(f => {
         f.totalBalance = f.purchases.reduce((acc, p) => acc + p.balance, 0);
-        f.allPayments.sort((a,b) => b.date.getTime() - a.date.getTime());
+        f.allPayments.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     });
     return Object.values(farmers).sort((a, b) => a.name.localeCompare(b.name));
   }, [purchases]);
@@ -238,7 +278,7 @@ export function PrivatePurchases() {
   };
 
   return (
-    <>
+    <Fragment>
       <Card className="border-none shadow-none bg-transparent">
         <CardHeader className="px-0 pt-0">
           <div className="flex justify-between items-start mb-6">
@@ -254,7 +294,8 @@ export function PrivatePurchases() {
             <Card className="bg-white border-primary/10 shadow-2xl rounded-3xl overflow-hidden animate-in zoom-in-95 duration-300">
               <CardHeader className="bg-primary/5 border-b border-primary/10"><CardTitle>Record Farmer Arrival</CardTitle></CardHeader>
               <CardContent className="pt-6">
-                <Form {...purchaseForm}><form onSubmit={purchaseForm.handleSubmit(onPurchaseSubmit)} className="space-y-8">
+                <Form {...purchaseForm}>
+                  <form onSubmit={purchaseForm.handleSubmit(onPurchaseSubmit)} className="space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                       <FormField control={purchaseForm.control} name="farmerName" render={({ field }) => (
                         <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="Full Name" {...field} className="h-12 rounded-xl" /></FormControl></FormItem>
@@ -292,7 +333,8 @@ export function PrivatePurchases() {
                       )} />
                     </div>
                     <Button type="submit" className="w-full bg-primary py-8 rounded-2xl text-xl font-bold shadow-xl shadow-primary/20">Save Purchase Record</Button>
-                </form></Form>
+                  </form>
+                </Form>
               </CardContent>
             </Card>
           )}
@@ -304,7 +346,7 @@ export function PrivatePurchases() {
                     <Collapsible key={farmer.id} open={openFarmerCollapsibles[farmer.id]} onOpenChange={(o) => setOpenFarmerCollapsibles(p => ({...p, [farmer.id]: o}))} className="border-b last:border-b-0 border-primary/5">
                         <div className="flex w-full p-4 items-center justify-between hover:bg-primary/5 transition-colors group">
                             <CollapsibleTrigger className="flex items-center gap-3 flex-grow text-left cursor-pointer">
-                                {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                                {openFarmerCollapsibles[farmer.id] ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4" />}
                                 <div className="bg-primary/5 p-2 rounded-xl">
                                     <UserIcon className="h-5 w-5 text-primary" />
                                 </div>
@@ -323,7 +365,7 @@ export function PrivatePurchases() {
                                 <Button size="sm" variant="outline" onClick={(e) => handlePayClick(e, farmer.name)} className="h-9 rounded-xl border-primary/20 hover:bg-primary/5 text-primary font-bold">
                                     <CreditCard className="mr-2 h-4 w-4" /> Pay
                                 </Button>
-                                <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); downloadPdf(`printable-purchases-${farmer.id}`, `purchases-${farmer.id}`); }} className="h-9 w-9 rounded-xl hover:text-primary">
+                                <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); downloadPdf(`printable-purchases-${farmer.id}`, `Statement_${farmer.name.replace(/\s+/g, '_')}`); }} className="h-9 w-9 rounded-xl hover:text-primary">
                                     <Download className="h-4 w-4" />
                                 </Button>
                             </div>
@@ -348,18 +390,18 @@ export function PrivatePurchases() {
                                         <TableBody>
                                             {farmer.purchases.map(p => (
                                                 <TableRow key={p.id} className="border-primary/5 hover:bg-primary/5 transition-colors">
-                                                    <TableCell className="text-xs font-medium">{format(p.date, 'dd MMM yy')}</TableCell>
+                                                    <TableCell className="text-xs font-medium">{format(new Date(p.date), 'dd MMM yy')}</TableCell>
                                                     <TableCell className="text-xs">
                                                         <div className="flex flex-col">
                                                             <span className="capitalize font-bold text-primary">{p.itemType}</span>
-                                                            {p.isMandiExcess && <span className="text-[8px] font-black text-accent-foreground bg-accent/20 px-1 rounded w-fit">TOKEN: {p.mandiTokenNo || 'N/A'}</span>}
+                                                            {p.isMandiExcess && <span className="text-[8px] font-black text-accent-foreground bg-accent/20 px-1 rounded w-fit uppercase">Excess Token: {p.mandiTokenNo || 'N/A'}</span>}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-xs text-right font-medium">{p.quantity.toFixed(2)}</TableCell>
                                                     <TableCell className="text-xs text-right font-black text-primary">{formatCurrency(p.totalAmount)}</TableCell>
                                                     <TableCell className="text-xs text-right">
                                                         <Badge variant="outline" className={`font-black text-[9px] ${p.balance > 0 ? 'bg-destructive/5 text-destructive border-destructive/20' : 'bg-green-500/5 text-green-700 border-green-200'}`}>
-                                                            {p.balance > 0 ? formatCurrency(p.balance) : 'PAID'}
+                                                            {p.balance > 0 ? formatCurrency(p.balance) : 'SETTLED'}
                                                         </Badge>
                                                     </TableCell>
                                                     <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => deletePurchase(p.id)} className="h-7 w-7 text-destructive/40 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button></TableCell>
@@ -376,7 +418,7 @@ export function PrivatePurchases() {
                                             {farmer.allPayments.map((pay, i) => (
                                                 <div key={pay.id} className="bg-white p-3 rounded-xl border border-primary/5 flex justify-between items-center shadow-sm">
                                                     <div>
-                                                        <p className="text-[10px] font-bold text-primary/60">{format(pay.date, 'dd MMM yy, hh:mm a')}</p>
+                                                        <p className="text-[10px] font-bold text-primary/60">{format(new Date(pay.date), 'dd MMM yy, hh:mm a')}</p>
                                                         <p className="text-[8px] text-muted-foreground italic">{pay.note || 'Account Payment'}</p>
                                                     </div>
                                                     <p className="font-black text-green-600 text-sm">{formatCurrency(pay.amount)}</p>
@@ -421,6 +463,6 @@ export function PrivatePurchases() {
               </Form>
           </DialogContent>
       </Dialog>
-    </>
+    </Fragment>
   );
 }

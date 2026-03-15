@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, Fragment } from 'react';
+import React, { useState, useMemo, useEffect, forwardRef, Fragment } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,7 +22,6 @@ import {
   ChevronDown,
   User as UserIcon,
   Edit,
-  TrendingUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,13 +34,11 @@ import { useAuth } from '@/hooks/use-auth';
 import { Separator } from '@/components/ui/separator';
 import { downloadPdf } from '@/lib/pdf-utils';
 import type { PaddyLifted as PaddyLiftedType } from '@/lib/types';
-import { Label } from '@/components/ui/label';
 import { format, isValid } from 'date-fns';
 import { BagWeightCalculator } from './bag-weight-calculator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { PaddyLiftingSlip } from './paddy-lifting-slip';
 import { Badge } from '@/components/ui/badge';
 import { Dialog } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -88,6 +85,80 @@ const monetaryFormSchema = z.object({
   ratePerQuintal: z.coerce.number().positive('Must be a positive number'),
   date: z.date({ required_error: 'A date is required.' }),
 });
+
+/**
+ * PRINTABLE MANDI STATEMENT
+ */
+const FarmerMandiStatement = forwardRef<HTMLDivElement, { farmer: any, millName: string, millLocation: string }>(({ farmer, millName, millLocation }, ref) => {
+  return (
+    <div ref={ref} className="p-10 bg-white text-black w-[1000px] mx-auto min-h-screen border shadow-sm">
+      <div className="text-center mb-10 border-b-4 border-primary pb-6">
+        <h1 className="text-4xl font-black uppercase text-primary tracking-tighter mb-1">{millName}</h1>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{millLocation}</p>
+        <div className="mt-6 bg-primary text-white py-2 px-8 inline-block rounded-full text-xs font-black uppercase tracking-widest">
+          Mandi Procurement Account Statement
+        </div>
+      </div>
+
+      <div className="flex justify-between items-end mb-12">
+        <div className="space-y-1">
+          <p className="text-[10px] font-black uppercase text-primary/40 tracking-widest">Farmer / Supplier Name</p>
+          <p className="text-3xl font-black text-primary">{farmer.name}</p>
+        </div>
+        <div className="text-right space-y-1">
+          <p className="text-[10px] font-black uppercase text-primary/40 tracking-widest">Account Summary</p>
+          <p className="text-2xl font-black text-primary">{farmer.totalQty.toFixed(2)} <span className="text-sm opacity-60">QTL</span></p>
+          <p className="text-[10px] font-bold opacity-60 uppercase">Total Procurement Records: {farmer.items.length}</p>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-black/10 overflow-hidden mb-12">
+        <Table>
+          <TableHeader className="bg-primary/5">
+            <TableRow className="border-black/10">
+              <TableHead className="text-black font-black uppercase text-[10px] py-4 pl-6">Procurement Date</TableHead>
+              <TableHead className="text-black font-black uppercase text-[10px] py-4">Mandi Source</TableHead>
+              <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right">Actual Qty (Qtl)</TableHead>
+              <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right pr-6">Official weight (Qtl)</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {farmer.items.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
+              <TableRow key={item.id} className="border-black/5 hover:bg-muted/30">
+                <TableCell className="text-xs font-medium pl-6">{format(new Date(item.date), 'dd MMMM yyyy')}</TableCell>
+                <TableCell className="text-xs font-bold">{item.mandiName}</TableCell>
+                <TableCell className="text-xs text-right opacity-60">{parseFloat(String(item.totalPaddyReceived)).toFixed(2)}</TableCell>
+                <TableCell className="text-xs text-right font-black text-primary pr-6">{parseFloat(String(item.mandiWeight)).toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <tfoot className="bg-primary/5 border-t-2 border-primary/20">
+            <TableRow>
+              <TableCell colSpan={3} className="pl-6 py-6 font-black text-primary uppercase tracking-widest">Consolidated Official Total</TableCell>
+              <TableCell className="text-right pr-6 py-6 font-black text-3xl text-primary">{farmer.totalQty.toFixed(2)} <span className="text-xs opacity-60">Qtl</span></TableCell>
+            </TableRow>
+          </tfoot>
+        </Table>
+      </div>
+
+      <div className="mt-32 flex justify-between border-t border-black/10 pt-8">
+        <div className="text-center">
+          <div className="w-48 border-b-2 border-black mb-2"></div>
+          <p className="text-[10px] font-black uppercase text-primary/60">Farmer Signature</p>
+        </div>
+        <div className="text-center">
+          <div className="w-48 border-b-2 border-black mb-2"></div>
+          <p className="text-[10px] font-black uppercase text-primary/60">For {millName}</p>
+        </div>
+      </div>
+      
+      <div className="mt-auto pt-20 text-[8px] text-center font-bold opacity-30 uppercase tracking-[0.3em]">
+        Computer Generated Statement • Managed via Mandi Monitor Engine
+      </div>
+    </div>
+  );
+});
+FarmerMandiStatement.displayName = 'FarmerMandiStatement';
 
 export function PaddyLifted() {
   const { paddyLiftedItems, addPaddyLifted, updatePaddyLifted, deletePaddyLifted, targetAllocations } = useMandiData();
@@ -247,6 +318,12 @@ export function PaddyLifted() {
     setCalculatorOpen(false);
   };
 
+  const handleDownloadStatement = (e: React.MouseEvent, farmer: any) => {
+    e.stopPropagation();
+    const fileName = `Mandi_Statement_${farmer.name.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}`;
+    downloadPdf(`printable-mandi-statement-${farmer.id}`, fileName);
+  };
+
   return (
     <div className="space-y-8">
       <Card className="border-none shadow-none bg-transparent">
@@ -256,9 +333,6 @@ export function PaddyLifted() {
               <CardTitle className="text-2xl font-bold font-headline text-primary">Procurement Records</CardTitle>
               <CardDescription>Volume tracking for physical arrivals and monetary records.</CardDescription>
             </div>
-             <Button variant="outline" size="sm" onClick={() => downloadPdf('paddy-lifted-table', 'paddy-lifted-summary')} className="rounded-xl border-primary/20">
-                <DownloadIcon className="mr-2 h-4 w-4" /> Export PDF
-            </Button>
           </div>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -282,7 +356,8 @@ export function PaddyLifted() {
               </CardHeader>
               <CardContent className="pt-6">
                 {showPhysicalForm ? (
-                  <Form {...physicalForm}><form onSubmit={physicalForm.handleSubmit(onPhysicalSubmit)} className="space-y-8">
+                  <Form {...physicalForm}>
+                    <form onSubmit={physicalForm.handleSubmit(onPhysicalSubmit)} className="space-y-8">
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                         <FormField control={physicalForm.control} name="mandiName" render={({ field }) => (
                             <FormItem><FormLabel>Mandi Source</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>
@@ -291,7 +366,7 @@ export function PaddyLifted() {
                           <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="Full Name" {...field} className="rounded-xl h-12" /></FormControl></FormItem>
                         )} />
                         <FormField control={physicalForm.control} name="date" render={({ field }) => (
-                          <FormItem className="flex flex-col"><FormLabel>Date</FormLabel><Popover open={isPhysicalCalendarOpen} onOpenChange={setIsPhysicalCalendarOpen}><PopoverTrigger asChild><FormControl><Button variant="outline" className="h-12 rounded-xl text-left font-normal">{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={(d) => { field.onChange(d); setIsPhysicalCalendarOpen(false); }} initialFocus /></PopoverContent></Popover></FormItem>
+                          <FormItem className="flex flex-col"><FormLabel>Date</FormLabel><Popover open={isPhysicalCalendarOpen} onOpenChange={setIsPhysicalCalendarOpen}><PopoverTrigger asChild><FormControl><Button variant="outline" className="h-12 rounded-xl text-left font-normal">{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={(d) => { if(d) field.onChange(d); setIsPhysicalCalendarOpen(false); }} initialFocus /></PopoverContent></Popover></FormItem>
                         )} />
                          <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (
                           <FormItem><FormLabel>Actual Qty (Qtl)</FormLabel><div className="flex items-center gap-2"><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl><Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)} className="h-12 w-12 rounded-xl"><Calculator className="h-5 w-5" /></Button></div></FormItem>
@@ -308,21 +383,37 @@ export function PaddyLifted() {
                       <div className="space-y-6">
                           <h3 className="text-md font-bold flex items-center gap-2 opacity-80"><Car className="h-5 w-5" /> Logistics</h3>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
-                             <FormField control={physicalForm.control} name="vehicleType" render={({ field }) => (<FormItem><FormLabel>Ownership</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="farmer">Farmer's Vehicle</SelectItem><SelectItem value="own">Own Vehicle</SelectItem><SelectItem value="hired">Hired Vehicle</SelectItem></SelectContent></Select></FormItem>)} />
+                             <FormField control={physicalForm.control} name="vehicleType" render={({ field }) => (<FormItem><FormLabel>Ownership</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select type..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="farmer">Farmer's Vehicle</SelectItem><SelectItem value="own">Own Vehicle</SelectItem><SelectItem value="hired">Hired Vehicle</SelectItem></SelectContent></Select></FormItem>)} />
                              {vehicleType === 'hired' && (
-                              <>
+                              <Fragment>
                                   <FormField control={physicalForm.control} name="vehicleNumber" render={({ field }) => (<FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
                                   <FormField control={physicalForm.control} name="driverName" render={({ field }) => (<FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
                                   <FormField control={physicalForm.control} name="ownerName" render={({ field }) => (<FormItem><FormLabel>Owner Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
                                   <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (<FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl></FormItem>)} />
-                              </>
+                              </Fragment>
                              )}
                           </div>
                       </div>
                       <Button type="submit" className="w-full bg-primary py-8 rounded-2xl font-bold text-lg">{editingItem ? 'Save Changes' : 'Confirm Arrival'}</Button>
-                  </form></Form>
+                    </form>
+                  </Form>
                 ) : (
-                  <Form {...monetaryForm}><form onSubmit={monetaryForm.handleSubmit(onMonetarySubmit)} className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end"><FormField control={monetaryForm.control} name="mandiName" render={({ field }) => (<FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue/></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>)} /><FormField control={monetaryForm.control} name="moneyReceived" render={({ field }) => (<FormItem><FormLabel>Cash (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl></FormItem>)} /><FormField control={monetaryForm.control} name="ratePerQuintal" render={({ field }) => (<FormItem><FormLabel>Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl></FormItem>)} /><Button type="submit" className="bg-primary h-12 rounded-xl font-bold">Save Record</Button></div></form></Form>
+                  <Form {...monetaryForm}>
+                    <form onSubmit={monetaryForm.handleSubmit(onMonetarySubmit)} className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+                        <FormField control={monetaryForm.control} name="mandiName" render={({ field }) => (
+                          <FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>
+                        )} />
+                        <FormField control={monetaryForm.control} name="moneyReceived" render={({ field }) => (
+                          <FormItem><FormLabel>Cash (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl></FormItem>
+                        )} />
+                        <FormField control={monetaryForm.control} name="ratePerQuintal" render={({ field }) => (
+                          <FormItem><FormLabel>Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl></FormItem>
+                        )} />
+                        <Button type="submit" className="bg-primary h-12 rounded-xl font-bold">Save Record</Button>
+                      </div>
+                    </form>
+                  </Form>
                 )}
               </CardContent>
             </Card>
@@ -337,18 +428,32 @@ export function PaddyLifted() {
                       <div className="bg-primary/5 p-2 rounded-xl"><UserIcon className="h-5 w-5 text-primary" /></div>
                       <div><p className="font-bold text-primary">{farmer.name}</p><p className="text-[10px] uppercase opacity-60">{farmer.items.length} Records</p></div>
                     </CollapsibleTrigger>
-                    <div className="text-right"><p className="text-sm font-black text-primary">{farmer.totalQty.toFixed(2)} Qtl</p></div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right mr-2"><p className="text-sm font-black text-primary">{farmer.totalQty.toFixed(2)} Qtl</p></div>
+                      <Button variant="outline" size="sm" onClick={(e) => handleDownloadStatement(e, farmer)} className="rounded-xl border-primary/20 h-9">
+                        <DownloadIcon className="mr-2 h-4 w-4" /> Statement
+                      </Button>
+                    </div>
                   </div>
                   <CollapsibleContent className="bg-muted/30">
                     <div className="p-4 overflow-x-auto">
+                      <div className="absolute -left-[9999px] top-auto" aria-hidden="true">
+                        <div id={`printable-mandi-statement-${farmer.id}`}>
+                          <FarmerMandiStatement 
+                            farmer={farmer} 
+                            millName={selectedMill?.name || 'Mandi Monitor'} 
+                            millLocation={selectedMill?.location || 'Operational Unit'} 
+                          />
+                        </div>
+                      </div>
                       <Table>
-                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Mandi</TableHead><TableHead className="text-right">Actual</TableHead><TableHead className="text-right">Standard</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                        <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Mandi</TableHead><TableHead className="text-right">Actual</TableHead><TableHead className="text-right">Official</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                         <TableBody>{farmer.items.map(item => (
                           <TableRow key={item.id}>
                             <TableCell className="text-xs">{format(new Date(item.date), 'dd MMM yy')}</TableCell>
                             <TableCell className="text-xs font-bold">{item.mandiName}</TableCell>
-                            <TableCell className="text-xs text-right opacity-60">{Number(item.totalPaddyReceived).toFixed(2)}</TableCell>
-                            <TableCell className="text-xs text-right font-black text-primary">{Number(item.mandiWeight).toFixed(2)}</TableCell>
+                            <TableCell className="text-xs text-right opacity-60">{parseFloat(String(item.totalPaddyReceived)).toFixed(2)}</TableCell>
+                            <TableCell className="text-xs text-right font-black text-primary">{parseFloat(String(item.mandiWeight)).toFixed(2)}</TableCell>
                             <TableCell className="text-right"><div className="flex gap-2 justify-end">
                               <Button variant="ghost" size="icon" onClick={() => handleEditClick(item)} className="h-7 w-7 rounded-lg"><Edit className="h-3.5 w-3.5" /></Button>
                               <Button variant="ghost" size="icon" onClick={() => deletePaddyLifted(item.id)} className="h-7 w-7 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
