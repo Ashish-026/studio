@@ -23,6 +23,7 @@ import {
   ChevronDown,
   User as UserIcon,
   Edit,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,6 +88,73 @@ const monetaryFormSchema = z.object({
   date: z.date({ required_error: 'A date is required.' }),
 });
 
+/**
+ * PRINTABLE: Consolidated Mandi Report
+ */
+const MandiSummaryReport = forwardRef<HTMLDivElement, { mandiName: string, farmers: any[], millName: string, millLocation: string }>(({ mandiName, farmers, millName, millLocation }, ref) => {
+  const totalMandiQty = farmers.reduce((sum, f) => sum + f.totalQty, 0);
+  const totalRecords = farmers.reduce((sum, f) => sum + f.items.length, 0);
+
+  return (
+    <div ref={ref} className="p-10 bg-white text-black w-[1000px] mx-auto min-h-screen border shadow-sm">
+      <div className="text-center mb-10 border-b-4 border-primary pb-6">
+        <h1 className="text-4xl font-black uppercase text-primary tracking-tighter mb-1">{millName}</h1>
+        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{millLocation}</p>
+        <div className="mt-6 bg-primary text-white py-2 px-8 inline-block rounded-full text-xs font-black uppercase tracking-widest">
+          Mandi-Wise Procurement Summary
+        </div>
+      </div>
+
+      <div className="flex justify-between items-end mb-8">
+        <div>
+          <p className="text-[10px] font-black uppercase text-primary/40 tracking-widest">Source Mandi</p>
+          <p className="text-3xl font-black text-primary">{mandiName}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] font-black uppercase text-primary/40 tracking-widest">Total Weight Lifted</p>
+          <p className="text-2xl font-black text-primary">{totalMandiQty.toFixed(2)} QTL</p>
+          <p className="text-[10px] font-bold opacity-60 uppercase">Farmers: {farmers.length} | Records: {totalRecords}</p>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-black/10 overflow-hidden mb-12">
+        <Table>
+          <TableHeader className="bg-primary/5">
+            <TableRow className="border-black/10">
+              <TableHead className="text-black font-black uppercase text-[10px] py-4 pl-6">Farmer Name</TableHead>
+              <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right">No. of Arrivals</TableHead>
+              <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right pr-6">Mandi Weight (Qtl)</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {farmers.map(f => (
+              <TableRow key={f.id} className="border-black/5 font-medium">
+                <TableCell className="py-4 pl-6 font-bold">{f.name}</TableCell>
+                <TableCell className="text-right text-xs opacity-60">{f.items.length} Records</TableCell>
+                <TableCell className="text-right font-black text-primary pr-6">{f.totalQty.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <tfoot className="bg-primary/5 border-t-2 border-primary/20">
+            <TableRow>
+              <TableCell colSpan={2} className="pl-6 py-6 font-black text-primary uppercase tracking-widest">Consolidated Procurement Total</TableCell>
+              <TableCell className="text-right pr-6 py-6 font-black text-3xl text-primary">{totalMandiQty.toFixed(2)} <span className="text-xs opacity-60">Qtl</span></TableCell>
+            </TableRow>
+          </tfoot>
+        </Table>
+      </div>
+
+      <div className="mt-auto pt-20 text-[8px] text-center font-bold opacity-30 uppercase tracking-[0.3em]">
+        Computer Generated Report • Mandi Monitor Standalone Engine
+      </div>
+    </div>
+  );
+});
+MandiSummaryReport.displayName = 'MandiSummaryReport';
+
+/**
+ * PRINTABLE: Individual Farmer Mandi Statement
+ */
 const FarmerMandiStatement = forwardRef<HTMLDivElement, { farmer: any, millName: string, millLocation: string }>(({ farmer, millName, millLocation }, ref) => {
   return (
     <div ref={ref} className="p-10 bg-white text-black w-[1000px] mx-auto min-h-screen border shadow-sm">
@@ -205,7 +273,13 @@ export function PaddyLifted() {
 
   const farmerAggregates = useMemo(() => {
     const map: Record<string, { id: string; name: string; items: PaddyLiftedType[]; totalQty: number }> = {};
-    (paddyLiftedItems || []).forEach(item => {
+    
+    // FILTER: Filter arrival items by selected mandi before grouping by farmer
+    const filteredItems = selectedMandi === 'All' 
+      ? (paddyLiftedItems || []) 
+      : (paddyLiftedItems || []).filter(item => item.mandiName === selectedMandi);
+
+    filteredItems.forEach(item => {
       const key = item.farmerName.trim();
       if (!map[key]) {
         map[key] = { id: key.toLowerCase().replace(/\s+/g, '-'), name: key, items: [], totalQty: 0 };
@@ -214,7 +288,7 @@ export function PaddyLifted() {
       map[key].totalQty += (Number(item.mandiWeight) || 0);
     });
     return Object.values(map).sort((a,b) => a.name.localeCompare(b.name));
-  }, [paddyLiftedItems]);
+  }, [paddyLiftedItems, selectedMandi]);
 
   const physicalForm = useForm<z.infer<typeof physicalFormSchema>>({
     resolver: zodResolver(physicalFormSchema),
@@ -345,8 +419,34 @@ export function PaddyLifted() {
     downloadPdf(`printable-mandi-statement-${farmer.id}`, fileName);
   };
 
+  const handleDownloadMandiReport = () => {
+    const fileName = `Mandi_Report_${selectedMandi.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}`;
+    downloadPdf('printable-mandi-wise-report', fileName);
+  };
+
   return (
     <Fragment>
+      {/* HIDDEN PRINTABLE ELEMENTS */}
+      <div className="absolute -left-[9999px] top-auto" aria-hidden="true">
+        <div id="printable-mandi-wise-report">
+          <MandiSummaryReport 
+            mandiName={selectedMandi === 'All' ? 'All Operational Mandis' : selectedMandi} 
+            farmers={farmerAggregates} 
+            millName={selectedMill?.name || 'Mandi Monitor'} 
+            millLocation={selectedMill?.location || 'Operational Unit'} 
+          />
+        </div>
+        {farmerAggregates.map(farmer => (
+          <div key={`print-${farmer.id}`} id={`printable-mandi-statement-${farmer.id}`}>
+            <FarmerMandiStatement 
+              farmer={farmer} 
+              millName={selectedMill?.name || 'Mandi Monitor'} 
+              millLocation={selectedMill?.location || 'Operational Unit'} 
+            />
+          </div>
+        ))}
+      </div>
+
       <div className="space-y-8">
         <Card className="border-none shadow-none bg-transparent">
           <CardHeader className="px-0 pt-0">
@@ -359,7 +459,7 @@ export function PaddyLifted() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <Select value={selectedMandi} onValueChange={setSelectedMandi}>
-                    <SelectTrigger className="w-[240px] rounded-xl">
+                    <SelectTrigger className="w-[240px] rounded-xl border-primary/20 bg-white">
                       <SelectValue placeholder="All Mandis" />
                     </SelectTrigger>
                     <SelectContent>
@@ -367,6 +467,14 @@ export function PaddyLifted() {
                       {uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  <Button 
+                    variant="outline" 
+                    className="rounded-xl border-primary/20 bg-white text-primary"
+                    onClick={handleDownloadMandiReport}
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Mandi Report (PDF)
+                  </Button>
                 </div>
                 <div className="flex gap-3">
                   <Button onClick={() => { cancelForm(); setShowPhysicalForm(true); }} className="rounded-xl shadow-lg" disabled={uniqueMandis.length === 0}><PlusCircle className="mr-2 h-4 w-4" /> Farmer Arrival</Button>
@@ -449,17 +557,6 @@ export function PaddyLifted() {
             <div id="paddy-lifted-table" className="space-y-4">
                 {farmerAggregates.map((farmer) => (
                   <Collapsible key={farmer.id} open={openFarmerLedgers[farmer.id]} onOpenChange={(o) => setOpenFarmerLedgers(prev => ({...prev, [farmer.id]: o}))} className="border rounded-3xl bg-white overflow-hidden mb-2">
-                    {/* HIDDEN PRINTABLE ELEMENT - PLACED OUTSIDE COLLAPSIBLE CONTENT */}
-                    <div className="absolute -left-[9999px] top-auto" aria-hidden="true">
-                      <div id={`printable-mandi-statement-${farmer.id}`}>
-                        <FarmerMandiStatement 
-                          farmer={farmer} 
-                          millName={selectedMill?.name || 'Mandi Monitor'} 
-                          millLocation={selectedMill?.location || 'Operational Unit'} 
-                        />
-                      </div>
-                    </div>
-
                     <div className="flex items-center justify-between p-4 hover:bg-primary/5 transition-colors">
                       <CollapsibleTrigger className="flex items-center gap-3 flex-grow text-left">
                         {openFarmerLedgers[farmer.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -494,6 +591,11 @@ export function PaddyLifted() {
                     </CollapsibleContent>
                   </Collapsible>
                 ))}
+                {farmerAggregates.length === 0 && (
+                  <div className="text-center p-12 bg-white rounded-3xl border border-dashed border-primary/20 opacity-50">
+                    No arrivals found for {selectedMandi === 'All' ? 'any mandi' : selectedMandi}.
+                  </div>
+                )}
             </div>
           </CardContent>
         </Card>
