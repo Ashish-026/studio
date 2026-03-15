@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, forwardRef, Fragment } from 'react';
@@ -86,9 +87,6 @@ const monetaryFormSchema = z.object({
   date: z.date({ required_error: 'A date is required.' }),
 });
 
-/**
- * PRINTABLE MANDI STATEMENT
- */
 const FarmerMandiStatement = forwardRef<HTMLDivElement, { farmer: any, millName: string, millLocation: string }>(({ farmer, millName, millLocation }, ref) => {
   return (
     <div ref={ref} className="p-10 bg-white text-black w-[1000px] mx-auto min-h-screen border shadow-sm">
@@ -100,7 +98,7 @@ const FarmerMandiStatement = forwardRef<HTMLDivElement, { farmer: any, millName:
         </div>
       </div>
 
-      <div className="flex justify-between items-end mb-12">
+      <div className="flex justify-between items-end mb-8">
         <div className="space-y-1">
           <p className="text-[10px] font-black uppercase text-primary/40 tracking-widest">Farmer / Supplier Name</p>
           <p className="text-3xl font-black text-primary">{farmer.name}</p>
@@ -116,26 +114,48 @@ const FarmerMandiStatement = forwardRef<HTMLDivElement, { farmer: any, millName:
         <Table>
           <TableHeader className="bg-primary/5">
             <TableRow className="border-black/10">
-              <TableHead className="text-black font-black uppercase text-[10px] py-4 pl-6">Procurement Date</TableHead>
-              <TableHead className="text-black font-black uppercase text-[10px] py-4">Mandi Source</TableHead>
+              <TableHead className="text-black font-black uppercase text-[10px] py-4 pl-6">Procurement Details</TableHead>
               <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right">Actual Qty (Qtl)</TableHead>
               <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right pr-6">Official weight (Qtl)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {farmer.items.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
-              <TableRow key={item.id} className="border-black/5 hover:bg-muted/30">
-                <TableCell className="text-xs font-medium pl-6">{format(new Date(item.date), 'dd MMMM yyyy')}</TableCell>
-                <TableCell className="text-xs font-bold">{item.mandiName}</TableCell>
-                <TableCell className="text-xs text-right opacity-60">{parseFloat(String(item.totalPaddyReceived)).toFixed(2)}</TableCell>
-                <TableCell className="text-xs text-right font-black text-primary pr-6">{parseFloat(String(item.mandiWeight)).toFixed(2)}</TableCell>
-              </TableRow>
+              <Fragment key={item.id}>
+                <TableRow className="border-black/5 bg-white font-medium">
+                  <TableCell className="py-4 pl-6">
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold">{format(new Date(item.date), 'dd MMMM yyyy')}</p>
+                      <p className="text-[10px] opacity-60">Mandi: {item.mandiName} | Token: {item.tokenNumber || 'N/A'}</p>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-right opacity-60">{parseFloat(String(item.totalPaddyReceived)).toFixed(2)}</TableCell>
+                  <TableCell className="text-xs text-right font-black text-primary pr-6">{parseFloat(String(item.mandiWeight)).toFixed(2)}</TableCell>
+                </TableRow>
+                {item.individualBagWeights && item.individualBagWeights.length > 0 && (
+                  <TableRow className="border-none bg-muted/10">
+                    <TableCell colSpan={3} className="py-3 px-6">
+                      <div className="space-y-2">
+                        <p className="text-[8px] font-black uppercase opacity-40 tracking-widest">Individual Bag Weights (KG)</p>
+                        <div className="grid grid-cols-12 gap-1">
+                          {item.individualBagWeights.map((w: number, i: number) => (
+                            <div key={i} className="border border-black/10 p-1 text-center bg-white rounded">
+                              <p className="text-[7px] opacity-30 leading-none mb-0.5">{i + 1}</p>
+                              <p className="text-[9px] font-bold">{w.toFixed(1)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
             ))}
           </TableBody>
           <tfoot className="bg-primary/5 border-t-2 border-primary/20">
             <TableRow>
-              <TableCell colSpan={3} className="pl-6 py-6 font-black text-primary uppercase tracking-widest">Consolidated Official Total</TableCell>
-              <TableCell className="text-right pr-6 py-6 font-black text-3xl text-primary">{farmer.totalQty.toFixed(2)} <span className="text-xs opacity-60">Qtl</span></TableCell>
+              <TableCell className="pl-6 py-6 font-black text-primary uppercase tracking-widest">Consolidated Official Total</TableCell>
+              <TableCell colSpan={2} className="text-right pr-6 py-6 font-black text-3xl text-primary">{farmer.totalQty.toFixed(2)} <span className="text-xs opacity-60">Qtl</span></TableCell>
             </TableRow>
           </tfoot>
         </Table>
@@ -270,6 +290,7 @@ export function PaddyLifted() {
             isMandiExcess: true,
             mandiTokenNo: submissionValues.tokenNumber,
             vehicleType: 'farmer',
+            individualBagWeights: submissionValues.individualBagWeights,
         });
     }
 
@@ -337,8 +358,13 @@ export function PaddyLifted() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="flex items-center gap-4">
                 <Select value={selectedMandi} onValueChange={setSelectedMandi}>
-                  <SelectTrigger className="w-[240px] rounded-xl"><SelectValue placeholder="All Mandis" /></SelectTrigger>
-                  <SelectContent><SelectItem value="All">All Mandis</SelectItem>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                  <SelectTrigger className="w-[240px] rounded-xl">
+                    <SelectValue placeholder="All Mandis" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All Mandis</SelectItem>
+                    {uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="flex gap-3">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, forwardRef, Fragment } from 'react';
@@ -111,7 +112,6 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
                     <Table className="border border-black/10 rounded-3xl overflow-hidden">
                         <TableHeader className="bg-primary/5">
                             <TableRow className="border-black/10">
-                                <TableHead className="text-black font-black uppercase text-[10px] py-4">Date</TableHead>
                                 <TableHead className="text-black font-black uppercase text-[10px] py-4">Item Details</TableHead>
                                 <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right">Quantity (Qtl)</TableHead>
                                 <TableHead className="text-black font-black uppercase text-[10px] py-4 text-right">Rate (₹/Qtl)</TableHead>
@@ -120,19 +120,37 @@ const FarmerPurchaseTable = forwardRef<HTMLDivElement, { farmer: { id: string; n
                         </TableHeader>
                         <TableBody>
                             {farmer.purchases.map((p: PrivatePurchase) => (
-                                <TableRow key={p.id} className="border-black/5">
-                                    <TableCell className="text-xs font-medium">{format(new Date(p.date), 'dd MMM yyyy')}</TableCell>
-                                    <TableCell className="text-xs">
-                                        <div className="flex items-center gap-2 font-bold capitalize">
-                                            {p.itemType}
-                                            {p.isMandiExcess && <Badge variant="outline" className="text-[8px] h-4 bg-accent/10 border-accent/30 text-accent-foreground">EXCESS</Badge>}
-                                        </div>
-                                        {p.mandiTokenNo && <p className="text-[8px] opacity-50 font-bold">TOKEN: {p.mandiTokenNo}</p>}
-                                    </TableCell>
-                                    <TableCell className="text-xs text-right font-medium">{p.quantity.toFixed(2)}</TableCell>
-                                    <TableCell className="text-xs text-right opacity-60">{formatCurrency(p.rate)}</TableCell>
-                                    <TableCell className="text-xs text-right font-black text-primary">{formatCurrency(p.totalAmount)}</TableCell>
-                                </TableRow>
+                                <Fragment key={p.id}>
+                                    <TableRow className="border-black/5 bg-white">
+                                        <TableCell className="py-4">
+                                            <div className="flex items-center gap-2 font-bold capitalize text-xs">
+                                                {format(new Date(p.date), 'dd MMM yy')} — {p.itemType}
+                                                {p.isMandiExcess && <Badge variant="outline" className="text-[8px] h-4 bg-accent/10 border-accent/30 text-accent-foreground">EXCESS</Badge>}
+                                            </div>
+                                            {p.mandiTokenNo && <p className="text-[8px] opacity-50 font-bold">TOKEN: {p.mandiTokenNo}</p>}
+                                        </TableCell>
+                                        <TableCell className="text-xs text-right font-medium">{p.quantity.toFixed(2)}</TableCell>
+                                        <TableCell className="text-xs text-right opacity-60">{formatCurrency(p.rate)}</TableCell>
+                                        <TableCell className="text-xs text-right font-black text-primary">{formatCurrency(p.totalAmount)}</TableCell>
+                                    </TableRow>
+                                    {p.individualBagWeights && p.individualBagWeights.length > 0 && (
+                                        <TableRow className="border-none bg-muted/5">
+                                            <TableCell colSpan={4} className="py-3 px-4">
+                                                <div className="space-y-2">
+                                                    <p className="text-[7px] font-black uppercase opacity-30 tracking-[0.2em]">Bag Weight Breakdown (KG)</p>
+                                                    <div className="grid grid-cols-12 gap-1">
+                                                        {p.individualBagWeights.map((w, i) => (
+                                                            <div key={i} className="border border-black/5 p-1 text-center bg-white rounded shadow-sm">
+                                                                <p className="text-[6px] opacity-20 leading-none">{i + 1}</p>
+                                                                <p className="text-[8px] font-black">{w.toFixed(1)}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </Fragment>
                             ))}
                         </TableBody>
                     </Table>
