@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import { AuthProvider } from '@/context/auth-context';
@@ -58,18 +59,13 @@ export default function RootLayout({
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {
-              function register() {
+              window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
                   console.log('Mandi Monitor: Standalone Engine Active.');
                 }).catch(function(err) {
                   console.error('Mandi Monitor: Engine initialization pending.', err);
                 });
-              }
-              if (document.readyState === 'complete') {
-                register();
-              } else {
-                window.addEventListener('load', register);
-              }
+              });
             }
           `}
         </Script>

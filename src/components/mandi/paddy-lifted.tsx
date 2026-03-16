@@ -77,7 +77,7 @@ const physicalFormSchema = z.object({
     }
     return true;
 }, {
-    message: "Hired vehicle details are incomplete.",
+    message: "Hired vehicle details are incomplete (Check Rent and Names).",
     path: ['tripCharge'],
 });
 
@@ -273,8 +273,6 @@ export function PaddyLifted() {
 
   const farmerAggregates = useMemo(() => {
     const map: Record<string, { id: string; name: string; items: PaddyLiftedType[]; totalQty: number }> = {};
-    
-    // FILTER: Filter arrival items by selected mandi before grouping by farmer
     const filteredItems = selectedMandi === 'All' 
       ? (paddyLiftedItems || []) 
       : (paddyLiftedItems || []).filter(item => item.mandiName === selectedMandi);
@@ -426,8 +424,7 @@ export function PaddyLifted() {
 
   return (
     <Fragment>
-      {/* HIDDEN PRINTABLE ELEMENTS */}
-      <div className="absolute -left-[9999px] top-auto" aria-hidden="true">
+      <div className="absolute -left-[9999px] top-auto pointer-events-none" aria-hidden="true">
         <div id="printable-mandi-wise-report">
           <MandiSummaryReport 
             mandiName={selectedMandi === 'All' ? 'All Operational Mandis' : selectedMandi} 
@@ -467,13 +464,8 @@ export function PaddyLifted() {
                       {uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  <Button 
-                    variant="outline" 
-                    className="rounded-xl border-primary/20 bg-white text-primary"
-                    onClick={handleDownloadMandiReport}
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    Mandi Report (PDF)
+                  <Button variant="outline" className="rounded-xl border-primary/20 bg-white text-primary" onClick={handleDownloadMandiReport}>
+                    <FileText className="mr-2 h-4 w-4" /> Mandi Report (PDF)
                   </Button>
                 </div>
                 <div className="flex gap-3">
@@ -495,36 +487,36 @@ export function PaddyLifted() {
                       <form onSubmit={physicalForm.handleSubmit(onPhysicalSubmit)} className="space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                           <FormField control={physicalForm.control} name="mandiName" render={({ field }) => (
-                              <FormItem><FormLabel>Mandi Source</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>
+                              <FormItem><FormLabel>Mandi Source</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
                           )} />
                           <FormField control={physicalForm.control} name="farmerName" render={({ field }) => (
-                            <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="Full Name" {...field} className="rounded-xl h-12" /></FormControl></FormItem>
+                            <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="Full Name" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                           )} />
                           <FormField control={physicalForm.control} name="date" render={({ field }) => (
-                            <FormItem className="flex flex-col"><FormLabel>Date</FormLabel><Popover open={isPhysicalCalendarOpen} onOpenChange={setIsPhysicalCalendarOpen}><PopoverTrigger asChild><FormControl><Button variant="outline" className="h-12 rounded-xl text-left font-normal">{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={(d) => { if(d) field.onChange(d); setIsPhysicalCalendarOpen(false); }} initialFocus /></PopoverContent></Popover></FormItem>
+                            <FormItem className="flex flex-col"><FormLabel>Date</FormLabel><Popover open={isPhysicalCalendarOpen} onOpenChange={setIsPhysicalCalendarOpen}><PopoverTrigger asChild><FormControl><Button variant="outline" className="h-12 rounded-xl text-left font-normal">{field.value ? format(field.value, "PPP") : <span>Pick date</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={(d) => { if(d) field.onChange(d); setIsPhysicalCalendarOpen(false); }} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>
                           )} />
                            <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (
-                            <FormItem><FormLabel>Actual Qty (Qtl)</FormLabel><div className="flex items-center gap-2"><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl><Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)} className="h-12 w-12 rounded-xl"><Calculator className="h-5 w-5" /></Button></div></FormItem>
+                            <FormItem><FormLabel>Actual Qty (Qtl)</FormLabel><div className="flex items-center gap-2"><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl><Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)} className="h-12 w-12 rounded-xl"><Calculator className="h-5 w-5" /></Button></div><FormMessage /></FormItem>
                           )} />
                           <FormField control={physicalForm.control} name="mandiWeight" render={({ field }) => (
-                            <FormItem><FormLabel>Standard Mandi Weight (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12 bg-primary/5 font-bold" /></FormControl></FormItem>
+                            <FormItem><FormLabel>Standard Mandi Weight (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12 bg-primary/5 font-bold" /></FormControl><FormMessage /></FormItem>
                           )} />
-                          <FormField control={physicalForm.control} name="tokenNumber" render={({ field }) => (<FormItem><FormLabel>Token Number</FormLabel><FormControl><Input {...field} className="rounded-xl h-12" /></FormControl></FormItem>)} />
+                          <FormField control={physicalForm.control} name="tokenNumber" render={({ field }) => (<FormItem><FormLabel>Token Number</FormLabel><FormControl><Input {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>)} />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
-                            <FormField control={physicalForm.control} name="privateExcessQty" render={({ field }) => (<FormItem><FormLabel>Excess Qtl</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl border-accent/30" /></FormControl></FormItem>)} />
-                            <FormField control={physicalForm.control} name="privateExcessRate" render={({ field }) => (<FormItem><FormLabel>Excess Rate (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl border-accent/30" /></FormControl></FormItem>)} />
+                            <FormField control={physicalForm.control} name="privateExcessQty" render={({ field }) => (<FormItem><FormLabel>Excess Qtl</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl border-accent/30" /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={physicalForm.control} name="privateExcessRate" render={({ field }) => (<FormItem><FormLabel>Excess Rate (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl border-accent/30" /></FormControl><FormMessage /></FormItem>)} />
                         </div>
                         <div className="space-y-6">
                             <h3 className="text-md font-bold flex items-center gap-2 opacity-80"><Car className="h-5 w-5" /> Logistics</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
-                               <FormField control={physicalForm.control} name="vehicleType" render={({ field }) => (<FormItem><FormLabel>Ownership</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select type..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="farmer">Farmer's Vehicle</SelectItem><SelectItem value="own">Own Vehicle</SelectItem><SelectItem value="hired">Hired Vehicle</SelectItem></SelectContent></Select></FormItem>)} />
+                               <FormField control={physicalForm.control} name="vehicleType" render={({ field }) => (<FormItem><FormLabel>Ownership</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select type..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="farmer">Farmer's Vehicle</SelectItem><SelectItem value="own">Own Vehicle</SelectItem><SelectItem value="hired">Hired Vehicle</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                                {vehicleType === 'hired' && (
                                 <Fragment>
-                                    <FormField control={physicalForm.control} name="vehicleNumber" render={({ field }) => (<FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                                    <FormField control={physicalForm.control} name="driverName" render={({ field }) => (<FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                                    <FormField control={physicalForm.control} name="ownerName" render={({ field }) => (<FormItem><FormLabel>Owner Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                                    <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (<FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl></FormItem>)} />
+                                    <FormField control={physicalForm.control} name="vehicleNumber" render={({ field }) => (<FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={physicalForm.control} name="driverName" render={({ field }) => (<FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={physicalForm.control} name="ownerName" render={({ field }) => (<FormItem><FormLabel>Owner Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>)} />
+                                    <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (<FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                 </Fragment>
                                )}
                             </div>
@@ -537,13 +529,13 @@ export function PaddyLifted() {
                       <form onSubmit={monetaryForm.handleSubmit(onMonetarySubmit)} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
                           <FormField control={monetaryForm.control} name="mandiName" render={({ field }) => (
-                            <FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>
+                            <FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select mandi..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>
                           )} />
                           <FormField control={monetaryForm.control} name="moneyReceived" render={({ field }) => (
-                            <FormItem><FormLabel>Cash (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl></FormItem>
+                            <FormItem><FormLabel>Cash (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                           )} />
                           <FormField control={monetaryForm.control} name="ratePerQuintal" render={({ field }) => (
-                            <FormItem><FormLabel>Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl></FormItem>
+                            <FormItem><FormLabel>Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl h-12" /></FormControl><FormMessage /></FormItem>
                           )} />
                           <Button type="submit" className="bg-primary h-12 rounded-xl font-bold">Save Record</Button>
                         </div>

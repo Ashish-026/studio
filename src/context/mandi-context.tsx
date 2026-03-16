@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useState, useCallback, ReactNode, useContext, useMemo, useEffect } from 'react';
@@ -104,10 +105,9 @@ export function MandiProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addMandiProcessing = useCallback((item: Omit<MandiProcessingResult, 'id' | 'date' | 'yieldPercentage'>) => {
-    const id = Date.now().toString();
-    const newProc = { ...item, id, date: new Date(), yieldPercentage: (item.riceYield / item.paddyUsed) * 100 };
-    setMandiProcessingHistory(prev => [...prev, newProc as MandiProcessingResult]);
-  }, []);
+    // Calling the stock-context setter directly since it manages processing state
+    addMandiProcessingToStock(item);
+  }, [addMandiProcessingToStock]);
 
   const addStockRelease = useCallback((item: Omit<MandiStockRelease, 'id'>) => {
     const newRelease = { ...item, id: Date.now().toString() };
@@ -133,7 +133,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     addPaddyLifted,
     updatePaddyLifted,
     deletePaddyLifted,
-    addMandiProcessing: addMandiProcessingToStock,
+    addMandiProcessing,
     addStockRelease,
     availableRiceForSupply,
     totalRiceFromProcessing,
@@ -151,7 +151,7 @@ export function MandiProvider({ children }: { children: ReactNode }) {
     addPaddyLifted,
     updatePaddyLifted,
     deletePaddyLifted,
-    addMandiProcessingToStock,
+    addMandiProcessing,
     addStockRelease,
     availableRiceForSupply,
     totalRiceFromProcessing,
