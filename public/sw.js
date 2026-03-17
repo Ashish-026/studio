@@ -1,41 +1,39 @@
 
-/**
- * MANDI MONITOR - STANDALONE OFFLINE ENGINE (v1.0)
- * This worker ensures the app opens even when the server is unreachable.
- */
-
-const CACHE_NAME = 'mandi-monitor-v1';
+/* MANDI MONITOR - DEFINITIVE OFFLINE ENGINE (v12) */
+const CACHE_NAME = 'mandi-monitor-standalone-v12';
 const OFFLINE_URL = '/';
 
-// 1. INSTALL: Cache the root App Shell
+// Core assets required for the app to boot offline
+const CORE_ASSETS = [
+  '/',
+  '/manifest.webmanifest',
+  'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
+  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
+];
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll([OFFLINE_URL]);
+      console.log('Mandi Monitor: Offline Cache Primed.');
+      return cache.addAll(CORE_ASSETS);
     })
   );
   self.skipWaiting();
 });
 
-// 2. ACTIVATE: Clean up old versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
+        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
       );
     })
   );
   self.clients.claim();
 });
 
-// 3. FETCH: Intercept requests and provide Navigation Fallback
 self.addEventListener('fetch', (event) => {
-  // NAVIGATION FALLBACK: If a user navigates to a page while offline, serve the root index
+  // NAVIGATION FALLBACK: Intercepts network failures and serves the local app shell
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -45,18 +43,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ASSET CACHING: Stale-while-revalidate for images, CSS, and JS
+  // STALE-WHILE-REVALIDATE: Serve from cache instantly, update in background
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).then((networkResponse) => {
-        if (networkResponse.status === 200) {
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
           const cacheCopy = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, cacheCopy));
         }
         return networkResponse;
-      });
-    }).catch(() => {
-        // Silent failure for assets that aren't critical
+      }).catch(() => null);
+
+      return cachedResponse || fetchPromise;
     })
   );
 });

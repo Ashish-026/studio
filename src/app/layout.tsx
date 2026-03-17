@@ -63,7 +63,7 @@ export default function RootLayout({
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
                   console.log('Mandi Monitor: Standalone Engine Active.');
                 }).catch(function(err) {
-                  console.error('Mandi Monitor: Engine initialization pending.', err);
+                  console.warn('Mandi Monitor: Offline Engine initialization pending.', err);
                 });
               });
             }

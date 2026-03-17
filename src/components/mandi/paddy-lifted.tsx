@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect, forwardRef, Fragment } from 'react';
+import React, { useState, useMemo, useEffect, forwardRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -88,9 +88,6 @@ const monetaryFormSchema = z.object({
   date: z.date({ required_error: 'A date is required.' }),
 });
 
-/**
- * PRINTABLE: Consolidated Mandi Report
- */
 const MandiSummaryReport = forwardRef<HTMLDivElement, { mandiName: string, farmers: any[], millName: string, millLocation: string }>(({ mandiName, farmers, millName, millLocation }, ref) => {
   const totalMandiQty = farmers.reduce((sum, f) => sum + f.totalQty, 0);
   const totalRecords = farmers.reduce((sum, f) => sum + f.items.length, 0);
@@ -152,9 +149,6 @@ const MandiSummaryReport = forwardRef<HTMLDivElement, { mandiName: string, farme
 });
 MandiSummaryReport.displayName = 'MandiSummaryReport';
 
-/**
- * PRINTABLE: Individual Farmer Mandi Statement
- */
 const FarmerMandiStatement = forwardRef<HTMLDivElement, { farmer: any, millName: string, millLocation: string }>(({ farmer, millName, millLocation }, ref) => {
   return (
     <div ref={ref} className="p-10 bg-white text-black w-[1000px] mx-auto min-h-screen border shadow-sm">
@@ -189,7 +183,7 @@ const FarmerMandiStatement = forwardRef<HTMLDivElement, { farmer: any, millName:
           </TableHeader>
           <TableBody>
             {farmer.items.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
-              <Fragment key={item.id}>
+              <React.Fragment key={item.id}>
                 <TableRow className="border-black/5 bg-white font-medium">
                   <TableCell className="py-4 pl-6">
                     <div className="space-y-1">
@@ -208,7 +202,7 @@ const FarmerMandiStatement = forwardRef<HTMLDivElement, { farmer: any, millName:
                         <div className="grid grid-cols-12 gap-1">
                           {item.individualBagWeights.map((w: number, i: number) => (
                             <div key={i} className="border border-black/10 p-1 text-center bg-white rounded">
-                              <p className="text-[7px] opacity-30 leading-none mb-0.5">{i + 1}</p>
+                              <p className="text-[7px] opacity-20 leading-none mb-0.5">{i + 1}</p>
                               <p className="text-[9px] font-bold">{w.toFixed(1)}</p>
                             </div>
                           ))}
@@ -217,7 +211,7 @@ const FarmerMandiStatement = forwardRef<HTMLDivElement, { farmer: any, millName:
                     </TableCell>
                   </TableRow>
                 )}
-              </Fragment>
+              </React.Fragment>
             ))}
           </TableBody>
           <tfoot className="bg-primary/5 border-t-2 border-primary/20">
@@ -423,7 +417,7 @@ export function PaddyLifted() {
   };
 
   return (
-    <Fragment>
+    <React.Fragment>
       <div className="absolute -left-[9999px] top-auto pointer-events-none" aria-hidden="true">
         <div id="printable-mandi-wise-report">
           <MandiSummaryReport 
@@ -512,12 +506,12 @@ export function PaddyLifted() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
                                <FormField control={physicalForm.control} name="vehicleType" render={({ field }) => (<FormItem><FormLabel>Ownership</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select type..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="farmer">Farmer's Vehicle</SelectItem><SelectItem value="own">Own Vehicle</SelectItem><SelectItem value="hired">Hired Vehicle</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                                {vehicleType === 'hired' && (
-                                <Fragment>
+                                <React.Fragment>
                                     <FormField control={physicalForm.control} name="vehicleNumber" render={({ field }) => (<FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>)} />
                                     <FormField control={physicalForm.control} name="driverName" render={({ field }) => (<FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>)} />
                                     <FormField control={physicalForm.control} name="ownerName" render={({ field }) => (<FormItem><FormLabel>Owner Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>)} />
                                     <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (<FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                </Fragment>
+                                </React.Fragment>
                                )}
                             </div>
                         </div>
@@ -591,8 +585,14 @@ export function PaddyLifted() {
             </div>
           </CardContent>
         </Card>
-        <Dialog open={isCalculatorOpen} onOpenChange={setCalculatorOpen}><BagWeightCalculator onConfirm={handleCalculatorConfirm} onCancel={() => setCalculatorOpen(false)} initialBagWeights={watchedBagWeights} /></Dialog>
+        <Dialog open={isCalculatorOpen} onOpenChange={setCalculatorOpen}>
+          <BagWeightCalculator 
+            onConfirm={handleCalculatorConfirm} 
+            onCancel={() => setCalculatorOpen(false)} 
+            initialBagWeights={watchedBagWeights} 
+          />
+        </Dialog>
       </div>
-    </Fragment>
+    </React.Fragment>
   );
 }
