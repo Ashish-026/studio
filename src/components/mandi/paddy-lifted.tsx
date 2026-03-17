@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect, forwardRef } from 'react';
+import React, { useState, useMemo, useEffect, forwardRef, Fragment } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -77,7 +77,7 @@ const physicalFormSchema = z.object({
     }
     return true;
 }, {
-    message: "Hired vehicle details are incomplete (Check Rent and Names).",
+    message: "Hired vehicle details are incomplete (Check Rent, Driver and Owner Names).",
     path: ['tripCharge'],
 });
 
@@ -183,7 +183,7 @@ const FarmerMandiStatement = forwardRef<HTMLDivElement, { farmer: any, millName:
           </TableHeader>
           <TableBody>
             {farmer.items.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((item: any) => (
-              <React.Fragment key={item.id}>
+              <Fragment key={item.id}>
                 <TableRow className="border-black/5 bg-white font-medium">
                   <TableCell className="py-4 pl-6">
                     <div className="space-y-1">
@@ -211,7 +211,7 @@ const FarmerMandiStatement = forwardRef<HTMLDivElement, { farmer: any, millName:
                     </TableCell>
                   </TableRow>
                 )}
-              </React.Fragment>
+              </Fragment>
             ))}
           </TableBody>
           <tfoot className="bg-primary/5 border-t-2 border-primary/20">
@@ -417,7 +417,8 @@ export function PaddyLifted() {
   };
 
   return (
-    <React.Fragment>
+    <Fragment>
+      {/* HIDDEN PRINTABLE ELEMENTS - OUTSIDE COLLAPSIBLES FOR DOM STABILITY */}
       <div className="absolute -left-[9999px] top-auto pointer-events-none" aria-hidden="true">
         <div id="printable-mandi-wise-report">
           <MandiSummaryReport 
@@ -506,12 +507,12 @@ export function PaddyLifted() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
                                <FormField control={physicalForm.control} name="vehicleType" render={({ field }) => (<FormItem><FormLabel>Ownership</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select type..." /></SelectTrigger></FormControl><SelectContent><SelectItem value="farmer">Farmer's Vehicle</SelectItem><SelectItem value="own">Own Vehicle</SelectItem><SelectItem value="hired">Hired Vehicle</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                                {vehicleType === 'hired' && (
-                                <React.Fragment>
+                                <Fragment>
                                     <FormField control={physicalForm.control} name="vehicleNumber" render={({ field }) => (<FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>)} />
                                     <FormField control={physicalForm.control} name="driverName" render={({ field }) => (<FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>)} />
                                     <FormField control={physicalForm.control} name="ownerName" render={({ field }) => (<FormItem><FormLabel>Owner Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl><FormMessage /></FormItem>)} />
                                     <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (<FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                                </React.Fragment>
+                                </Fragment>
                                )}
                             </div>
                         </div>
@@ -593,6 +594,6 @@ export function PaddyLifted() {
           />
         </Dialog>
       </div>
-    </React.Fragment>
+    </Fragment>
   );
 }

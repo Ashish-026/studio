@@ -19,8 +19,7 @@ import {
   Calculator, 
   Trash2, 
   CreditCard,
-  Receipt,
-  Ticket
+  Receipt
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +36,6 @@ import { Separator } from '../ui/separator';
 import type { PrivatePurchase, Payment } from '@/lib/types';
 import { BagWeightCalculator } from '../mandi/bag-weight-calculator';
 import { Badge } from '../ui/badge';
-import { Checkbox } from '../ui/checkbox';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
@@ -53,8 +51,6 @@ const purchaseFormSchema = z.object({
   rate: z.coerce.number().positive('Rate must be a positive number'),
   initialPayment: z.coerce.number().min(0, 'Initial payment cannot be negative').default(0),
   description: z.string().optional(),
-  isMandiExcess: z.boolean().default(false),
-  mandiTokenNo: z.string().optional(),
   vehicleType: z.enum(['farmer', 'own', 'hired'], { required_error: 'Vehicle type is required' }),
   vehicleNumber: z.string().optional(),
   driverName: z.string().optional(),
@@ -213,7 +209,7 @@ export function PrivatePurchases() {
     defaultValues: {
       farmerName: '', itemType: 'paddy', quantity: 0, rate: 0, initialPayment: 0,
       description: '', vehicleType: 'farmer', destination: 'Mill', vehicleNumber: '',
-      driverName: '', ownerName: '', tripCharge: 0, source: '', isMandiExcess: false, mandiTokenNo: '',
+      driverName: '', ownerName: '', tripCharge: 0, source: '', 
       numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount',
       calculationMethod: 'uniform', deductionKg: 0, grossWeightKg: 0, individualBagWeights: [],
     },
@@ -237,7 +233,6 @@ export function PrivatePurchases() {
   }, [numberOfLabours, replace, purchaseForm, fields.length]);
 
   const vehicleType = purchaseForm.watch('vehicleType');
-  const isMandiExcess = purchaseForm.watch('isMandiExcess');
 
   const farmerAggregates = useMemo(() => {
     const farmers: Record<string, { id: string, name: string, purchases: any[], totalBalance: number, allPayments: Payment[] }> = {};
@@ -319,23 +314,6 @@ export function PrivatePurchases() {
                         <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="Full Name" {...field} className="h-12 rounded-xl" /></FormControl></FormItem>
                       )} />
                       
-                      <div className="flex items-center space-x-2 pt-8">
-                        <FormField control={purchaseForm.control} name="isMandiExcess" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-xl border p-3 shadow-sm bg-muted/20">
-                                <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                                <div className="space-y-1 leading-none">
-                                    <FormLabel className="text-sm font-bold flex items-center gap-2"><Ticket className="h-3 w-3" /> Mandi Token Excess</FormLabel>
-                                </div>
-                            </FormItem>
-                        )} />
-                      </div>
-
-                      {isMandiExcess && (
-                        <FormField control={purchaseForm.control} name="mandiTokenNo" render={({ field }) => (
-                            <FormItem><FormLabel>Token Reference</FormLabel><FormControl><Input placeholder="e.g., T-1234" {...field} className="h-12 rounded-xl border-accent/30" /></FormControl></FormItem>
-                        )} />
-                      )}
-
                       <div className="pt-8"><Button type="button" variant="outline" onClick={() => setCalculatorOpen(true)} className="w-full h-12 rounded-xl border-dashed border-primary/30"><Calculator className="mr-2 h-4 w-4" /> Open Weight Calculator</Button></div>
                       
                       <FormField control={purchaseForm.control} name="quantity" render={({ field }) => (
@@ -362,7 +340,7 @@ export function PrivatePurchases() {
             <div className="border border-primary/5 rounded-3xl overflow-hidden shadow-sm bg-white">
                 {farmerAggregates.map(farmer => (
                     <Collapsible key={farmer.id} open={openFarmerCollapsibles[farmer.id]} onOpenChange={(o) => setOpenFarmerCollapsibles(p => ({...p, [farmer.id]: o}))} className="border-b last:border-b-0 border-primary/5">
-                        {/* HIDDEN PRINTABLE ELEMENT - PLACED OUTSIDE COLLAPSIBLE CONTENT */}
+                        {/* HIDDEN PRINTABLE ELEMENT */}
                         <div className="absolute -left-[9999px] top-auto" aria-hidden="true">
                             <div id={`printable-purchases-${farmer.id}`}>
                                 <FarmerPurchaseTable farmer={farmer} />

@@ -1,31 +1,35 @@
 
-/* MANDI MONITOR - DEFINITIVE OFFLINE ENGINE (v12) */
-const CACHE_NAME = 'mandi-monitor-standalone-v12';
-const OFFLINE_URL = '/';
+/**
+ * MANDI MONITOR - STANDALONE OFFLINE ENGINE
+ * This Service Worker ensures the app code is stored in the phone's memory
+ * and serves it instantly when the network or server is unreachable.
+ */
 
-// Core assets required for the app to boot offline
-const CORE_ASSETS = [
+const CACHE_NAME = 'mandi-monitor-v12';
+const ASSETS_TO_CACHE = [
   '/',
-  '/manifest.webmanifest',
+  '/manifest.json',
   'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
-  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('Mandi Monitor: Offline Cache Primed.');
-      return cache.addAll(CORE_ASSETS);
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+        cacheNames.map((name) => {
+          if (name !== CACHE_NAME) {
+            return caches.delete(name);
+          }
+        })
       );
     })
   );
@@ -33,28 +37,23 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // NAVIGATION FALLBACK: Intercepts network failures and serves the local app shell
+  // Navigation Fallback: Intercept "Site can't be reached" errors
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match(OFFLINE_URL);
+        return caches.match('/');
       })
     );
     return;
   }
 
-  // STALE-WHILE-REVALIDATE: Serve from cache instantly, update in background
+  // Stale-While-Revalidate for speed and offline stability
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const cacheCopy = networkResponse.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, cacheCopy));
-        }
-        return networkResponse;
-      }).catch(() => null);
-
-      return cachedResponse || fetchPromise;
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request);
     })
   );
 });
