@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, forwardRef, Fragment } from 'react';
@@ -155,7 +156,7 @@ export function PaddyLifted() {
   const { paddyLiftedItems, addPaddyLifted, updatePaddyLifted, deletePaddyLifted, targetAllocations } = useMandiData();
   const { addVehicle, addTrip } = useVehicleData();
   const { labourers, addGroupWorkEntry } = useLabourData();
-  const { addPurchase } = useStockData();
+  const { addPurchase, deletePurchase } = useStockData();
   const { selectedMill } = useMill();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -216,9 +217,37 @@ export function PaddyLifted() {
     const lIds = values.labourerIds.map(l => l.value).filter(Boolean);
     const sub = { ...values, labourerIds: lIds, entryType: 'physical' as const };
     let entryId = editingItem?.id;
-    if (editingItem) { updatePaddyLifted(editingItem.id, sub); toast({ title: 'Updated' }); } 
-    else { const n = addPaddyLifted(sub); entryId = n.id; toast({ title: 'Recorded' }); }
-    if (sub.privateExcessQty > 0) addPurchase({ id: `excess-${entryId}`, farmerName: sub.farmerName, itemType: 'paddy', quantity: sub.privateExcessQty, rate: sub.privateExcessRate, date: sub.date, description: `Mandi Excess: ${sub.mandiName}`, isMandiExcess: true, mandiTokenNo: sub.tokenNumber, vehicleType: 'farmer', individualBagWeights: sub.individualBagWeights });
+    
+    if (editingItem) { 
+        updatePaddyLifted(editingItem.id, sub); 
+        toast({ title: 'Updated' }); 
+    } else { 
+        const n = addPaddyLifted(sub); 
+        entryId = n.id; 
+        toast({ title: 'Recorded' }); 
+    }
+
+    // MANDI-PRIVATE SYNC ENGINE
+    const excessId = `excess-${entryId}`;
+    if (sub.privateExcessQty > 0) {
+        addPurchase({ 
+            id: excessId, 
+            farmerName: sub.farmerName, 
+            itemType: 'paddy', 
+            quantity: sub.privateExcessQty, 
+            rate: sub.privateExcessRate, 
+            date: sub.date, 
+            description: `Mandi Excess: ${sub.mandiName}`, 
+            isMandiExcess: true, 
+            mandiTokenNo: sub.tokenNumber, 
+            vehicleType: 'farmer', 
+            individualBagWeights: sub.individualBagWeights 
+        });
+    } else {
+        // If excess is removed, delete corresponding private record
+        deletePurchase(excessId);
+    }
+
     if (sub.vehicleType === 'hired' && sub.vehicleNumber && sub.tripCharge) {
       const vId = addVehicle({ vehicleNumber: sub.vehicleNumber, driverName: sub.driverName || '', ownerName: sub.ownerName || '', rentType: 'per_trip', rentAmount: 0 });
       if (vId) addTrip(vId, { source: sub.source || sub.mandiName, destination: sub.destination || 'Mill', quantity: sub.totalPaddyReceived, tripCharge: sub.tripCharge });
@@ -247,73 +276,126 @@ export function PaddyLifted() {
         <div id="mandi-report-pdf"><MandiSummaryReport mandiName={selectedMandi} farmers={farmerAggregates} millName={selectedMill?.name || ''} millLocation={selectedMill?.location || ''} /></div>
         {farmerAggregates.map(f => (<div key={f.id} id={`stmt-${f.id}`}><FarmerMandiStatement farmer={f} millName={selectedMill?.name || ''} millLocation={selectedMill?.location || ''} /></div>))}
       </div>
+      
       <div className="space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Select value={selectedMandi} onValueChange={setSelectedMandi}><SelectTrigger className="w-[200px] rounded-xl"><SelectValue placeholder="All Mandis" /></SelectTrigger><SelectContent><SelectItem value="All">All Mandis</SelectItem>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select>
-            <Button variant="outline" className="rounded-xl" onClick={() => downloadPdf('mandi-report-pdf', `Mandi_Report_${selectedMandi}`)}><FileText className="mr-2 h-4 w-4" /> PDF Report</Button>
+            <Select value={selectedMandi} onValueChange={setSelectedMandi}>
+                <SelectTrigger className="w-[200px] rounded-xl"><SelectValue placeholder="All Mandis" /></SelectTrigger>
+                <SelectContent><SelectItem value="All">All Mandis</SelectItem>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+            </Select>
+            <Button variant="outline" className="rounded-xl" onClick={() => downloadPdf('mandi-report-pdf', `Mandi_Report_${selectedMandi}`)}>
+                <FileText className="mr-2 h-4 w-4" /> Mandi Report (PDF)
+            </Button>
           </div>
           <div className="flex gap-3">
             <Button onClick={() => { resetForm(); setShowPhysicalForm(true); }} className="rounded-xl" disabled={uniqueMandis.length === 0}><PlusCircle className="mr-2 h-4 w-4" /> Farmer Arrival</Button>
             {isAdmin && <Button onClick={() => { resetForm(); setShowMonetaryForm(true); }} variant="secondary" className="rounded-xl" disabled={uniqueMandis.length === 0}><CalendarIcon className="mr-2 h-4 w-4" /> Monetary</Button>}
           </div>
         </div>
+
         {(showPhysicalForm || showMonetaryForm) && (
           <Card className="rounded-3xl shadow-xl overflow-hidden border-primary/10">
-            <CardHeader className="bg-primary/5 flex flex-row items-center justify-between"><CardTitle className="text-lg">{editingItem ? 'Edit' : 'New'} Record</CardTitle><Button variant="ghost" size="icon" onClick={resetForm} className="rounded-full"><X className="h-5 w-5" /></Button></CardHeader>
+            <CardHeader className="bg-primary/5 flex flex-row items-center justify-between">
+                <CardTitle className="text-lg">{editingItem ? 'Edit Entry' : 'New Entry'}</CardTitle>
+                <Button variant="ghost" size="icon" onClick={resetForm} className="rounded-full"><X className="h-5 w-5" /></Button>
+            </CardHeader>
             <CardContent className="pt-6">
               {showPhysicalForm ? (
-                <Form {...physicalForm}><form onSubmit={physicalForm.handleSubmit(onPhysicalSubmit)} className="space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <FormField control={physicalForm.control} name="mandiName" render={({ field }) => (<FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>)} />
-                    <FormField control={physicalForm.control} name="farmerName" render={({ field }) => (<FormItem><FormLabel>Farmer</FormLabel><FormControl><Input placeholder="Name" {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                    <FormField control={physicalForm.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date</FormLabel><Popover open={isPhysicalCalendarOpen} onOpenChange={setIsPhysicalCalendarOpen}><PopoverTrigger asChild><FormControl><Button variant="outline" className="rounded-xl text-left">{field.value ? format(field.value, "PPP") : 'Pick date'}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={(d) => { if(d) field.onChange(d); setIsPhysicalCalendarOpen(false); }} initialFocus /></PopoverContent></Popover></FormItem>)} />
-                    <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (<FormItem><FormLabel>Qty (Qtl)</FormLabel><div className="flex gap-2"><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl" /></FormControl><Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)} className="rounded-xl"><Calculator className="h-4 w-4" /></Button></div></FormItem>)} />
-                    <FormField control={physicalForm.control} name="mandiWeight" render={({ field }) => (<FormItem><FormLabel>Official (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl bg-primary/5 font-bold" /></FormControl></FormItem>)} />
-                    <FormField control={physicalForm.control} name="tokenNumber" render={({ field }) => (<FormItem><FormLabel>Token</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <FormField control={physicalForm.control} name="privateExcessQty" render={({ field }) => (<FormItem><FormLabel>Excess Qtl</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl border-accent/30" /></FormControl></FormItem>)} />
-                    <FormField control={physicalForm.control} name="privateExcessRate" render={({ field }) => (<FormItem><FormLabel>Excess Rate</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl border-accent/30" /></FormControl></FormItem>)} />
-                  </div>
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-bold opacity-50 flex items-center gap-2"><Car className="h-4 w-4" /> Logistics</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                      <FormField control={physicalForm.control} name="vehicleType" render={({ field }) => (<FormItem><FormLabel>Ownership</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="farmer">Farmer's</SelectItem><SelectItem value="own">Own</SelectItem><SelectItem value="hired">Hired</SelectItem></SelectContent></Select></FormItem>)} />
-                      {vehicleType === 'hired' && (
-                        <Fragment>
-                          <FormField control={physicalForm.control} name="vehicleNumber" render={({ field }) => (<FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                          <FormField control={physicalForm.control} name="driverName" render={({ field }) => (<FormItem><FormLabel>Driver</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                          <FormField control={physicalForm.control} name="ownerName" render={({ field }) => (<FormItem><FormLabel>Owner</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
-                          <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (<FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        </Fragment>
-                      )}
+                <Form {...physicalForm}>
+                  <form onSubmit={physicalForm.handleSubmit(onPhysicalSubmit)} className="space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <FormField control={physicalForm.control} name="mandiName" render={({ field }) => (<FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select..." /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>)} />
+                        <FormField control={physicalForm.control} name="farmerName" render={({ field }) => (<FormItem><FormLabel>Farmer</FormLabel><FormControl><Input placeholder="Name" {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                        <FormField control={physicalForm.control} name="date" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Date</FormLabel><Popover open={isPhysicalCalendarOpen} onOpenChange={setIsPhysicalCalendarOpen}><PopoverTrigger asChild><FormControl><Button variant="outline" className="rounded-xl text-left">{field.value ? format(field.value, "PPP") : 'Pick date'}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={(d) => { if(d) field.onChange(d); setIsPhysicalCalendarOpen(false); }} initialFocus /></PopoverContent></Popover></FormItem>)} />
+                        <FormField control={physicalForm.control} name="totalPaddyReceived" render={({ field }) => (<FormItem><FormLabel>Actual Qty (Qtl)</FormLabel><div className="flex gap-2"><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl" /></FormControl><Button type="button" variant="outline" size="icon" onClick={() => setCalculatorOpen(true)} className="rounded-xl"><Calculator className="h-4 w-4" /></Button></div></FormItem>)} />
+                        <FormField control={physicalForm.control} name="mandiWeight" render={({ field }) => (<FormItem><FormLabel>Official Mandi Qty (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl bg-primary/5 font-bold" /></FormControl></FormItem>)} />
+                        <FormField control={physicalForm.control} name="tokenNumber" render={({ field }) => (<FormItem><FormLabel>Token No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
                     </div>
-                  </div>
-                  <Button type="submit" className="w-full py-8 rounded-2xl font-bold text-lg">{editingItem ? 'Save Changes' : 'Confirm Entry'}</Button>
-                </form></Form>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-accent/5 p-6 rounded-2xl border border-accent/20">
+                        <div className="space-y-1"><h3 className="font-bold text-accent-foreground text-sm uppercase">Private Excess (Auto-Sync)</h3><p className="text-[10px] opacity-60">Quantities above target will be pushed to Private section.</p></div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField control={physicalForm.control} name="privateExcessQty" render={({ field }) => (<FormItem><FormLabel>Excess Qtl</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl border-accent/30" /></FormControl></FormItem>)} />
+                            <FormField control={physicalForm.control} name="privateExcessRate" render={({ field }) => (<FormItem><FormLabel>Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl border-accent/30" /></FormControl></FormItem>)} />
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold opacity-50 flex items-center gap-2"><Car className="h-4 w-4" /> Logistics & Hired Rent</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <FormField control={physicalForm.control} name="vehicleType" render={({ field }) => (<FormItem><FormLabel>Ownership</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="farmer">Farmer's</SelectItem><SelectItem value="own">Own</SelectItem><SelectItem value="hired">Hired</SelectItem></SelectContent></Select></FormItem>)} />
+                            {vehicleType === 'hired' && (
+                                <Fragment>
+                                    <FormField control={physicalForm.control} name="vehicleNumber" render={({ field }) => (<FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                                    <FormField control={physicalForm.control} name="driverName" render={({ field }) => (<FormItem><FormLabel>Driver</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                                    <FormField control={physicalForm.control} name="ownerName" render={({ field }) => (<FormItem><FormLabel>Owner</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                                    <FormField control={physicalForm.control} name="tripCharge" render={({ field }) => (<FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                                </Fragment>
+                            )}
+                        </div>
+                    </div>
+                    <Button type="submit" className="w-full py-8 rounded-2xl font-bold text-lg">{editingItem ? 'Update Arrival' : 'Confirm Arrival'}</Button>
+                  </form>
+                </Form>
               ) : (
-                <Form {...monetaryForm}><form onSubmit={monetaryForm.handleSubmit(onMonetarySubmit)} className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end"><FormField control={monetaryForm.control} name="mandiName" render={({ field }) => (<FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>)} /><FormField control={monetaryForm.control} name="moneyReceived" render={({ field }) => (<FormItem><FormLabel>Cash (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl" /></FormControl></FormItem>)} /><FormField control={monetaryForm.control} name="ratePerQuintal" render={({ field }) => (<FormItem><FormLabel>Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl" /></FormControl></FormItem>)} /><Button type="submit" className="rounded-xl h-10 font-bold">Save Record</Button></div></form></Form>
+                <Form {...monetaryForm}>
+                    <form onSubmit={monetaryForm.handleSubmit(onMonetarySubmit)} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                            <FormField control={monetaryForm.control} name="mandiName" render={({ field }) => (<FormItem><FormLabel>Mandi</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent>{uniqueMandis.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent></Select></FormItem>)} />
+                            <FormField control={monetaryForm.control} name="moneyReceived" render={({ field }) => (<FormItem><FormLabel>Cash Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                            <FormField control={monetaryForm.control} name="ratePerQuintal" render={({ field }) => (<FormItem><FormLabel>Standard Rate (₹/Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="rounded-xl" /></FormControl></FormItem>)} />
+                            <Button type="submit" className="rounded-xl h-10 font-bold">Save Monetary Entry</Button>
+                        </div>
+                    </form>
+                </Form>
               )}
             </CardContent>
           </Card>
         )}
+
         <div className="space-y-4">
           {farmerAggregates.map(f => (
             <Collapsible key={f.id} open={openFarmerLedgers[f.id]} onOpenChange={(o) => setOpenFarmerLedgers(p => ({...p, [f.id]: o}))} className="border rounded-3xl bg-white overflow-hidden shadow-sm">
               <div className="flex items-center justify-between p-4 hover:bg-primary/5 transition-colors">
-                <CollapsibleTrigger className="flex items-center gap-3 flex-grow text-left cursor-pointer">{openFarmerLedgers[f.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}<div className="bg-primary/5 p-2 rounded-xl"><UserIcon className="h-5 w-5 text-primary" /></div><div><p className="font-bold text-primary">{f.name}</p><p className="text-[10px] uppercase opacity-60">{f.items.length} Records</p></div></CollapsibleTrigger>
-                <div className="flex items-center gap-4"><p className="text-sm font-black text-primary">{f.totalQty.toFixed(2)} Qtl</p><Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); downloadPdf(`stmt-${f.id}`, `Statement_${f.name.replace(/\s+/g, '_')}`); }} className="rounded-xl h-9">Statement</Button></div>
+                <CollapsibleTrigger className="flex items-center gap-3 flex-grow text-left cursor-pointer">
+                    {openFarmerLedgers[f.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    <div className="bg-primary/5 p-2 rounded-xl"><UserIcon className="h-5 w-5 text-primary" /></div>
+                    <div><p className="font-bold text-primary">{f.name}</p><p className="text-[10px] uppercase opacity-60">{f.items.length} Deliveries</p></div>
+                </CollapsibleTrigger>
+                <div className="flex items-center gap-4">
+                    <p className="text-sm font-black text-primary">{f.totalQty.toFixed(2)} Qtl</p>
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); downloadPdf(`stmt-${f.id}`, `Statement_${f.name.replace(/\s+/g, '_')}`); }} className="rounded-xl h-9">Statement</Button>
+                </div>
               </div>
               <CollapsibleContent className="bg-muted/30 p-4 overflow-x-auto">
-                <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Mandi</TableHead><TableHead className="text-right">Actual</TableHead><TableHead className="text-right">Official</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader><TableBody>{f.items.map(item => (<TableRow key={item.id}><TableCell className="text-xs">{format(new Date(item.date), 'dd MMM yy')}</TableCell><TableCell className="text-xs font-bold">{item.mandiName}</TableCell><TableCell className="text-xs text-right opacity-60">{item.totalPaddyReceived.toFixed(2)}</TableCell><TableCell className="text-xs text-right font-black text-primary">{item.mandiWeight.toFixed(2)}</TableCell><TableCell className="text-right"><div className="flex gap-2 justify-end"><Button variant="ghost" size="icon" onClick={() => handleEdit(item)} className="h-7 w-7"><Edit className="h-3.5 w-3.5" /></Button><Button variant="ghost" size="icon" onClick={() => deletePaddyLifted(item.id)} className="h-7 w-7 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell></TableRow>))}</TableBody></Table>
+                <Table>
+                    <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Mandi</TableHead><TableHead className="text-right">Actual</TableHead><TableHead className="text-right">Official</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                        {f.items.map(item => (
+                            <TableRow key={item.id}>
+                                <TableCell className="text-xs">{format(new Date(item.date), 'dd MMM yy')}</TableCell>
+                                <TableCell className="text-xs font-bold">{item.mandiName}</TableCell>
+                                <TableCell className="text-xs text-right opacity-60">{item.totalPaddyReceived.toFixed(2)}</TableCell>
+                                <TableCell className="text-xs text-right font-black text-primary">{item.mandiWeight.toFixed(2)}</TableCell>
+                                <TableCell className="text-right">
+                                    <div className="flex gap-2 justify-end">
+                                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} className="h-7 w-7"><Edit className="h-3.5 w-3.5" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => deletePaddyLifted(item.id)} className="h-7 w-7 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
               </CollapsibleContent>
             </Collapsible>
           ))}
           {farmerAggregates.length === 0 && <div className="text-center p-12 bg-white rounded-3xl border border-dashed opacity-50 italic">No arrivals found for {selectedMandi}.</div>}
         </div>
       </div>
-      <Dialog open={isCalculatorOpen} onOpenChange={setCalculatorOpen}><BagWeightCalculator onConfirm={(v) => { physicalForm.setValue('totalPaddyReceived', v.grossQuintals); physicalForm.setValue('mandiWeight', v.netQuintals); physicalForm.setValue('individualBagWeights', v.bagWeights); physicalForm.setValue('calculationMethod', v.method); setCalculatorOpen(false); }} onCancel={() => setCalculatorOpen(false)} initialBagWeights={watchedBagWeights} /></Dialog>
+
+      <Dialog open={isCalculatorOpen} onOpenChange={setCalculatorOpen}>
+        <BagWeightCalculator onConfirm={(v) => { physicalForm.setValue('totalPaddyReceived', v.grossQuintals); physicalForm.setValue('mandiWeight', v.netQuintals); physicalForm.setValue('individualBagWeights', v.bagWeights); physicalForm.setValue('calculationMethod', v.method); setCalculatorOpen(false); }} onCancel={() => setCalculatorOpen(false)} initialBagWeights={watchedBagWeights} />
+      </Dialog>
     </Fragment>
   );
 }

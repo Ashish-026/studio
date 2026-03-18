@@ -19,7 +19,9 @@ import {
   Calculator, 
   Trash2, 
   CreditCard,
-  Receipt
+  Receipt,
+  Wheat,
+  Sprout
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -305,7 +307,7 @@ export function PrivatePurchases() {
         <CardContent className="px-0 space-y-6">
           {showForm && (
             <Card className="bg-white border-primary/10 shadow-2xl rounded-3xl overflow-hidden animate-in zoom-in-95 duration-300">
-              <CardHeader className="bg-primary/5 border-b border-primary/10"><CardTitle>Record Farmer Arrival</CardTitle></CardHeader>
+              <CardHeader className="bg-primary/5 border-b border-primary/10"><CardTitle>Record Arrival</CardTitle></CardHeader>
               <CardContent className="pt-6">
                 <Form {...purchaseForm}>
                   <form onSubmit={purchaseForm.handleSubmit(onPurchaseSubmit)} className="space-y-8">
@@ -313,8 +315,21 @@ export function PrivatePurchases() {
                       <FormField control={purchaseForm.control} name="farmerName" render={({ field }) => (
                         <FormItem><FormLabel>Farmer Name</FormLabel><FormControl><Input placeholder="Full Name" {...field} className="h-12 rounded-xl" /></FormControl></FormItem>
                       )} />
+
+                      <FormField control={purchaseForm.control} name="itemType" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Item Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger className="h-12 rounded-xl"><SelectValue/></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="paddy">Paddy Arrival</SelectItem>
+                                    <SelectItem value="rice">Rice Purchase</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </FormItem>
+                      )} />
                       
-                      <div className="pt-8"><Button type="button" variant="outline" onClick={() => setCalculatorOpen(true)} className="w-full h-12 rounded-xl border-dashed border-primary/30"><Calculator className="mr-2 h-4 w-4" /> Open Weight Calculator</Button></div>
+                      <div className="pt-8"><Button type="button" variant="outline" onClick={() => setCalculatorOpen(true)} className="w-full h-12 rounded-xl border-dashed border-primary/30"><Calculator className="mr-2 h-4 w-4" /> Weight Calculator</Button></div>
                       
                       <FormField control={purchaseForm.control} name="quantity" render={({ field }) => (
                         <FormItem><FormLabel>Final Net Qtl</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="h-12 rounded-xl bg-primary/5 font-black text-primary text-lg" /></FormControl></FormItem>
@@ -381,7 +396,7 @@ export function PrivatePurchases() {
                                         <TableHeader className="bg-muted/50">
                                             <TableRow className="border-none">
                                                 <TableHead className="text-[10px] font-bold uppercase py-3">Date</TableHead>
-                                                <TableHead className="text-[10px] font-bold uppercase py-3">Details</TableHead>
+                                                <TableHead className="text-[10px] font-bold uppercase py-3">Item</TableHead>
                                                 <TableHead className="text-[10px] font-bold uppercase py-3 text-right">Qty (Qtl)</TableHead>
                                                 <TableHead className="text-[10px] font-bold uppercase py-3 text-right">Total (₹)</TableHead>
                                                 <TableHead className="text-[10px] font-bold uppercase py-3 text-right">Balance</TableHead>
@@ -393,9 +408,10 @@ export function PrivatePurchases() {
                                                 <TableRow key={p.id} className="border-primary/5 hover:bg-primary/5 transition-colors">
                                                     <TableCell className="text-xs font-medium">{format(new Date(p.date), 'dd MMM yy')}</TableCell>
                                                     <TableCell className="text-xs">
-                                                        <div className="flex flex-col">
+                                                        <div className="flex items-center gap-1">
+                                                            {p.itemType === 'paddy' ? <Wheat className="h-3 w-3 text-primary opacity-40" /> : <Sprout className="h-3 w-3 text-accent-foreground opacity-40" />}
                                                             <span className="capitalize font-bold text-primary">{p.itemType}</span>
-                                                            {p.isMandiExcess && <span className="text-[8px] font-black text-accent-foreground bg-accent/20 px-1 rounded w-fit uppercase">Excess Token: {p.mandiTokenNo || 'N/A'}</span>}
+                                                            {p.isMandiExcess && <Badge variant="outline" className="text-[8px] font-black uppercase h-4 bg-accent/10 border-accent/30 text-accent-foreground">EXCESS</Badge>}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="text-xs text-right font-medium">{p.quantity.toFixed(2)}</TableCell>
