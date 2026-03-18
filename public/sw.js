@@ -1,51 +1,59 @@
 
-const CACHE_NAME = 'mandi-monitor-v13';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'mandi-monitor-v15';
+const OFFLINE_URL = '/';
+
+// Core assets to cache for the "App Shell"
+const ASSETS = [
   '/',
   '/manifest.json',
-  '/favicon.ico',
+  'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
+  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
 ];
 
-// 1. Install - Cache the main shell
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll(ASSETS);
     })
   );
-  self.skipWaiting();
 });
 
-// 2. Activate - Clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))
+        keys.map((key) => {
+          if (key !== CACHE_NAME) return caches.delete(key);
+        })
       );
     })
   );
   self.clients.claim();
 });
 
-// 3. Fetch - The core Offline logic
+/**
+ * STRATEGY: Navigation Fallback + Stale-While-Revalidate
+ * This is the magic that prevents "Site can't be reached" errors.
+ */
 self.addEventListener('fetch', (event) => {
-  // NAVIGATION FALLBACK: For any page request (HTML), serve the cached root / if network fails
+  // Handle Navigation requests (user entering URL or refreshing)
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/'))
+      fetch(event.request).catch(() => {
+        return caches.match(OFFLINE_URL);
+      })
     );
     return;
   }
 
-  // STANDARD ASSETS: Stale-While-Revalidate strategy
+  // Handle other assets (JS, CSS, Images)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Cache static assets only
-        if (event.request.url.includes('/_next/') || event.request.url.includes('/images/')) {
-            const cacheCopy = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+        if (networkResponse && networkResponse.status === 200) {
+          const cacheCopy = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
         }
         return networkResponse;
       }).catch(() => null);

@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import { AuthProvider } from '@/context/auth-context';
@@ -59,7 +60,7 @@ export default function RootLayout({
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                  console.log('Mandi Monitor: Standalone Engine Active.');
+                  console.log('Mandi Monitor: Standalone Offline Engine Active.');
                 }).catch(function(err) {
                   console.warn('Mandi Monitor: Offline Engine initialization pending.', err);
                 });
