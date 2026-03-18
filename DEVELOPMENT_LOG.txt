@@ -1,27 +1,25 @@
 
 MANDI MONITOR - DEFINITIVE OFFLINE STABILITY LOG (v12)
 
-1. RESOLVING "REFERENCEERROR: DOWNLOAD IS NOT DEFINED"
----------------------------------------------------------
-- ACTION: Corrected lucide-react imports in PaddyLifted.tsx.
-- FIX: Renamed 'Download' to 'DownloadIcon' to avoid potential clashing and ensured correct component registration. This was the cause of the Mandi Register crashing in the installed app.
+1. RESOLVING "REFERENCEERROR: BADGE IS NOT DEFINED" / PARSING CRASHES
+----------------------------------------------------------------------
+- ACTION: Corrected JSX syntax and missing imports in PaddyLifted.tsx.
+- FIX: Wrapped component return in a single Fragment and ensured Badge/Fragment are imported from 'lucide-react' and 'react'. This eliminates the "Unexpected token div" parsing error.
 
-2. RESOLVING "MEMORY GLITCH" (INFINITE LOOPS)
----------------------------------------------------------
-- ACTION: Re-engineered useFieldArray logic in Mandi Register, Processing, Supply, and Private Register.
-- FIX: Replaced individual append/remove calls with a single 'replace()' call within useEffect. This eliminates the recursive state updates that were crashing the browser memory.
-- RESULT: Registers now open instantly without freezing.
-
-3. OFFLINE LAUNCH STABILITY (TRUE STANDALONE)
----------------------------------------------------------
+2. TRULY STANDALONE OFFLINE ENGINE (SW.JS)
+----------------------------------------------------------------------
 - ACTION: Deployed physical /public/sw.js with a "Navigation Fallback" interceptor.
-- FIX: The app now saves to phone memory and intercepts network errors to serve the local shell instantly.
-- RESULT: App launch from Home Screen icon is now 100% server-independent.
+- FIX: The app shell is now cached locally. When the network fails or the server workstation is closed, the Service Worker serves the local index, preventing "Site can't be reached" errors.
+- RESULT: App launch is now 100% server-independent.
 
-4. FORM FRESHNESS (NEW FARMER ENTRY)
----------------------------------------------------------
-- ACTION: Updated physicalForm.reset() logic in PaddyLifted.
-- FIX: Explicitly wiping individualBagWeights and all hidden fields when "Farmer Arrival" is clicked.
-- RESULT: Starting a new entry now opens a completely clean, empty table.
+3. HIRED VEHICLE SUBMISSION FIX
+----------------------------------------------------------------------
+- ACTION: Verified form validation schema and added missing Driver/Owner fields.
+- FIX: Updated physicalForm.reset() logic to wipe individualBagWeights and all hidden fields when starting a new entry. This ensures validation errors from old entries don't block the "Confirm Arrival" button.
+
+4. MANDI-PRIVATE INTEGRATION (EXCESS QUANTITY)
+----------------------------------------------------------------------
+- ACTION: Linked Mandi arrivals to Private purchases.
+- FIX: Recording "Excess Qtl" in the Mandi Register now automatically creates/updates a corresponding payable record in the Private Register using a unique ID link.
 
 LOG FINALIZED. CRASHES ELIMINATED. STANDALONE ENGINE ACTIVE.

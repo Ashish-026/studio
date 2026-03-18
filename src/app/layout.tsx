@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import { AuthProvider } from '@/context/auth-context';
@@ -55,7 +54,6 @@ export default function RootLayout({
           {children}
           <Toaster />
         </AuthProvider>
-        {/* STANDALONE ENGINE ACTIVATION: Ensures the app code is saved to the phone's memory */}
         <Script id="register-sw" strategy="afterInteractive">
           {`
             if ('serviceWorker' in navigator) {

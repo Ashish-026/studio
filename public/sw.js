@@ -1,34 +1,33 @@
-
 /**
- * MANDI MONITOR - STANDALONE OFFLINE ENGINE
- * This Service Worker ensures the app code is stored in the phone's memory
- * and serves it instantly when the network or server is unreachable.
+ * MANDI MONITOR - STANDALONE OFFLINE ENGINE (v12)
+ * This worker intercepts network failures and serves the cached App Shell.
  */
 
-const CACHE_NAME = 'mandi-monitor-v12';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'mandi-monitor-engine-v12';
+const OFFLINE_URL = '/';
+
+const INITIAL_ASSETS = [
   '/',
   '/manifest.json',
   'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
+  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      return cache.addAll(INITIAL_ASSETS);
     })
   );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.map((name) => {
-          if (name !== CACHE_NAME) {
-            return caches.delete(name);
-          }
+        keys.map((key) => {
+          if (key !== CACHE_NAME) return caches.delete(key);
         })
       );
     })
@@ -37,23 +36,39 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Navigation Fallback: Intercept "Site can't be reached" errors
+  // NAVIGATION FALLBACK: Crucial for "Truly Offline" launch
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match('/');
+        return caches.match(OFFLINE_URL);
       })
     );
     return;
   }
 
-  // Stale-While-Revalidate for speed and offline stability
+  // ASSET CACHING: Stale-While-Revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
+        // Return cached, but update in background
+        fetch(event.request).then((networkResponse) => {
+          if (networkResponse.ok) {
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
+          }
+        }).catch(() => {});
         return cachedResponse;
       }
-      return fetch(event.request);
+
+      return fetch(event.request).then((networkResponse) => {
+        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+          return networkResponse;
+        }
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        return networkResponse;
+      });
     })
   );
 });
