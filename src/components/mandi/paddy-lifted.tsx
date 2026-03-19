@@ -216,14 +216,13 @@ export function PaddyLifted() {
   function onPhysicalSubmit(values: z.infer<typeof physicalFormSchema>) {
     const lIds = values.labourerIds.map(l => l.value).filter(Boolean);
     const sub = { ...values, labourerIds: lIds, entryType: 'physical' as const };
-    let entryId = editingItem?.id;
+    let entryId = editingItem?.id || Date.now().toString();
     
     if (editingItem) { 
         updatePaddyLifted(editingItem.id, sub); 
         toast({ title: 'Updated' }); 
     } else { 
-        const n = addPaddyLifted(sub); 
-        entryId = n.id; 
+        addPaddyLifted({ ...sub, id: entryId }); 
         toast({ title: 'Recorded' }); 
     }
 
@@ -244,7 +243,6 @@ export function PaddyLifted() {
             individualBagWeights: sub.individualBagWeights 
         });
     } else {
-        // If excess is removed, delete corresponding private record
         deletePurchase(excessId);
     }
 

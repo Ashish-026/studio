@@ -1,62 +1,55 @@
 
-const CACHE_NAME = 'mandi-monitor-v15';
-const OFFLINE_URL = '/';
+/* 
+ * MANDI MONITOR - STANDALONE OFFLINE ENGINE
+ * This worker enables the app to launch without a server connection.
+ */
 
-// Core assets to cache for the "App Shell"
-const ASSETS = [
+const CACHE_NAME = 'mandi-monitor-offline-v1';
+const ASSETS_TO_CACHE = [
   '/',
-  '/manifest.json',
+  '/manifest.webmanifest',
   'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
   'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
-      );
-    })
-  );
-  self.clients.claim();
+  event.waitUntil(self.clients.claim());
 });
 
-/**
- * STRATEGY: Navigation Fallback + Stale-While-Revalidate
- * This is the magic that prevents "Site can't be reached" errors.
- */
 self.addEventListener('fetch', (event) => {
-  // Handle Navigation requests (user entering URL or refreshing)
+  // NAVIGATION FALLBACK: Crucial for "Truly Offline" launch
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match(OFFLINE_URL);
+        return caches.match('/');
       })
     );
     return;
   }
 
-  // Handle other assets (JS, CSS, Images)
+  // ASSET CACHING: Stale-while-revalidate
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const cacheCopy = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, cacheCopy));
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
         return networkResponse;
-      }).catch(() => null);
+      }).catch(() => {
+        // Silent catch for offline fetch failures
+      });
 
       return cachedResponse || fetchPromise;
     })
