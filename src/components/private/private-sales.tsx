@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Fragment } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -11,14 +12,14 @@ import {
   PlusCircle, 
   ChevronDown, 
   ChevronRight, 
-  Download, 
   Car, 
   Users, 
   User as UserIcon, 
   Trash2,
   Banknote,
   Receipt,
-  CreditCard
+  CreditCard,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +36,7 @@ import { Separator } from '@/components/ui/separator';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
-  labourerIds: z.array(z.object({ value: z.string().min(1, "Please select a labourer.") })).default([]),
+  labourerIds: z.array(z.object({ value: z.string() })).default([]),
   labourWageType: z.enum(['per_item', 'total_amount']).default('total_amount'),
   labourCharge: z.coerce.number().min(0).default(0),
 });
@@ -61,7 +62,7 @@ const saleFormSchema = z.object({
     }
     return true;
 }, {
-    message: "Hired vehicle details are incomplete.",
+    message: "Hired vehicle details are incomplete (Check Rent, Driver and Owner Names).",
     path: ['tripCharge'],
 });
 
@@ -99,6 +100,7 @@ export function PrivateSales() {
 
   const { fields, replace } = useFieldArray({ control: saleForm.control, name: "labourerIds" });
   const numberOfLabours = saleForm.watch('numberOfLabours');
+  const vehicleType = saleForm.watch('vehicleType');
 
   useEffect(() => {
     const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
@@ -160,27 +162,44 @@ export function PrivateSales() {
     setPayDialogOpen(true);
   };
 
+  const handleOpenNewForm = () => {
+    saleForm.reset({
+        source: 'private', customerName: '', itemType: 'rice', quantity: 0, rate: 0, initialPayment: 0,
+        description: '', vehicleType: 'customer', sourceLocation: 'Mill', vehicleNumber: '',
+        driverName: '', ownerName: '', tripCharge: 0, destination: '',
+        numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount',
+    });
+    setShowForm(true);
+  };
+
   return (
     <>
       <Card className="border-none shadow-none bg-transparent">
         <CardHeader className="px-0 pt-0">
           <div className="flex justify-between items-start mb-6">
             <div><CardTitle className="text-2xl font-bold text-primary">Private Sales</CardTitle><CardDescription>Track customer sales, collections, and outstanding receivables.</CardDescription></div>
-            <Button onClick={() => setShowForm(!showForm)} className="rounded-xl shadow-lg"><PlusCircle className="mr-2 h-4 w-4" />{showForm ? 'Cancel' : 'New Sale'}</Button>
+            <Button onClick={() => showForm ? setShowForm(false) : handleOpenNewForm()} className="rounded-xl shadow-lg">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                {showForm ? 'Cancel' : 'New Sale'}
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="px-0 space-y-6">
           {showForm && (
             <Card className="bg-white border-primary/10 shadow-2xl rounded-3xl overflow-hidden animate-in zoom-in-95 duration-300">
-              <CardHeader className="bg-primary/5 border-b border-primary/10"><CardTitle>New Sale Entry</CardTitle></CardHeader>
+              <CardHeader className="bg-primary/5 border-b border-primary/10 flex flex-row items-center justify-between">
+                <CardTitle>New Sale Entry</CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setShowForm(false)}><X className="h-5 w-5" /></Button>
+              </CardHeader>
               <CardContent className="pt-6">
-                <Form {...saleForm}><form onSubmit={saleForm.handleSubmit(onSaleSubmit)} className="space-y-8">
+                <Form {...saleForm}>
+                  <form onSubmit={saleForm.handleSubmit(onSaleSubmit)} className="space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                       <FormField control={saleForm.control} name="customerName" render={({ field }) => (
                         <FormItem><FormLabel>Customer Name</FormLabel><FormControl><Input placeholder="Full Name" {...field} className="h-12 rounded-xl" /></FormControl></FormItem>
                       )} />
                       <FormField control={saleForm.control} name="itemType" render={({ field }) => (
-                        <FormItem><FormLabel>Item</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-12 rounded-xl"><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="rice">Rice</SelectItem><SelectItem value="paddy">Paddy</SelectItem></SelectContent></Select></FormItem>
+                        <FormItem><FormLabel>Item</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="h-12 rounded-xl"><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="rice">Rice</SelectItem><SelectItem value="paddy">Paddy</SelectItem></SelectContent></Select></FormItem>
                       )} />
                       <FormField control={saleForm.control} name="quantity" render={({ field }) => (
                         <FormItem><FormLabel>Quantity (Qtl)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="h-12 rounded-xl bg-primary/5 font-bold" /></FormControl></FormItem>
@@ -192,6 +211,72 @@ export function PrivateSales() {
                         <FormItem><FormLabel>Immediate Received (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="h-12 rounded-xl" /></FormControl></FormItem>
                       )} />
                     </div>
+
+                    <Separator />
+
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold opacity-50 flex items-center gap-2"><Car className="h-4 w-4" /> Logistics & Delivery</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <FormField control={saleForm.control} name="vehicleType" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Ownership</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="customer">Customer's</SelectItem>
+                                            <SelectItem value="own">Own Vehicle</SelectItem>
+                                            <SelectItem value="hired">Hired / Agency</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </FormItem>
+                            )} />
+                            {vehicleType === 'hired' && (
+                                <Fragment>
+                                    <FormField control={saleForm.control} name="vehicleNumber" render={({ field }) => (
+                                        <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    )} />
+                                    <FormField control={saleForm.control} name="driverName" render={({ field }) => (
+                                        <FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    )} />
+                                    <FormField control={saleForm.control} name="ownerName" render={({ field }) => (
+                                        <FormItem><FormLabel>Owner Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    )} />
+                                    <FormField control={saleForm.control} name="tripCharge" render={({ field }) => (
+                                        <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                </Fragment>
+                            )}
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold opacity-50 flex items-center gap-2"><Users className="h-4 w-4" /> Labour & Loading</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormField control={saleForm.control} name="numberOfLabours" render={({ field }) => (
+                                <FormItem><FormLabel>Number of Workers</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>
+                            )} />
+                            <FormField control={saleForm.control} name="labourCharge" render={({ field }) => (
+                                <FormItem><FormLabel>Total Loading Wage (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} className="rounded-xl" /></FormControl></FormItem>
+                            )} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {fields.map((f, i) => (
+                                <FormField key={f.id} control={saleForm.control} name={`labourerIds.${i}.value`} render={({ field }) => (
+                                    <FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select worker..." /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {labourers.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </FormItem>
+                                )} />
+                            ))}
+                        </div>
+                    </div>
+
                     <Button type="submit" className="w-full bg-primary py-8 rounded-2xl text-xl font-bold shadow-xl shadow-primary/20">Record Sale</Button>
                 </form></Form>
               </CardContent>
@@ -205,7 +290,7 @@ export function PrivateSales() {
                     <Collapsible key={customer.id} open={openCustomerCollapsibles[customer.id]} onOpenChange={(o) => setOpenCustomerCollapsibles(p => ({...p, [customer.id]: o}))} className="border-b last:border-b-0 border-primary/5">
                         <div className="flex w-full p-4 items-center justify-between hover:bg-primary/5 transition-colors group">
                             <CollapsibleTrigger className="flex items-center gap-3 flex-grow text-left cursor-pointer">
-                                {openCustomerCollapsibles[customer.id] ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                                {openCustomerCollapsibles[customer.id] ? <ChevronDown className="h-4 w-4 text-primary" /> : <ChevronRight className="h-4 w-4" text-muted-foreground />}
                                 <div className="bg-primary/5 p-2 rounded-xl">
                                     <UserIcon className="h-5 w-5 text-primary" />
                                 </div>

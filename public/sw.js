@@ -1,10 +1,12 @@
 
-/* 
- * MANDI MONITOR - STANDALONE OFFLINE ENGINE
- * This worker enables the app to launch without a server connection.
+/**
+ * MANDI MONITOR - OFFLINE INDEPENDENCE ENGINE
+ * This Service Worker ensures the app works even if the server is closed.
  */
 
-const CACHE_NAME = 'mandi-monitor-offline-v1';
+const CACHE_NAME = 'mandi-monitor-v13';
+const OFFLINE_URL = '/';
+
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.webmanifest',
@@ -22,36 +24,34 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+    })
+  );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
-  // NAVIGATION FALLBACK: Crucial for "Truly Offline" launch
+  // Navigation Fallback: If network fails, serve the root index.html
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
-        return caches.match('/');
+        return caches.match(OFFLINE_URL);
       })
     );
     return;
   }
 
-  // ASSET CACHING: Stale-while-revalidate
+  // Generic Stale-While-Revalidate for other assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
-      }).catch(() => {
-        // Silent catch for offline fetch failures
-      });
-
-      return cachedResponse || fetchPromise;
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request);
     })
   );
 });

@@ -21,7 +21,8 @@ import {
   CreditCard,
   Receipt,
   Wheat,
-  Sprout
+  Sprout,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +42,7 @@ import { Badge } from '../ui/badge';
 
 const labourDetailsSchema = z.object({
   numberOfLabours: z.coerce.number().min(0).default(0),
-  labourerIds: z.array(z.object({ value: z.string().min(1, "Please select a labourer.") })).default([]),
+  labourerIds: z.array(z.object({ value: z.string() })).default([]),
   labourWageType: z.enum(['per_item', 'total_amount']).default('total_amount'),
   labourCharge: z.coerce.number().min(0).default(0),
 });
@@ -70,7 +71,7 @@ const purchaseFormSchema = z.object({
     }
     return true;
 }, {
-    message: "Hired vehicle details are incomplete.",
+    message: "Hired vehicle details are incomplete (Check Rent, Driver and Owner Names).",
     path: ['tripCharge'],
 });
 
@@ -224,6 +225,8 @@ export function PrivatePurchases() {
   
   const { fields, replace } = useFieldArray({ control: purchaseForm.control, name: "labourerIds" });
   const numberOfLabours = purchaseForm.watch('numberOfLabours');
+  const vehicleType = purchaseForm.watch('vehicleType');
+  const watchedBagWeights = purchaseForm.watch('individualBagWeights');
 
   useEffect(() => {
     const targetCount = Math.max(0, parseInt(String(numberOfLabours || 0)));
@@ -233,8 +236,6 @@ export function PrivatePurchases() {
       replace(nextFields);
     }
   }, [numberOfLabours, replace, purchaseForm, fields.length]);
-
-  const vehicleType = purchaseForm.watch('vehicleType');
 
   const farmerAggregates = useMemo(() => {
     const farmers: Record<string, { id: string, name: string, purchases: any[], totalBalance: number, allPayments: Payment[] }> = {};
@@ -292,13 +293,24 @@ export function PrivatePurchases() {
     setCalculatorOpen(false);
   };
 
+  const handleOpenNewForm = () => {
+    purchaseForm.reset({
+        farmerName: '', itemType: 'paddy', quantity: 0, rate: 0, initialPayment: 0,
+        description: '', vehicleType: 'farmer', destination: 'Mill', vehicleNumber: '',
+        driverName: '', ownerName: '', tripCharge: 0, source: '', 
+        numberOfLabours: 0, labourerIds: [], labourCharge: 0, labourWageType: 'total_amount',
+        calculationMethod: 'uniform', deductionKg: 0, grossWeightKg: 0, individualBagWeights: [],
+    });
+    setShowForm(true);
+  };
+
   return (
     <Fragment>
       <Card className="border-none shadow-none bg-transparent">
         <CardHeader className="px-0 pt-0">
           <div className="flex justify-between items-start mb-6">
             <div><CardTitle className="text-2xl font-bold text-primary">Private Purchases</CardTitle><CardDescription>Track farmer purchases, payments, and Mandi excess arrivals.</CardDescription></div>
-            <Button onClick={() => setShowForm(!showForm)} className="rounded-xl shadow-lg">
+            <Button onClick={() => showForm ? setShowForm(false) : handleOpenNewForm()} className="rounded-xl shadow-lg">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 {showForm ? 'Cancel' : 'New Purchase'}
             </Button>
@@ -307,7 +319,10 @@ export function PrivatePurchases() {
         <CardContent className="px-0 space-y-6">
           {showForm && (
             <Card className="bg-white border-primary/10 shadow-2xl rounded-3xl overflow-hidden animate-in zoom-in-95 duration-300">
-              <CardHeader className="bg-primary/5 border-b border-primary/10"><CardTitle>Record Arrival</CardTitle></CardHeader>
+              <CardHeader className="bg-primary/5 border-b border-primary/10 flex flex-row items-center justify-between">
+                <CardTitle>Record Arrival</CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setShowForm(false)}><X className="h-5 w-5" /></Button>
+              </CardHeader>
               <CardContent className="pt-6">
                 <Form {...purchaseForm}>
                   <form onSubmit={purchaseForm.handleSubmit(onPurchaseSubmit)} className="space-y-8">
@@ -319,7 +334,7 @@ export function PrivatePurchases() {
                       <FormField control={purchaseForm.control} name="itemType" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Item Type</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl><SelectTrigger className="h-12 rounded-xl"><SelectValue/></SelectTrigger></FormControl>
                                 <SelectContent>
                                     <SelectItem value="paddy">Paddy Arrival</SelectItem>
@@ -343,6 +358,72 @@ export function PrivatePurchases() {
                         <FormItem><FormLabel>Advance/Immediate Paid (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="h-12 rounded-xl" /></FormControl></FormItem>
                       )} />
                     </div>
+
+                    <Separator />
+
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold opacity-50 flex items-center gap-2"><Car className="h-4 w-4" /> Logistics & Transport</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <FormField control={purchaseForm.control} name="vehicleType" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Ownership</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl><SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="farmer">Farmer's</SelectItem>
+                                            <SelectItem value="own">Own Vehicle</SelectItem>
+                                            <SelectItem value="hired">Hired / Agency</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </FormItem>
+                            )} />
+                            {vehicleType === 'hired' && (
+                                <Fragment>
+                                    <FormField control={purchaseForm.control} name="vehicleNumber" render={({ field }) => (
+                                        <FormItem><FormLabel>Vehicle No.</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    )} />
+                                    <FormField control={purchaseForm.control} name="driverName" render={({ field }) => (
+                                        <FormItem><FormLabel>Driver Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    )} />
+                                    <FormField control={purchaseForm.control} name="ownerName" render={({ field }) => (
+                                        <FormItem><FormLabel>Owner Name</FormLabel><FormControl><Input {...field} className="rounded-xl" /></FormControl></FormItem>
+                                    )} />
+                                    <FormField control={purchaseForm.control} name="tripCharge" render={({ field }) => (
+                                        <FormItem><FormLabel>Rent (₹)</FormLabel><FormControl><Input type="number" step="10" className="rounded-xl" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                </Fragment>
+                            )}
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold opacity-50 flex items-center gap-2"><Users className="h-4 w-4" /> Labour & Loading</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormField control={purchaseForm.control} name="numberOfLabours" render={({ field }) => (
+                                <FormItem><FormLabel>Number of Workers</FormLabel><FormControl><Input type="number" {...field} className="rounded-xl" /></FormControl></FormItem>
+                            )} />
+                            <FormField control={purchaseForm.control} name="labourCharge" render={({ field }) => (
+                                <FormItem><FormLabel>Total Loading Wage (₹)</FormLabel><FormControl><Input type="number" step="10" {...field} className="rounded-xl" /></FormControl></FormItem>
+                            )} />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {fields.map((f, i) => (
+                                <FormField key={f.id} control={purchaseForm.control} name={`labourerIds.${i}.value`} render={({ field }) => (
+                                    <FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl><SelectTrigger className="rounded-xl"><SelectValue placeholder="Select worker..." /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {labourers.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </FormItem>
+                                )} />
+                            ))}
+                        </div>
+                    </div>
+
                     <Button type="submit" className="w-full bg-primary py-8 rounded-2xl text-xl font-bold shadow-xl shadow-primary/20">Save Purchase Record</Button>
                   </form>
                 </Form>
@@ -355,7 +436,6 @@ export function PrivatePurchases() {
             <div className="border border-primary/5 rounded-3xl overflow-hidden shadow-sm bg-white">
                 {farmerAggregates.map(farmer => (
                     <Collapsible key={farmer.id} open={openFarmerCollapsibles[farmer.id]} onOpenChange={(o) => setOpenFarmerCollapsibles(p => ({...p, [farmer.id]: o}))} className="border-b last:border-b-0 border-primary/5">
-                        {/* HIDDEN PRINTABLE ELEMENT */}
                         <div className="absolute -left-[9999px] top-auto" aria-hidden="true">
                             <div id={`printable-purchases-${farmer.id}`}>
                                 <FarmerPurchaseTable farmer={farmer} />
@@ -457,7 +537,7 @@ export function PrivatePurchases() {
       </Card>
       
       <Dialog open={isCalculatorOpen} onOpenChange={setCalculatorOpen}>
-        <BagWeightCalculator onConfirm={handleCalculatorConfirm} onCancel={() => setCalculatorOpen(false)} isPrivate={true} />
+        <BagWeightCalculator onConfirm={handleCalculatorConfirm} onCancel={() => setCalculatorOpen(false)} isPrivate={true} initialBagWeights={watchedBagWeights} />
       </Dialog>
 
       <Dialog open={isPayDialogOpen} onOpenChange={setPayDialogOpen}>
