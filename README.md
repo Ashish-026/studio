@@ -1,29 +1,37 @@
 
-# Mandi Monitor - Operation Manual (Zero-Cost Version)
+# Mandi Monitor - Standalone Independence Guide
 
-Professional rice mill management system optimized for zero-cost operation and total data ownership.
+This application is now **100% server-independent** and ready for hosting on your own GitHub or Vercel account.
 
-## 🚀 How to Start
-1. Click the **"Preview"** button in the top-right of this editor.
-2. Use your credentials to log in.
+## 🚀 How to Host (Free & Permanent)
 
-## 🔑 Your Credentials
-- **Default Administrator**: `admin@mill.com` / `password123`
-- **Staff User**: `user@mill.com` / `staffpassword`
-- **Customization**: You can change these in the **Settings** menu once logged in.
+### Option 1: Vercel (Recommended for Beginners)
+1. Create a free account at [vercel.com](https://vercel.com).
+2. Connect your GitHub repository.
+3. Click **"Deploy"**. Vercel will automatically build and host the app.
+4. You will get a permanent link (e.g., `your-mill.vercel.app`). Open this link on your phone and **"Add to Home Screen"**.
 
-## 🔒 Security & Privacy
-- **Automatic Logout**: For your security, the app will automatically log you out whenever you close the browser window or swipe the app closed on your mobile phone.
-- **Data Privacy**: No data leaves your device. This app DOES NOT use a cloud database. 
-- **Storage Box**: All records are stored in your device's `Local Storage`. Even when "Installed" on your phone, the app uses the browser's sandboxed storage engine (limited to 5MB).
+### Option 2: GitHub Pages
+1. Push this code to a GitHub repository.
+2. Go to **Settings** -> **Pages**.
+3. Under Build and deployment, set source to **GitHub Actions**.
+4. Use the "Next.js" starter template provided by GitHub.
 
-## 📦 Total Independence (No Server Required)
-This app is designed to work even if the original Firebase account or hosting is deleted:
-1. **Local-First**: All logic runs in your browser.
-2. **Backups**: Go to **Settings** -> **Backup to Local File** to download your entire database.
-3. **Restoration**: You can load your backup file onto any new device to instantly recover your records.
+## 📱 Multi-Device Sync
+This app uses **Local-First** storage. Data does not automatically sync via the cloud (saving you database costs). 
+To sync multiple devices:
+1. On Device A: Go to **Settings** -> **Download Sync File**.
+2. Send this file to Device B (WhatsApp/Email).
+3. On Device B: Go to **Settings** -> **Import & Merge Records**.
+4. The databases will be combined automatically.
 
-## 📊 Mobile Installation
-Open the link on your phone and use **"Add to Home Screen"** to use it like a native mobile app.
+## 🔒 Security
+- The app stores credentials locally on the device.
+- You can change the default `admin@mill.com` / `password123` in the **Settings** menu.
+- **Offline Access**: Once opened, the app will work even if your internet is disconnected.
 
-*Note: Data is device-specific. Entries made on a laptop will not appear on your mobile phone unless you move a Backup file.*
+## 🛠 Tech Stack
+- **Framework**: Next.js 15 (App Router)
+- **Styling**: Tailwind CSS + ShadCN UI
+- **Database**: Browser IndexedDB (Unlimited local capacity)
+- **Offline**: PWA Service Worker

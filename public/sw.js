@@ -1,17 +1,11 @@
 
-/**
- * MANDI MONITOR - OFFLINE INDEPENDENCE ENGINE
- * This Service Worker ensures the app works even if the server is closed.
- */
-
-const CACHE_NAME = 'mandi-monitor-v13';
+const CACHE_NAME = 'mandi-monitor-v12';
 const OFFLINE_URL = '/';
 
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.webmanifest',
-  'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
-  'https://placehold.co/180x180/0b3d1e/ffffff.png?text=MILL'
+  '/favicon.ico',
 ];
 
 self.addEventListener('install', (event) => {
@@ -25,9 +19,13 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
       );
     })
   );
@@ -35,7 +33,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Navigation Fallback: If network fails, serve the root index.html
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).catch(() => {
@@ -45,13 +42,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Generic Stale-While-Revalidate for other assets
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request);
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request).then((fetchResponse) => {
+        // Don't cache everything, just keep the shell snappy
+        return fetchResponse;
+      });
     })
   );
 });

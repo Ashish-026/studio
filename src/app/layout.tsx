@@ -20,15 +20,12 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   title: 'Mandi Monitor | Rice Mill Management',
-  description: 'Professional Rice Mill Management System for seamless Mandi and Private operations.',
+  description: 'Professional Standalone PWA for Mandi and Private operations.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     title: 'Mandi Monitor',
     statusBarStyle: 'default',
-  },
-  formatDetection: {
-    telephone: false,
   },
   icons: {
     icon: 'https://placehold.co/32x32/0b3d1e/ffffff.png?text=M',
@@ -61,9 +58,9 @@ export default function RootLayout({
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                  console.log('Mandi Monitor: Offline Independence Engine Active.', reg.scope);
+                  console.log('Mandi Monitor: Offline Engine Active.', reg.scope);
                 }).catch(function(err) {
-                  console.warn('Mandi Monitor: Offline Engine initialization pending.', err);
+                  console.warn('Mandi Monitor: Offline Engine Error.', err);
                 });
               });
             }
